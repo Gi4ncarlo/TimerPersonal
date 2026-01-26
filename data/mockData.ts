@@ -6,13 +6,11 @@ export const mockUsers: User[] = [
         id: 'user-1',
         username: 'demo',
         preferences: { password: 'demo123' },
-    },
-    {
-        id: 'user-2',
-        username: 'admin',
-        preferences: { password: 'admin123' },
+        level: 1,
+        xp: 0,
     },
 ];
+
 
 export const mockActions: Action[] = [
     // Actividades Negativas (más peso negativo)
