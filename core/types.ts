@@ -53,3 +53,12 @@ export interface DailyStats {
     mainActivity: string; // Most time spent on
     totalActivities: number;
 }
+
+
+export interface Balance {
+    periodType: 'daily' | 'weekly' | 'monthly';
+    periodStart: string; // ISO
+    periodEnd: string;   // ISO
+    totalPoints: number;
+    timeGainedMinutes: number;
+}
