@@ -47,7 +47,10 @@ export default function EstadisticasPage() {
                     return acc;
                 }, {} as Record<string, number>);
 
-                const mainActivity = Object.entries(activityTime).sort((a, b) => b[1] - a[1])[0]?.[0] || 'Sin actividad';
+                const mainActivity =
+                    (Object.entries(activityTime) as [string, number][])
+                        .sort((a, b) => b[1] - a[1])[0]?.[0] || 'Sin actividad';
+
 
                 statsData.push({
                     date,
