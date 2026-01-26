@@ -1,0 +1,83 @@
+.action-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-md);
+    margin-bottom: var(--space-sm);
+    background: rgba(17, 26, 69, 0.4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    transition: var(--transition-fast);
+    position: relative;
+}
+
+.action-item::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--color-positive);
+    border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+    opacity: 0.7;
+}
+
+.action-item.negative::before {
+    background: var(--color-negative);
+}
+
+.action-item:hover {
+    background: rgba(17, 26, 69, 0.6);
+    border-color: var(--color-border-glow);
+    transform: translateX(4px);
+}
+
+.action-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex: 1;
+    gap: var(--space-md);
+}
+
+.action-name {
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    color: var(--color-text-primary);
+    font-weight: 500;
+}
+
+.action-progress {
+    font-family: var(--font-display);
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+    letter-spacing: 0.05em;
+}
+
+.action-add-btn {
+    width: 32px;
+    height: 32px;
+    background: var(--color-primary);
+    color: var(--color-background);
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 1.5rem;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: var(--transition-fast);
+    box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+}
+
+.action-add-btn:hover {
+    background: var(--color-accent);
+    box-shadow: 0 0 20px rgba(0, 212, 255, 0.6);
+    transform: scale(1.1);
+}
+
+.action-add-btn:active {
+    transform: scale(0.95);
+}

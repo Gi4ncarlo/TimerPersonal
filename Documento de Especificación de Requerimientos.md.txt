@@ -1,0 +1,94 @@
+Documento de Especificación de Requerimientos (SRS)
+1. Introducción
+1.1 Propósito
+Este documento describe de manera completa los requerimientos funcionales y no funcionales de una aplicación personal de seguimiento y gamificación del tiempo, cuyo objetivo es ayudar al usuario a tomar conciencia de cómo utiliza su tiempo diario mediante un sistema de puntos, visualizaciones y análisis asistidos por IA.
+1.2 Alcance
+La aplicación permitirá registrar acciones diarias positivas y negativas, calcular puntos asociados al tiempo invertido, visualizar balances temporales y obtener análisis inteligentes sin que la IA modifique las reglas definidas por el usuario. El sistema utilizará Supabase como backend, base de datos y autenticación.
+1.3 Definiciones y abreviaturas
+* Acción: Actividad realizada por el usuario (ej. correr, ver streams).
+* Puntos: Unidad abstracta que representa tiempo ganado o perdido.
+* Balance: Resultado neto de puntos en un período.
+* IA: Sistema de análisis e interpretación de datos históricos.
+
+2. Descripción general
+2.1 Perspectiva del producto
+La aplicación comienza como un tracker manual de hábitos y evoluciona hacia un asistente inteligente que analiza patrones y ofrece recomendaciones personalizadas.
+2.2 Usuarios
+* Usuario único (uso personal)
+* Perfil configurable según objetivos personales
+2.3 Suposiciones
+* El usuario define y controla las reglas de puntuación
+* El registro inicial de acciones es manual
+* La IA solo analiza datos existentes
+
+3. Requerimientos funcionales
+3.1 Autenticación y usuarios
+* RF-01: El sistema debe permitir registro e inicio de sesión mediante Supabase Auth.
+* RF-02: El usuario debe poder gestionar su perfil y preferencias.
+3.2 Gestión de acciones
+* RF-03: El usuario debe poder crear, editar y eliminar acciones.
+* RF-04: Cada acción debe tener:
+o Nombre
+o Tipo (positiva / negativa)
+o Valor de puntos por unidad de tiempo
+3.3 Registro diario
+* RF-05: El usuario debe poder registrar acciones de forma manual.
+* RF-06: El sistema debe permitir registro mediante texto libre interpretado por IA.
+* RF-07: Cada registro debe almacenar fecha, duración y puntos calculados.
+3.4 Sistema de puntos
+* RF-08: El sistema debe calcular automáticamente los puntos según reglas definidas.
+* RF-09: Los puntos deben traducirse a tiempo ganado o perdido.
+3.5 Visualización y balance
+* RF-10: El sistema debe mostrar balances diarios, semanales y mensuales.
+* RF-11: El sistema debe ofrecer gráficos comparativos e históricos.
+3.6 Historial y análisis
+* RF-12: El usuario debe poder consultar el historial completo de acciones.
+* RF-13: El sistema debe identificar patrones de comportamiento.
+3.7 Inteligencia Artificial
+* RF-14: La IA debe generar insights automáticos sobre hábitos.
+* RF-15: La IA debe predecir resultados futuros basados en patrones.
+* RF-16: La IA debe sugerir acciones para compensar balances negativos.
+* RF-17: La IA debe ofrecer feedback en lenguaje natural.
+* RF-18: La IA no debe modificar reglas ni puntajes definidos por el usuario.
+
+4. Requerimientos no funcionales
+4.1 Usabilidad
+* RNF-01: La aplicación debe ser simple, rápida y clara.
+* RNF-02: El registro diario debe requerir el mínimo de pasos posibles.
+4.2 Rendimiento
+* RNF-03: Los cálculos de puntos deben ser inmediatos.
+* RNF-04: Los gráficos deben cargarse en menos de 2 segundos.
+4.3 Seguridad
+* RNF-05: Los datos deben almacenarse de forma segura en Supabase.
+* RNF-06: El acceso a los datos debe estar restringido por autenticación.
+4.4 Escalabilidad
+* RNF-07: El sistema debe permitir agregar nuevas métricas y tipos de acciones.
+* RNF-08: La arquitectura debe permitir futuras integraciones automáticas.
+
+5. Requerimientos de datos
+5.1 Entidades principales
+* Usuario
+* Acción
+* Registro diario
+* Balance
+* Insight
+5.2 Persistencia
+* Base de datos PostgreSQL provista por Supabase.
+
+6. Restricciones técnicas
+* Uso obligatorio de Supabase para base de datos y autenticación.
+* Frontend basado en tecnologías web modernas (ej. React).
+* Integración de IA mediante API externa.
+
+7. Evolución futura
+* Automatización de registros mediante integraciones externas.
+* Análisis predictivo avanzado.
+* Sistema de objetivos y logros.
+
+8. Criterios de éxito
+* El usuario comprende claramente cómo usa su tiempo.
+* El sistema genera conciencia sin enfoque punitivo.
+* La IA aporta valor explicativo y motivacional.
+
+Fin del documento
+

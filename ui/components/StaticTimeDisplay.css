@@ -1,0 +1,53 @@
+.static-time-container {
+    text-align: center;
+    padding: var(--space-lg) 0;
+}
+
+.static-time-label {
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    color: var(--color-text-secondary);
+    margin-bottom: var(--space-md);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+.static-time-display {
+    font-family: var(--font-display);
+    font-size: 4.5rem;
+    font-weight: 900;
+    color: var(--color-primary);
+    text-shadow:
+        0 0 20px var(--color-primary),
+        0 0 40px rgba(0, 212, 255, 0.5);
+    letter-spacing: 0.15em;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: var(--space-sm);
+    margin: var(--space-md) 0;
+}
+
+.time-digit {
+    display: inline-block;
+    min-width: 3ch;
+    text-align: center;
+    background: rgba(0, 212, 255, 0.1);
+    padding: var(--space-md) var(--space-lg);
+    border-radius: var(--radius-lg);
+    border: 2px solid var(--color-border);
+}
+
+.time-separator {
+    color: var(--color-accent);
+    opacity: 1;
+    font-weight: 900;
+}
+
+.time-suffix {
+    font-family: var(--font-body);
+    font-size: 1rem;
+    color: var(--color-text-secondary);
+    margin-top: var(--space-sm);
+    font-style: italic;
+}
