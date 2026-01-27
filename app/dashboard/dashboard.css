@@ -85,7 +85,57 @@
     margin-bottom: var(--space-2xl);
     text-align: center;
     box-shadow: var(--shadow-glow-strong);
-    animation: pulse-glow 3s infinite;
+    transition: all 0.3s ease;
+}
+
+/* Positive points state */
+.accumulated-time-card.positive {
+    border-color: rgba(0, 212, 255, 0.5);
+    box-shadow:
+        0 0 20px rgba(0, 212, 255, 0.3),
+        0 4px 10px rgba(0, 0, 0, 0.3);
+    animation: pulse-glow-positive 3s infinite;
+}
+
+@keyframes pulse-glow-positive {
+
+    0%,
+    100% {
+        box-shadow:
+            0 0 20px rgba(0, 212, 255, 0.3),
+            0 4px 10px rgba(0, 0, 0, 0.3);
+    }
+
+    50% {
+        box-shadow:
+            0 0 30px rgba(0, 212, 255, 0.5),
+            0 4px 15px rgba(0, 0, 0, 0.4);
+    }
+}
+
+/* Negative points state */
+.accumulated-time-card.negative {
+    border-color: rgba(255, 68, 68, 0.5);
+    box-shadow:
+        0 0 20px rgba(255, 68, 68, 0.3),
+        0 4px 10px rgba(0, 0, 0, 0.3);
+    animation: pulse-glow-negative 2s infinite;
+}
+
+@keyframes pulse-glow-negative {
+
+    0%,
+    100% {
+        box-shadow:
+            0 0 20px rgba(255, 68, 68, 0.3),
+            0 4px 10px rgba(0, 0, 0, 0.3);
+    }
+
+    50% {
+        box-shadow:
+            0 0 35px rgba(255, 68, 68, 0.5),
+            0 4px 15px rgba(0, 0, 0, 0.4);
+    }
 }
 
 .accumulated-label {

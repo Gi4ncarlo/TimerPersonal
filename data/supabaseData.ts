@@ -354,4 +354,60 @@ export const SupabaseDataStore = {
             }
         }
     },
+
+    // Leaderboard Stats
+    getLeaderboardStats: async (weekStart: string, weekEnd: string): Promise<any[]> => {
+        const { data, error } = await supabase
+            .from('leaderboard_stats')
+            .select('*')
+            .eq('week_start', weekStart)
+            .order('total_points', { ascending: false });
+
+        if (error) {
+            console.error('Error fetching leaderboard:', error);
+            return [];
+        }
+
+        return (data || []).map(stat => ({
+            id: stat.id,
+            userId: stat.user_id,
+            username: stat.username,
+            totalPoints: stat.total_points,
+            positiveActivities: stat.positive_activities,
+            negativeActivities: stat.negative_activities,
+            goalsCompleted: stat.goals_completed,
+            weekStart: stat.week_start,
+            weekEnd: stat.week_end,
+        }));
+    },
+
+    updateUserWeeklyStats: async (userId: string, username: string, weekStart: string, weekEnd: string) => {
+        // Get current week's stats
+        const records = await SupabaseDataStore.getRecordsByDateRange(weekStart, weekEnd);
+        const goals = await SupabaseDataStore.getGoals();
+
+        const totalPoints = records.reduce((sum, r) => sum + r.pointsCalculated, 0);
+        const positiveActivities = records.filter(r => r.pointsCalculated > 0).length;
+        const negativeActivities = records.filter(r => r.pointsCalculated < 0).length;
+        const goalsCompleted = goals.filter(g => g.isCompleted).length;
+
+        // Upsert stats
+        const { error } = await supabase
+            .from('leaderboard_stats')
+            .upsert({
+                user_id: userId,
+                username,
+                week_start: weekStart,
+                week_end: weekEnd,
+                total_points: totalPoints,
+                positive_activities: positiveActivities,
+                negative_activities: negativeActivities,
+                goals_completed: goalsCompleted,
+                updated_at: new Date().toISOString(),
+            }, {
+                onConflict: 'user_id,week_start'
+            });
+
+        if (error) console.error('Error updating weekly stats:', error);
+    },
 };

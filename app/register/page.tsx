@@ -32,16 +32,39 @@ export default function RegisterPage() {
         setIsLoading(true);
 
         try {
+            // IMPORTANT: Use the email field directly for auth
+            // Login expects ${username}@demo.com format, so we need consistency
+            console.log('🔐 Registrando usuario:', { username, email });
+
             // Register user in Supabase Auth
             const { data: authData, error: authError } = await supabase.auth.signUp({
                 email,
                 password,
+                options: {
+                    data: {
+                        username: username, // Store username in metadata
+                    }
+                }
+            });
+
+            console.log('✅ Auth Response:', {
+                user: authData.user?.id,
+                error: authError?.message,
+                session: !!authData.session
             });
 
             if (authError) throw authError;
 
             if (!authData.user) {
                 throw new Error('No se pudo crear el usuario');
+            }
+
+            // Check if email confirmation is required
+            if (!authData.session) {
+                setError('Por favor, revisa tu email para confirmar tu cuenta antes de iniciar sesión.');
+                console.log('⚠️ Email confirmation required');
+                setIsLoading(false);
+                return;
             }
 
             // Create user profile
@@ -52,6 +75,8 @@ export default function RegisterPage() {
                     username,
                     preferences: {},
                 });
+
+            console.log('👤 Profile created:', { error: profileError?.message });
 
             if (profileError) throw profileError;
 
@@ -75,13 +100,17 @@ export default function RegisterPage() {
                 .from('actions')
                 .insert(defaultActions.map(a => ({ ...a, user_id: authData.user!.id })));
 
+            console.log('🎯 Actions created:', { error: actionsError?.message });
+
             if (actionsError) throw actionsError;
+
+            console.log('✨ Registration complete! Redirecting to dashboard...');
 
             // Redirect to dashboard
             router.push('/dashboard');
         } catch (err: any) {
+            console.error('❌ Registration error:', err);
             setError(err.message || 'Error al registrar usuario');
-            console.error(err);
         } finally {
             setIsLoading(false);
         }
@@ -148,7 +177,7 @@ export default function RegisterPage() {
                             />
                         </div>
 
-                        {error && <p className="error-message">{error}</p>}
+                        {error && <p className="error-message" style={{ whiteSpace: 'pre-wrap', lineHeight: '1.5' }}>{error}</p>}
 
                         <button type="submit" className="login-button" disabled={isLoading}>
                             {isLoading ? 'Creando cuenta...' : 'Registrarse'}

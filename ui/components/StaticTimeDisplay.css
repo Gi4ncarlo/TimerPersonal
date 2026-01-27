@@ -1,6 +1,41 @@
 .static-time-container {
     text-align: center;
     padding: var(--space-lg) 0;
+    transition: all 0.3s ease;
+}
+
+/* Positive points styling - vibrant and energizing */
+.static-time-container.points-positive {
+    animation: pulse-positive 3s ease-in-out infinite;
+}
+
+@keyframes pulse-positive {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.02);
+    }
+}
+
+/* Negative points styling - alert and warning */
+.static-time-container.points-negative {
+    animation: pulse-negative 2s ease-in-out infinite;
+}
+
+@keyframes pulse-negative {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.85;
+    }
 }
 
 .static-time-label {
@@ -12,6 +47,67 @@
     letter-spacing: 0.1em;
 }
 
+/* Main points display */
+.static-points-display {
+    font-family: var(--font-display);
+    font-size: 4.5rem;
+    font-weight: 900;
+    display: flex;
+    justify-content: center;
+    align-items: baseline;
+    gap: var(--space-md);
+    margin: var(--space-md) 0;
+    transition: all 0.3s ease;
+}
+
+/* Positive points - bright cyan/blue glow */
+.points-positive .static-points-display {
+    color: var(--color-primary);
+    text-shadow:
+        0 0 20px var(--color-primary),
+        0 0 40px rgba(0, 212, 255, 0.5),
+        0 0 60px rgba(0, 212, 255, 0.3);
+}
+
+/* Negative points - red/orange glow */
+.points-negative .static-points-display {
+    color: #ff4444;
+    text-shadow:
+        0 0 20px #ff4444,
+        0 0 40px rgba(255, 68, 68, 0.5),
+        0 0 60px rgba(255, 68, 68, 0.3);
+}
+
+.points-value {
+    display: inline-block;
+    letter-spacing: 0.05em;
+}
+
+.points-unit {
+    font-size: 2.5rem;
+    opacity: 0.7;
+    font-weight: 700;
+    margin-left: -0.3em;
+}
+
+/* Suffix text */
+.points-suffix {
+    font-family: var(--font-body);
+    font-size: 1rem;
+    color: var(--color-text-secondary);
+    margin-top: var(--space-sm);
+    font-style: italic;
+}
+
+.points-positive .points-suffix {
+    color: var(--color-accent);
+}
+
+.points-negative .points-suffix {
+    color: #ff6b6b;
+}
+
+/* Legacy time display styles - kept for backward compatibility */
 .static-time-display {
     font-family: var(--font-display);
     font-size: 4.5rem;

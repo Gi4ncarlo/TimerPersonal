@@ -1,27 +1,29 @@
 import './StaticTimeDisplay.css';
 
 interface StaticTimeDisplayProps {
-    totalMinutes: number;
+    totalPoints: number; // Changed from totalMinutes to totalPoints
     label?: string;
 }
 
-export default function StaticTimeDisplay({ totalMinutes, label }: StaticTimeDisplayProps) {
-    const isPositive = totalMinutes >= 0;
-    const absMinutes = Math.abs(totalMinutes);
-    const hours = Math.floor(absMinutes / 60);
-    const minutes = absMinutes % 60;
+export default function StaticTimeDisplay({ totalPoints, label }: StaticTimeDisplayProps) {
+    const isPositive = totalPoints >= 0;
+    const absPoints = Math.abs(totalPoints);
 
-    const formatNumber = (num: number) => num.toString().padStart(2, '0');
+    // Format points with thousands separator for better readability
+    const formatPoints = (points: number) => {
+        return points.toLocaleString('es-ES');
+    };
 
     return (
-        <div className="static-time-container">
+        <div className={`static-time-container ${isPositive ? 'points-positive' : 'points-negative'}`}>
             {label && <p className="static-time-label">{label}</p>}
-            <div className="static-time-display">
-                <span className="time-digit">{formatNumber(hours)}</span>
-                <span className="time-separator">:</span>
-                <span className="time-digit">{formatNumber(minutes)}</span>
+            <div className="static-points-display">
+                <span className="points-value">{formatPoints(absPoints)}</span>
+                <span className="points-unit">pts</span>
             </div>
-            <p className="time-suffix">{isPositive ? 'horas disponibles' : 'horas en deuda'}</p>
+            <p className="points-suffix">
+                {isPositive ? 'puntos ganados' : 'puntos en deuda'}
+            </p>
         </div>
     );
 }

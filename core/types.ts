@@ -41,6 +41,8 @@ export interface Goal {
     targetValue: number;
     currentValue: number;
     actionId?: string; // Optional specific action constraint
+    metricType?: 'pages' | 'kilometers' | 'hours' | 'points' | 'activities'; // NEW: Type of metric to track
+    metricUnit?: string; // NEW: Display unit (e.g., "páginas", "km", "horas")
     startDate: string;
     endDate?: string;
     isCompleted: boolean;

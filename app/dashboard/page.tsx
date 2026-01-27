@@ -26,7 +26,7 @@ export default function Dashboard() {
 
     const [selectedAction, setSelectedAction] = useState<Action | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [accumulatedTimeMinutes, setAccumulatedTimeMinutes] = useState(0);
+    const [accumulatedPoints, setAccumulatedPoints] = useState(0); // Changed from accumulatedTimeMinutes
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
@@ -52,8 +52,9 @@ export default function Dashboard() {
             setRecords(fetchedRecords);
             setGoals(fetchedGoals);
 
+            // Calculate total points (already in points, no conversion needed)
             const totalPoints = fetchedRecords.reduce((sum, r) => sum + r.pointsCalculated, 0);
-            setAccumulatedTimeMinutes(totalPoints);
+            setAccumulatedPoints(totalPoints);
         } catch (error) {
             console.error('Error loading data:', error);
         } finally {
@@ -92,12 +93,15 @@ export default function Dashboard() {
         }
     };
 
-    const handleCreateGoal = async (title: string, targetValue: number) => {
+    const handleCreateGoal = async (title: string, targetValue: number, actionId?: string, metricType?: string, metricUnit?: string) => {
         try {
             await SupabaseDataStore.createGoal({
                 title,
-                type: 'count', // Defaulting to count/points for simplicity in this sprint
+                type: metricType === 'points' ? 'points' : metricType === 'hours' ? 'duration' : 'count',
                 targetValue,
+                actionId,
+                metricType: metricType as any,
+                metricUnit,
                 startDate: new Date().toISOString().split('T')[0],
             });
             await loadData();
@@ -169,6 +173,7 @@ export default function Dashboard() {
                     </div>
 
                     <div className="header-actions">
+                        <Link href="/leaderboard" className="nav-link">🏆 Leaderboard</Link>
                         <Link href="/estadisticas" className="nav-link">📊 Estadísticas</Link>
                         <Link href="/analisis-ia" className="nav-link">🤖 Análisis IA</Link>
                         <button className="logout-btn" onClick={handleLogout}>Salir</button>
@@ -180,17 +185,18 @@ export default function Dashboard() {
                 <div className="dashboard-grid-new">
                     {/* LEFT COLUMN */}
                     <div className="left-column">
-                        {/* Accumulated Time */}
-                        <div className="accumulated-time-card">
+                        {/* Accumulated Points */}
+                        <div className={`accumulated-time-card ${accumulatedPoints >= 0 ? 'positive' : 'negative'}`}>
                             <p className="accumulated-label">
-                                {accumulatedTimeMinutes >= 0 ? '✓ TIEMPO GANADO' : '⚠ DEUDA DE TIEMPO'}
+                                {accumulatedPoints >= 0 ? '✓ PUNTOS GANADOS' : '⚠ PUNTOS EN DEUDA'}
                             </p>
-                            <StaticTimeDisplay totalMinutes={accumulatedTimeMinutes} />
+                            <StaticTimeDisplay totalPoints={accumulatedPoints} />
                         </div>
 
                         {/* Goals Tracker */}
                         <GoalTracker
                             goals={goals}
+                            actions={actions}
                             onCreateGoal={handleCreateGoal}
                             onDeleteGoal={handleDeleteGoal}
                         />
