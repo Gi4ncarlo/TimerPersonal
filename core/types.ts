@@ -21,6 +21,7 @@ export interface DailyRecord {
     actionName: string;
     date: string; // ISO date string
     durationMinutes: number;
+    metricValue?: number; // Added for tracking pages, km, etc.
     pointsCalculated: number;
     notes?: string;
 }

@@ -61,6 +61,36 @@
     box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
 }
 
+.header-controls {
+    display: flex;
+    gap: var(--space-md);
+    align-items: center;
+}
+
+.refresh-btn {
+    font-family: var(--font-display);
+    font-size: 0.9rem;
+    padding: var(--space-sm) var(--space-lg);
+    background: transparent;
+    border: 1px solid var(--color-border);
+    color: var(--color-text-primary);
+    border-radius: var(--radius-md);
+    transition: var(--transition-fast);
+    letter-spacing: 0.05em;
+    cursor: pointer;
+}
+
+.refresh-btn:hover:not(:disabled) {
+    border-color: var(--color-positive);
+    color: var(--color-positive);
+    box-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
+}
+
+.refresh-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 @media (max-width: 768px) {
     .leaderboard-page {
         padding: var(--space-md);

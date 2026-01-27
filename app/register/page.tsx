@@ -73,6 +73,7 @@ export default function RegisterPage() {
                 .insert({
                     id: authData.user.id,
                     username,
+                    email, // Save email for login lookup
                     preferences: {},
                 });
 

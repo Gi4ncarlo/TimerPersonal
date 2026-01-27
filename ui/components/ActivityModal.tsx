@@ -5,7 +5,7 @@ interface ActivityModalProps {
     action: Action;
     isOpen: boolean;
     onClose: () => void;
-    onSubmit: (data: { durationMinutes: number; notes: string }) => void;
+    onSubmit: (data: { durationMinutes: number; metricValue: number; notes: string }) => void;
 }
 
 export default function ActivityModal({ action, isOpen, onClose, onSubmit }: ActivityModalProps) {
@@ -16,18 +16,21 @@ export default function ActivityModal({ action, isOpen, onClose, onSubmit }: Act
         const formData = new FormData(e.currentTarget);
 
         let durationMinutes = 0;
+        let metricValue = 0;
         let notes = '';
 
         switch (action.metadata?.inputType) {
             case 'hours':
                 const hours = parseFloat(formData.get('hours') as string || '0');
                 durationMinutes = hours * 60;
+                metricValue = hours;
                 notes = `${hours} horas`;
                 break;
 
             case 'pages':
                 const pages = parseInt(formData.get('pages') as string || '0');
-                durationMinutes = pages * (action.metadata.estimatedMinutesPerPage || 3);
+                durationMinutes = pages * (action.metadata?.estimatedMinutesPerPage || 3);
+                metricValue = pages;
                 notes = `${pages} páginas`;
                 break;
 
@@ -35,28 +38,32 @@ export default function ActivityModal({ action, isOpen, onClose, onSubmit }: Act
                 const km = parseFloat(formData.get('km') as string || '0');
                 const minutes = parseInt(formData.get('minutes') as string || '0');
                 durationMinutes = minutes;
+                metricValue = km;
                 notes = `${km} km en ${minutes} minutos`;
                 break;
 
             case 'time':
                 durationMinutes = parseInt(formData.get('minutes') as string || '0');
+                metricValue = durationMinutes;
                 notes = `${durationMinutes} minutos`;
                 break;
 
             case 'time-note':
                 durationMinutes = parseInt(formData.get('minutes') as string || '0');
+                metricValue = durationMinutes;
                 const task = formData.get('task') as string || '';
                 notes = `${durationMinutes} min - ${task}`;
                 break;
 
             case 'time-subject':
                 durationMinutes = parseInt(formData.get('minutes') as string || '0');
+                metricValue = durationMinutes;
                 const subject = formData.get('subject') as string || '';
                 notes = `${subject} (${durationMinutes} min)`;
                 break;
         }
 
-        onSubmit({ durationMinutes, notes });
+        onSubmit({ durationMinutes, metricValue, notes });
         onClose();
     };
 

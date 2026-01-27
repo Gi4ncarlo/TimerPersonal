@@ -11,6 +11,8 @@ interface LeaderboardEntry {
     positiveActivities: number;
     negativeActivities: number;
     goalsCompleted: number;
+    pointsLast24hPositive?: number;
+    pointsLast24hNegative?: number;
     weekStart: string;
     weekEnd: string;
 }
@@ -68,8 +70,8 @@ export default function Leaderboard({ currentEntry, entries, isLoading }: Leader
                 <div className="leaderboard-header">
                     <div className="header-cell rank-col">Pos</div>
                     <div className="header-cell username-col">Usuario</div>
-                    <div className="header-cell points-col">Puntos</div>
-                    <div className="header-cell activities-col">Act. (+)</div>
+                    <div className="header-cell points-col">Puntos Totales</div>
+                    <div className="header-cell points-24h-col">24h (+/-)</div>
                     <div className="header-cell goals-col">Objetivos</div>
                 </div>
 
@@ -93,14 +95,24 @@ export default function Leaderboard({ currentEntry, entries, isLoading }: Leader
                                 </div>
                                 <div className="row-cell points-col">
                                     <span className={entry.totalPoints >= 0 ? 'points-positive' : 'points-negative'}>
-                                        {entry.totalPoints.toLocaleString('es-ES')} pts
+                                        {Math.floor(entry.totalPoints).toLocaleString('es-ES')} pts
                                     </span>
                                 </div>
-                                <div className="row-cell activities-col">
-                                    {entry.positiveActivities}
+                                <div className="row-cell points-24h-col">
+                                    <div className="stats-24h">
+                                        {(entry.pointsLast24hPositive || 0) > 0 &&
+                                            <span className="stat-pos">+{Math.floor(entry.pointsLast24hPositive || 0)}</span>
+                                        }
+                                        {(entry.pointsLast24hNegative || 0) < 0 &&
+                                            <span className="stat-neg">{Math.floor(entry.pointsLast24hNegative || 0)}</span>
+                                        }
+                                        {!(entry.pointsLast24hPositive) && !(entry.pointsLast24hNegative) &&
+                                            <span className="stat-neutral">-</span>
+                                        }
+                                    </div>
                                 </div>
                                 <div className="row-cell goals-col">
-                                    {entry.goalsCompleted}
+                                    {entry.goalsCompleted} <span className="cell-label">obj.</span>
                                 </div>
                             </div>
                         );

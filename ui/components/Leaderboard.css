@@ -157,7 +157,7 @@
 
     .leaderboard-header,
     .leaderboard-row {
-        grid-template-columns: 60px 1fr 100px 70px 70px;
+        grid-template-columns: 50px 1fr 90px 80px 60px;
         gap: var(--space-xs);
         padding: var(--space-sm) var(--space-md);
     }
@@ -175,4 +175,34 @@
         font-size: 0.6rem;
         padding: 2px 6px;
     }
+}
+
+/* 24h Stats */
+.stats-24h {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.stat-pos {
+    color: var(--color-positive);
+}
+
+.stat-neg {
+    color: var(--color-negative);
+}
+
+.stat-neutral {
+    color: var(--color-text-muted);
+    opacity: 0.3;
+}
+
+.cell-label {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+    margin-left: 4px;
+    font-weight: normal;
 }

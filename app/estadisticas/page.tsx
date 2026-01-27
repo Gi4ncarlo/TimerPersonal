@@ -18,6 +18,8 @@ export default function EstadisticasPage() {
         loadStats();
     }, []);
 
+    const [isExpanded, setIsExpanded] = useState(false);
+
     const loadStats = async () => {
         try {
             // OPTIMIZATION: Fetch ALL records at once instead of 60 individual queries
@@ -87,11 +89,14 @@ export default function EstadisticasPage() {
 
     const selectedDayData = selectedDate ? stats.find(s => s.date === selectedDate) : null;
 
+    // Sort reverse for history view (newest first)
+    const historyData = [...stats].reverse();
+    const visibleHistory = isExpanded ? historyData : historyData.slice(0, 7);
+
     // Prepare chart data with actual values
     const chartData = stats.map(s => ({
         fecha: s.dateFormatted,
-        'Tiempo (min)': s.totalMinutes,
-        puntos: s.totalPoints,
+        'Puntos': Math.floor(s.totalPoints),
     }));
 
     // Calculate global stats from all records
@@ -106,7 +111,7 @@ export default function EstadisticasPage() {
                 <header className="stats-header">
                     <div>
                         <h1 className="stats-title">📊 Estadísticas</h1>
-                        <p className="stats-subtitle">Análisis de actividad y progreso (60 días)</p>
+                        <p className="stats-subtitle">Análisis de actividad y progreso</p>
                     </div>
                     <Link href="/dashboard" className="back-link">
                         ← Volver al Dashboard
@@ -116,13 +121,13 @@ export default function EstadisticasPage() {
                 {/* Global Stats */}
                 <div className="global-stats">
                     <div className="stat-box">
-                        <span className="stat-label">Balance Global</span>
+                        <span className="stat-label">Balance Global (60d)</span>
                         <span className={`stat-big ${globalBalance >= 0 ? 'positive' : 'negative'}`}>
-                            {globalBalance >= 0 ? '+' : ''}{Math.floor(Math.abs(globalBalance) / 60)}h {Math.abs(globalBalance) % 60}m
+                            {globalBalance >= 0 ? '+' : ''}{Math.floor(globalBalance)} pts
                         </span>
                     </div>
                     <div className="stat-box">
-                        <span className="stat-label">Días Activos (60d)</span>
+                        <span className="stat-label">Días Activos</span>
                         <span className="stat-big">{totalDaysWithActivity}/60</span>
                     </div>
                     <div className="stat-box">
@@ -134,7 +139,7 @@ export default function EstadisticasPage() {
                 {/* Charts */}
                 <div className="charts-section">
                     <div className="chart-card">
-                        <h3>Progreso de 60 Días (Tiempo Ganado/Perdido)</h3>
+                        <h3>Balance Diario (Puntos)</h3>
                         <ResponsiveContainer width="100%" height={300}>
                             <LineChart data={chartData}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
@@ -152,7 +157,7 @@ export default function EstadisticasPage() {
                                 <Legend />
                                 <Line
                                     type="monotone"
-                                    dataKey="Tiempo (min)"
+                                    dataKey="Puntos"
                                     stroke="#00d4ff"
                                     strokeWidth={2}
                                     dot={false}
@@ -161,35 +166,22 @@ export default function EstadisticasPage() {
                             </LineChart>
                         </ResponsiveContainer>
                     </div>
-
-                    <div className="chart-card">
-                        <h3>Balance Diario (Puntos)</h3>
-                        <ResponsiveContainer width="100%" height={300}>
-                            <BarChart data={chartData}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-                                <XAxis
-                                    dataKey="fecha"
-                                    stroke="#b8c5d6"
-                                    tick={{ fontSize: 10 }}
-                                    interval="preserveStartEnd"
-                                />
-                                <YAxis stroke="#b8c5d6" />
-                                <Tooltip
-                                    contentStyle={{ background: '#111a45', border: '1px solid #00d4ff' }}
-                                    labelStyle={{ color: '#00d4ff' }}
-                                />
-                                <Legend />
-                                <Bar dataKey="puntos" fill="#00d4ff" />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
                 </div>
 
                 {/* Calendar View */}
                 <div className="calendar-section">
-                    <h2 className="section-title">Historial de 60 Días</h2>
+                    <div className="section-header-row">
+                        <h2 className="section-title">Historial Reciente</h2>
+                        <button
+                            className="toggle-history-btn"
+                            onClick={() => setIsExpanded(!isExpanded)}
+                        >
+                            {isExpanded ? 'Ver menos (7 días)' : 'Ver historial completo (60 días)'}
+                        </button>
+                    </div>
+
                     <div className="calendar-grid">
-                        {stats.map((day) => (
+                        {visibleHistory.map((day) => (
                             <div
                                 key={day.date}
                                 className={`calendar-day ${day.isPositive ? 'positive-day' : 'negative-day'} ${selectedDate === day.date ? 'selected' : ''
@@ -197,10 +189,10 @@ export default function EstadisticasPage() {
                                 onClick={() => setSelectedDate(day.date === selectedDate ? null : day.date)}
                             >
                                 <div className="day-date-small">{format(parseISO(day.date), 'dd/MM')}</div>
-                                <div className="day-indicator-small">
-                                    {day.records.length > 0 ? (day.isPositive ? '✓' : '✗') : '○'}
-                                </div>
                                 <div className="day-main-activity">{day.mainActivity}</div>
+                                <div className={`day-points ${day.totalPoints >= 0 ? 'pos' : 'neg'}`}>
+                                    {day.totalPoints > 0 ? '+' : ''}{Math.floor(day.totalPoints)} pts
+                                </div>
                             </div>
                         ))}
                     </div>
@@ -215,7 +207,7 @@ export default function EstadisticasPage() {
                         <div className="detail-summary">
                             <span className={`detail-balance ${selectedDayData.isPositive ? 'positive' : 'negative'}`}>
                                 Balance: {selectedDayData.isPositive ? '+' : ''}
-                                {Math.floor(Math.abs(selectedDayData.totalMinutes) / 60)}h {Math.abs(selectedDayData.totalMinutes) % 60}m
+                                {Math.floor(selectedDayData.totalPoints)} pts
                             </span>
                             <span className="detail-count">{selectedDayData.records.length} actividades</span>
                         </div>
@@ -230,7 +222,7 @@ export default function EstadisticasPage() {
                                             <strong>{record.actionName}</strong>
                                             <span className={record.pointsCalculated >= 0 ? 'positive' : 'negative'}>
                                                 {record.pointsCalculated >= 0 ? '+' : ''}
-                                                {Math.floor(Math.abs(record.pointsCalculated) / 60)}h {Math.abs(record.pointsCalculated) % 60}m
+                                                {Math.floor(record.pointsCalculated)} pts
                                             </span>
                                         </div>
                                         <p className="detail-record-notes">{record.notes}</p>

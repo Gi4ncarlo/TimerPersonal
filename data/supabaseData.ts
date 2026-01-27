@@ -1,12 +1,27 @@
-// Supabase Data Store - Replacement for MockDataStore
 import { supabase } from '@/lib/supabase/client';
 import { Action, DailyRecord, User, Goal } from '@/core/types';
+import { startOfWeek, endOfWeek, format } from 'date-fns';
 
 export const SupabaseDataStore = {
     // Authentication
-    login: async (username: string, password: string): Promise<User | null> => {
-        // For demo using email convention
-        const email = `${username}@demo.com`;
+    login: async (usernameOrEmail: string, password: string): Promise<User | null> => {
+        let email = usernameOrEmail;
+
+        // If simple username, try to find associated email or fallback to demo
+        if (!email.includes('@')) {
+            const { data } = await supabase
+                .from('users')
+                .select('email')
+                .eq('username', usernameOrEmail)
+                .single();
+
+            if (data?.email) {
+                email = data.email;
+            } else {
+                // Fallback for legacy/demo users
+                email = `${usernameOrEmail}@demo.com`;
+            }
+        }
 
         const { data, error } = await supabase.auth.signInWithPassword({
             email,
@@ -137,6 +152,7 @@ export const SupabaseDataStore = {
             actionName: r.action_name,
             date: r.date,
             durationMinutes: r.duration_minutes,
+            metricValue: r.metric_value ? Number(r.metric_value) : undefined,
             pointsCalculated: Number(r.points_calculated),
             notes: r.notes,
         }));
@@ -205,6 +221,7 @@ export const SupabaseDataStore = {
                 date: record.date,
                 duration_minutes: record.durationMinutes,
                 points_calculated: record.pointsCalculated,
+                metric_value: record.metricValue || 0,
                 notes: record.notes,
             })
             .select()
@@ -222,8 +239,22 @@ export const SupabaseDataStore = {
             user.id,
             record.actionId,
             record.durationMinutes,
-            record.pointsCalculated
+            record.pointsCalculated,
+            record.metricValue
         );
+
+        // 4. Update Leaderboard Stats (Weekly)
+        const now = new Date();
+        const weekStart = format(startOfWeek(now, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+        const weekEnd = format(endOfWeek(now, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+
+        // We need the username. It's safe to fetch it or rely on app state, 
+        // but here we can fetch it briefly or pass it. 
+        // For efficiency, we might want to cache this, but for now we fetch.
+        const currentUser = await SupabaseDataStore.getCurrentUser();
+        if (currentUser) {
+            await SupabaseDataStore.updateUserWeeklyStats(user.id, currentUser.username, weekStart, weekEnd);
+        }
 
         return {
             id: data.id,
@@ -231,6 +262,7 @@ export const SupabaseDataStore = {
             actionName: data.action_name,
             date: data.date,
             durationMinutes: data.duration_minutes,
+            metricValue: Number(data.metric_value),
             pointsCalculated: Number(data.points_calculated),
             notes: data.notes,
         };
@@ -263,6 +295,8 @@ export const SupabaseDataStore = {
             targetValue: g.target_value,
             currentValue: g.current_value,
             actionId: g.action_id,
+            metricType: g.metric_type,
+            metricUnit: g.metric_unit,
             startDate: g.start_date,
             endDate: g.end_date,
             isCompleted: g.is_completed,
@@ -281,6 +315,8 @@ export const SupabaseDataStore = {
                 type: goal.type,
                 target_value: goal.targetValue,
                 action_id: goal.actionId,
+                metric_type: goal.metricType,
+                metric_unit: goal.metricUnit,
                 start_date: goal.startDate,
                 end_date: goal.endDate,
             })
@@ -297,6 +333,8 @@ export const SupabaseDataStore = {
             targetValue: data.target_value,
             currentValue: 0,
             actionId: data.action_id,
+            metricType: data.metric_type,
+            metricUnit: data.metric_unit,
             startDate: data.start_date,
             endDate: data.end_date,
             isCompleted: false,
@@ -313,7 +351,8 @@ export const SupabaseDataStore = {
         userId: string,
         actionId: string,
         duration: number,
-        points: number
+        points: number,
+        metricValue?: number
     ): Promise<void> => {
         // Fetch active goals
         const { data: goals } = await supabase
@@ -331,9 +370,26 @@ export const SupabaseDataStore = {
             if (goal.action_id && goal.action_id !== actionId) continue;
 
             // Calculate increments
-            if (goal.type === 'duration') increment = duration;
-            else if (goal.type === 'points') increment = points;
-            else if (goal.type === 'count') increment = 1;
+            if (metricValue && goal.metric_type) {
+                // If goal has a specific metric type (e.g., 'kilometers', 'pages'), use metricValue
+                // This covers cases like "Run 54km" -> 20km activity
+                increment = metricValue;
+            } else if (goal.type === 'duration') {
+                // Handle unit conversion: Input is usually minutes.
+                // If goal unit is hours, convert.
+                if (goal.metric_unit === 'horas' || goal.metric_unit === 'hours') {
+                    increment = duration / 60;
+                } else {
+                    increment = duration;
+                }
+            } else if (goal.type === 'points') {
+                increment = points;
+            } else if (goal.type === 'count') {
+                increment = 1;
+            } else if (metricValue) {
+                // Fallback
+                increment = metricValue;
+            }
 
             if (increment > 0) {
                 const newValue = goal.current_value + increment;
@@ -376,20 +432,45 @@ export const SupabaseDataStore = {
             positiveActivities: stat.positive_activities,
             negativeActivities: stat.negative_activities,
             goalsCompleted: stat.goals_completed,
+            pointsLast24hPositive: stat.points_last_24h_positive || 0,
+            pointsLast24hNegative: stat.points_last_24h_negative || 0,
             weekStart: stat.week_start,
             weekEnd: stat.week_end,
         }));
     },
 
     updateUserWeeklyStats: async (userId: string, username: string, weekStart: string, weekEnd: string) => {
-        // Get current week's stats
+        // Get current week's records
         const records = await SupabaseDataStore.getRecordsByDateRange(weekStart, weekEnd);
+
+        // Get goals matching week (approximate, or just check completed ones updated recently)
+        // For simplicity, we count ALL completed active goals or filter by updated_at if available. 
+        // Better: count goals completed in this timeframe. 
+        // For now, let's count *currently* completed goals as the user requested.
         const goals = await SupabaseDataStore.getGoals();
 
         const totalPoints = records.reduce((sum, r) => sum + r.pointsCalculated, 0);
         const positiveActivities = records.filter(r => r.pointsCalculated > 0).length;
         const negativeActivities = records.filter(r => r.pointsCalculated < 0).length;
         const goalsCompleted = goals.filter(g => g.isCompleted).length;
+
+        // Calculate 24h stats
+        const yesterday = new Date();
+        yesterday.setHours(yesterday.getHours() - 24);
+        const yesterdayIso = yesterday.toISOString();
+
+        const recentRecords = records.filter(r => new Date(r.date) >= yesterday || r.date >= yesterdayIso.split('T')[0]); // Approximate date check
+        // Ideally we need full timestamp in records for 24h precision, but date is stored as YYYY-MM-DD.
+        // We'll use the daily records of TODAY (and maybe yesterday if close?). 
+        // Let's stick to "Today's" points for simple "Last 24h" proxy if time is missing, 
+        // OR better: Since we don't have time in DailyRecord, we can only approximate "Since Yesterday".
+        // Let's assume 'date' is enough filter for "last 2 days" but the UI says "24h".
+        // Let's calculate positive/negativesum for the *current date* as a proxy for "recent performance".
+        const todayStr = new Date().toISOString().split('T')[0];
+        const recentStats = records.filter(r => r.date === todayStr);
+
+        const pointsLast24hPos = recentStats.filter(r => r.pointsCalculated > 0).reduce((sum, r) => sum + r.pointsCalculated, 0);
+        const pointsLast24hNeg = recentStats.filter(r => r.pointsCalculated < 0).reduce((sum, r) => sum + r.pointsCalculated, 0);
 
         // Upsert stats
         const { error } = await supabase
@@ -403,6 +484,8 @@ export const SupabaseDataStore = {
                 positive_activities: positiveActivities,
                 negative_activities: negativeActivities,
                 goals_completed: goalsCompleted,
+                points_last_24h_positive: pointsLast24hPos,
+                points_last_24h_negative: pointsLast24hNeg,
                 updated_at: new Date().toISOString(),
             }, {
                 onConflict: 'user_id,week_start'

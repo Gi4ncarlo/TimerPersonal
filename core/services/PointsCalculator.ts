@@ -34,7 +34,8 @@ export class PointsCalculator {
         action: Action,
         durationMinutes: number,
         date: string,
-        notes?: string
+        notes?: string,
+        metricValue?: number
     ): Omit<DailyRecord, 'id'> {
         const pointsCalculated = this.calculatePoints(action, durationMinutes);
 
@@ -43,6 +44,7 @@ export class PointsCalculator {
             actionName: action.name,
             date,
             durationMinutes,
+            metricValue,
             pointsCalculated,
             notes,
         };

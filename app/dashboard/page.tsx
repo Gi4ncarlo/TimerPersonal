@@ -73,7 +73,7 @@ export default function Dashboard() {
         await handleModalSubmit({ durationMinutes: minutes, notes: note }, action);
     };
 
-    const handleModalSubmit = async (data: { durationMinutes: number; notes: string }, overrideAction?: Action) => {
+    const handleModalSubmit = async (data: { durationMinutes: number; metricValue?: number; notes: string }, overrideAction?: Action) => {
         const actionToUse = overrideAction || selectedAction;
         if (!actionToUse) return;
 
@@ -82,7 +82,8 @@ export default function Dashboard() {
                 actionToUse,
                 data.durationMinutes,
                 new Date().toISOString().split('T')[0],
-                data.notes
+                data.notes,
+                data.metricValue
             );
 
             await SupabaseDataStore.createRecord(newRecord);
@@ -216,7 +217,7 @@ export default function Dashboard() {
                                             </div>
                                             <p className="record-notes">{record.notes}</p>
                                             <p className={`record-impact ${record.pointsCalculated >= 0 ? 'positive' : 'negative'}`}>
-                                                {record.pointsCalculated >= 0 ? '+' : ''}{Math.floor(record.pointsCalculated / 60)}h {Math.abs(record.pointsCalculated) % 60}m
+                                                {record.pointsCalculated >= 0 ? '+' : ''}{Math.floor(record.pointsCalculated)} pts
                                             </p>
                                         </div>
                                     ))}
@@ -227,7 +228,7 @@ export default function Dashboard() {
                                     <span>Balance de hoy:</span>
                                     <strong className={todayBalance.totalPoints >= 0 ? 'positive' : 'negative'}>
                                         {todayBalance.totalPoints >= 0 ? '+' : ''}
-                                        {Math.floor(Math.abs(todayBalance.timeGainedMinutes) / 60)}h {Math.abs(todayBalance.timeGainedMinutes) % 60}m
+                                        {Math.floor(todayBalance.totalPoints)} pts
                                     </strong>
                                 </p>
                             </div>

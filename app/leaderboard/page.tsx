@@ -6,7 +6,7 @@ import Link from 'next/link';
 import Leaderboard from '@/ui/components/Leaderboard';
 import QuestCard from '@/ui/components/QuestCard';
 import { SupabaseDataStore } from '@/data/supabaseData';
-import { startOfWeek, endOfWeek } from 'date-fns';
+import { startOfWeek, endOfWeek, format } from 'date-fns';
 import './leaderboard.css';
 
 interface LeaderboardEntry {
@@ -32,6 +32,7 @@ export default function LeaderboardPage() {
     }, []);
 
     const loadLeaderboard = async () => {
+        setIsLoading(true);
         try {
             const user = await SupabaseDataStore.getCurrentUser();
             if (!user) {
@@ -40,8 +41,9 @@ export default function LeaderboardPage() {
             }
 
             const now = new Date();
-            const weekStart = startOfWeek(now).toISOString().split('T')[0];
-            const weekEnd = endOfWeek(now).toISOString().split('T')[0];
+            // Match the DataStore logic: Week starts on Monday
+            const weekStart = format(startOfWeek(now, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+            const weekEnd = format(endOfWeek(now, { weekStartsOn: 1 }), 'yyyy-MM-dd');
 
             // This function will be implemented in supabaseData.ts
             const leaderboardData = await SupabaseDataStore.getLeaderboardStats(weekStart, weekEnd);
@@ -64,9 +66,14 @@ export default function LeaderboardPage() {
                         <h1 className="page-title">🏆 Clasificación Semanal</h1>
                         <p className="page-subtitle">Ranking de usuarios por puntos</p>
                     </div>
-                    <Link href="/dashboard" className="back-link">
-                        ← Volver al Dashboard
-                    </Link>
+                    <div className="header-controls">
+                        <button onClick={loadLeaderboard} className="refresh-btn" disabled={isLoading}>
+                            {isLoading ? '...' : '🔄 Refrescar'}
+                        </button>
+                        <Link href="/dashboard" className="back-link">
+                            ← Volver al Dashboard
+                        </Link>
+                    </div>
                 </header>
 
                 <QuestCard title="LEADERBOARD" subtitle="Semana actual">
