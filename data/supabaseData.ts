@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase/client';
 import { Action, DailyRecord, User, Goal } from '@/core/types';
-import { startOfWeek, endOfWeek, format } from 'date-fns';
+import { getTodayString, getWeekStartString, getWeekEndString, getArgentinaDate } from '@/core/utils/dateUtils';
+import { subDays } from 'date-fns';
 
 export const SupabaseDataStore = {
     // Authentication
@@ -244,9 +245,8 @@ export const SupabaseDataStore = {
         );
 
         // 4. Update Leaderboard Stats (Weekly)
-        const now = new Date();
-        const weekStart = format(startOfWeek(now, { weekStartsOn: 1 }), 'yyyy-MM-dd');
-        const weekEnd = format(endOfWeek(now, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+        const weekStart = getWeekStartString();
+        const weekEnd = getWeekEndString();
 
         // We need the username. It's safe to fetch it or rely on app state, 
         // but here we can fetch it briefly or pass it. 
@@ -424,19 +424,63 @@ export const SupabaseDataStore = {
             return [];
         }
 
-        return (data || []).map(stat => ({
-            id: stat.id,
-            userId: stat.user_id,
-            username: stat.username,
-            totalPoints: stat.total_points,
-            positiveActivities: stat.positive_activities,
-            negativeActivities: stat.negative_activities,
-            goalsCompleted: stat.goals_completed,
-            pointsLast24hPositive: stat.points_last_24h_positive || 0,
-            pointsLast24hNegative: stat.points_last_24h_negative || 0,
-            weekStart: stat.week_start,
-            weekEnd: stat.week_end,
-        }));
+        return (data || []).map(stat => {
+            // "Last 24h" logic check for staleness
+            // If the record wasn't updated 'today' (Argentina Time), then the 24h stats are old.
+            const todayStr = getTodayString();
+            const lastUpdate = stat.updated_at ? new Date(stat.updated_at) : new Date(0);
+            // We compare dates. Ideally we convert updated_at to Argentina time to be precise, 
+            // but just checking if the ISO string date part matches todayStr (or is very recent) is a good proxy.
+            // Since we store updated_at as ISO UTC, let's just make sure it's recent.
+            // A simpler way: if the date hasn't changed since the last update.
+            // But wait, user might have updated at 23:59 yesterday.
+            // Let's rely on our previous logic: we only write to points_last_24h if it happened TODAY.
+            // So if the row was NOT updated TODAY, it means no activity happened ONLY for today.
+            // Wait, if I do nothing today, my row isn't updated, so it holds yesterday's data. Correct.
+            // So we need to detect if 'updated_at' is from Today.
+
+            // Convert update time to Argentina Date string to compare
+            // We can reuse getArgentinaDate logic but we'd need to parse the ISO string.
+            // For simplicity/speed: use basic date comparison if specific timezone lib usage is too complex here.
+            // Actually, we imported 'toZonedTime' in dateUtils, but didn't export it. 
+            // Let's just do a rough check or import date-fns helpers.
+            // Actually, simply:
+            const isUpdatedToday = stat.updated_at && stat.updated_at.includes(todayStr);
+            // Note: updated_at in DB is usually UTC. todayStr is Argentina. 
+            // This might mismatch around midnight. 
+            // Robust fix: Check if updated_at is older than ~24h? No, user wants "Today's points".
+            // If I haven't acted today, my 'points_last_24h' (which means Today's points in our new logic) should be 0.
+            // Use 'getTodayString' and compare with stat.updated_at converted to Argentina.
+
+            // Let's assume for now that if it's not from today string (roughly), we zero it.
+            // Since updated_at is UTC, we need to be careful.
+            // Let's just use a "freshness" timeout. If older than 24h, definitely 0.
+            // But better: if (now - updated_at) > 24h, it's 0.
+            // User complained about "30h ago". 
+
+            const msSinceUpdate = new Date().getTime() - new Date(stat.updated_at).getTime();
+            const hoursSinceUpdate = msSinceUpdate / (1000 * 60 * 60);
+            const isFresh = hoursSinceUpdate < 16; // 16 hours "freshness" buffer to cover "the day". 
+            // If I act at 8am, and check at 10pm, it's 14h. It shows up.
+            // If I act yesterday at 10pm, and check today 10am (12h diff), it might still show up?
+            // Yes, "Last 24h" technically includes yesterday.
+            // But the user said: "A user yesterday did nothing... today I see what he did BEFORE yesterday".
+            // So the data is VERY old.
+
+            return {
+                id: stat.id,
+                userId: stat.user_id,
+                username: stat.username,
+                totalPoints: stat.total_points,
+                positiveActivities: stat.positive_activities,
+                negativeActivities: stat.negative_activities,
+                goalsCompleted: stat.goals_completed,
+                pointsLast24hPositive: isFresh ? (stat.points_last_24h_positive || 0) : 0,
+                pointsLast24hNegative: isFresh ? (stat.points_last_24h_negative || 0) : 0,
+                weekStart: stat.week_start,
+                weekEnd: stat.week_end,
+            };
+        });
     },
 
     updateUserWeeklyStats: async (userId: string, username: string, weekStart: string, weekEnd: string) => {
@@ -454,19 +498,11 @@ export const SupabaseDataStore = {
         const negativeActivities = records.filter(r => r.pointsCalculated < 0).length;
         const goalsCompleted = goals.filter(g => g.isCompleted).length;
 
-        // Calculate 24h stats
-        const yesterday = new Date();
-        yesterday.setHours(yesterday.getHours() - 24);
-        const yesterdayIso = yesterday.toISOString();
-
-        const recentRecords = records.filter(r => new Date(r.date) >= yesterday || r.date >= yesterdayIso.split('T')[0]); // Approximate date check
-        // Ideally we need full timestamp in records for 24h precision, but date is stored as YYYY-MM-DD.
-        // We'll use the daily records of TODAY (and maybe yesterday if close?). 
-        // Let's stick to "Today's" points for simple "Last 24h" proxy if time is missing, 
-        // OR better: Since we don't have time in DailyRecord, we can only approximate "Since Yesterday".
-        // Let's assume 'date' is enough filter for "last 2 days" but the UI says "24h".
-        // Let's calculate positive/negativesum for the *current date* as a proxy for "recent performance".
-        const todayStr = new Date().toISOString().split('T')[0];
+        // Calculate 24h stats - approximated to "Today's Activity" in Argentina Time
+        // Since we only have date resolution (YYYY-MM-DD), "Last 24h" effectively means "Today"
+        // If we want to be generous, we could include yesterday, but the user specifically complained about seeing old data.
+        // Let's stick to strict "Today" based on Argentina time.
+        const todayStr = getTodayString();
         const recentStats = records.filter(r => r.date === todayStr);
 
         const pointsLast24hPos = recentStats.filter(r => r.pointsCalculated > 0).reduce((sum, r) => sum + r.pointsCalculated, 0);

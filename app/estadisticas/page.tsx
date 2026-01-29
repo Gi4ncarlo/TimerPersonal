@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { SupabaseDataStore } from '@/data/supabaseData';
 import { BalanceCalculator } from '@/core/services/BalanceCalculator';
 import { format, subDays, parseISO } from 'date-fns';
+import { getArgentinaDate } from '@/core/utils/dateUtils';
 import { es } from 'date-fns/locale';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import './estadisticas.css';
@@ -23,8 +24,9 @@ export default function EstadisticasPage() {
     const loadStats = async () => {
         try {
             // OPTIMIZATION: Fetch ALL records at once instead of 60 individual queries
-            const startDate = format(subDays(new Date(), 59), 'yyyy-MM-dd');
-            const endDate = format(new Date(), 'yyyy-MM-dd');
+            const nowArg = getArgentinaDate();
+            const startDate = format(subDays(nowArg, 59), 'yyyy-MM-dd');
+            const endDate = format(nowArg, 'yyyy-MM-dd');
 
             const allRecords = await SupabaseDataStore.getRecordsByDateRange(startDate, endDate);
 
@@ -40,7 +42,7 @@ export default function EstadisticasPage() {
             // Generate stats for last 60 days
             const statsData = [];
             for (let i = 59; i >= 0; i--) {
-                const date = format(subDays(new Date(), i), 'yyyy-MM-dd');
+                const date = format(subDays(nowArg, i), 'yyyy-MM-dd');
                 const dayRecords = recordsByDate[date] || [];
                 const balance = BalanceCalculator.getDailyBalance(dayRecords, parseISO(date));
 

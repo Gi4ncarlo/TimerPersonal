@@ -15,6 +15,7 @@ import { PointsCalculator } from '@/core/services/PointsCalculator';
 import { Action, DailyRecord, Goal } from '@/core/types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { getTodayString, getArgentinaDate } from '@/core/utils/dateUtils';
 import './dashboard.css';
 
 export default function Dashboard() {
@@ -160,8 +161,8 @@ export default function Dashboard() {
 
     if (isLoading) return <div className="loading">Cargando...</div>;
 
-    const todayRecords = records.filter(r => r.date === new Date().toISOString().split('T')[0]);
-    const todayBalance = BalanceCalculator.getDailyBalance(todayRecords, new Date());
+    const todayRecords = records.filter(r => r.date === getTodayString());
+    const todayBalance = BalanceCalculator.getDailyBalance(todayRecords, getArgentinaDate());
 
     return (
         <main className="dashboard">

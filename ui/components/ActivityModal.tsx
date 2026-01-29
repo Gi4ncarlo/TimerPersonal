@@ -77,9 +77,9 @@ export default function ActivityModal({ action, isOpen, onClose, onSubmit }: Act
                             id="hours"
                             name="hours"
                             type="number"
-                            step="0.5"
-                            min="0"
-                            placeholder="Ej: 2.5"
+                            step="0.1"
+                            min="0.1"
+                            placeholder="Ej: 0.5"
                             required
                             autoFocus
                         />
