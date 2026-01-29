@@ -102,6 +102,11 @@
     background: rgba(255, 255, 255, 0.08);
 }
 
+.goal-select-input option {
+    background-color: #0d1930;
+    color: #fff;
+}
+
 .goal-input-row {
     display: flex;
     gap: var(--space-md);

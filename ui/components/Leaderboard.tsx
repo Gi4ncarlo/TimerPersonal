@@ -21,9 +21,10 @@ interface LeaderboardProps {
     currentEntry?: LeaderboardEntry;
     entries: LeaderboardEntry[];
     isLoading?: boolean;
+    onRowClick?: (entry: LeaderboardEntry) => void;
 }
 
-export default function Leaderboard({ currentEntry, entries, isLoading }: LeaderboardProps) {
+export default function Leaderboard({ currentEntry, entries, isLoading, onRowClick }: LeaderboardProps) {
     const [sortedEntries, setSortedEntries] = useState<LeaderboardEntry[]>([]);
 
     useEffect(() => {
@@ -84,6 +85,8 @@ export default function Leaderboard({ currentEntry, entries, isLoading }: Leader
                             <div
                                 key={entry.id}
                                 className={`leaderboard-row ${getRankClass(rank)} ${isCurrentUser ? 'current-user' : ''}`}
+                                onClick={() => onRowClick && onRowClick(entry)}
+                                style={{ cursor: onRowClick ? 'pointer' : 'default' }}
                             >
                                 <div className="row-cell rank-col">
                                     <span className="rank-number">{rank}</span>

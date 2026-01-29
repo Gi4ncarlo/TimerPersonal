@@ -6,7 +6,8 @@ import Link from 'next/link';
 import Leaderboard from '@/ui/components/Leaderboard';
 import QuestCard from '@/ui/components/QuestCard';
 import { SupabaseDataStore } from '@/data/supabaseData';
-import { startOfWeek, endOfWeek, format } from 'date-fns';
+import { getWeekStartString, getWeekEndString } from '@/core/utils/dateUtils';
+import UserStatsModal from '@/ui/components/UserStatsModal';
 import './leaderboard.css';
 
 interface LeaderboardEntry {
@@ -17,6 +18,8 @@ interface LeaderboardEntry {
     positiveActivities: number;
     negativeActivities: number;
     goalsCompleted: number;
+    pointsLast24hPositive?: number;
+    pointsLast24hNegative?: number;
     weekStart: string;
     weekEnd: string;
 }
@@ -26,6 +29,7 @@ export default function LeaderboardPage() {
     const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
     const [currentEntry, setCurrentEntry] = useState<LeaderboardEntry | undefined>();
     const [isLoading, setIsLoading] = useState(true);
+    const [selectedUser, setSelectedUser] = useState<LeaderboardEntry | null>(null);
 
     useEffect(() => {
         loadLeaderboard();
@@ -40,10 +44,9 @@ export default function LeaderboardPage() {
                 return;
             }
 
-            const now = new Date();
-            // Match the DataStore logic: Week starts on Monday
-            const weekStart = format(startOfWeek(now, { weekStartsOn: 1 }), 'yyyy-MM-dd');
-            const weekEnd = format(endOfWeek(now, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+            // Match the DataStore logic: Week starts on Monday (Argentina Time)
+            const weekStart = getWeekStartString();
+            const weekEnd = getWeekEndString();
 
             // This function will be implemented in supabaseData.ts
             const leaderboardData = await SupabaseDataStore.getLeaderboardStats(weekStart, weekEnd);
@@ -81,8 +84,17 @@ export default function LeaderboardPage() {
                         entries={entries}
                         currentEntry={currentEntry}
                         isLoading={isLoading}
+                        onRowClick={(entry) => setSelectedUser(entry)}
                     />
                 </QuestCard>
+
+                {selectedUser && (
+                    <UserStatsModal
+                        entry={selectedUser}
+                        isOpen={!!selectedUser}
+                        onClose={() => setSelectedUser(null)}
+                    />
+                )}
             </div>
         </main>
     );

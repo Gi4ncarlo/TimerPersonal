@@ -1,0 +1,41 @@
+import { toZonedTime, format } from 'date-fns-tz';
+
+const TIMEZONE = 'America/Argentina/Buenos_Aires';
+
+/**
+ * Returns the current date in Argentina timezone.
+ */
+export const getArgentinaDate = (): Date => {
+    return toZonedTime(new Date(), TIMEZONE);
+};
+
+/**
+ * Returns the current date as a YYYY-MM-DD string in Argentina timezone.
+ */
+export const getTodayString = (): string => {
+    return format(toZonedTime(new Date(), TIMEZONE), 'yyyy-MM-dd', { timeZone: TIMEZONE });
+};
+
+/**
+ * Returns the start of the current week (Monday) in Argentina timezone as YYYY-MM-DD.
+ */
+// Start of week logic can be tricky with timezones. 
+// We want the Monday of the current week in Argentina.
+export const getWeekStartString = (): string => {
+    const now = getArgentinaDate();
+    const day = now.getDay(); // 0 (Sun) to 6 (Sat)
+    const diff = now.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
+    const monday = new Date(now.setDate(diff));
+    return format(monday, 'yyyy-MM-dd', { timeZone: TIMEZONE });
+};
+
+/**
+ * Returns the end of the current week (Sunday) in Argentina timezone as YYYY-MM-DD.
+ */
+export const getWeekEndString = (): string => {
+    const now = getArgentinaDate();
+    const day = now.getDay();
+    const diff = now.getDate() - day + (day === 0 ? 0 : 7); // adjust when day is sunday
+    const sunday = new Date(now.setDate(diff));
+    return format(sunday, 'yyyy-MM-dd', { timeZone: TIMEZONE });
+};
