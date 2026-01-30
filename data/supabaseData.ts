@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase/client';
-import { Action, DailyRecord, User, Goal } from '@/core/types';
+import { Action, DailyRecord, User, Goal, Strike } from '@/core/types';
 import { getTodayString, getWeekStartString, getWeekEndString, getArgentinaDate } from '@/core/utils/dateUtils';
 import { subDays } from 'date-fns';
 
@@ -152,6 +152,7 @@ export const SupabaseDataStore = {
             actionId: r.action_id,
             actionName: r.action_name,
             date: r.date,
+            timestamp: r.timestamp,
             durationMinutes: r.duration_minutes,
             metricValue: r.metric_value ? Number(r.metric_value) : undefined,
             pointsCalculated: Number(r.points_calculated),
@@ -168,7 +169,7 @@ export const SupabaseDataStore = {
             .select('*')
             .eq('user_id', user.id)
             .eq('date', date)
-            .order('created_at', { ascending: true });
+            .order('timestamp', { ascending: true });
 
         if (error || !data) return [];
 
@@ -177,6 +178,7 @@ export const SupabaseDataStore = {
             actionId: r.action_id,
             actionName: r.action_name,
             date: r.date,
+            timestamp: r.timestamp,
             durationMinutes: r.duration_minutes,
             pointsCalculated: Number(r.points_calculated),
             notes: r.notes,
@@ -202,6 +204,7 @@ export const SupabaseDataStore = {
             actionId: r.action_id,
             actionName: r.action_name,
             date: r.date,
+            timestamp: r.timestamp,
             durationMinutes: r.duration_minutes,
             pointsCalculated: Number(r.points_calculated),
             notes: r.notes,
@@ -220,6 +223,7 @@ export const SupabaseDataStore = {
                 action_id: record.actionId,
                 action_name: record.actionName,
                 date: record.date,
+                timestamp: record.timestamp,
                 duration_minutes: record.durationMinutes,
                 points_calculated: record.pointsCalculated,
                 metric_value: record.metricValue || 0,
@@ -261,6 +265,7 @@ export const SupabaseDataStore = {
             actionId: data.action_id,
             actionName: data.action_name,
             date: data.date,
+            timestamp: data.timestamp,
             durationMinutes: data.duration_minutes,
             metricValue: Number(data.metric_value),
             pointsCalculated: Number(data.points_calculated),
@@ -528,5 +533,79 @@ export const SupabaseDataStore = {
             });
 
         if (error) console.error('Error updating weekly stats:', error);
+    },
+
+    // Strikes
+    getStrikes: async (): Promise<Strike[]> => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return [];
+
+        const { data, error } = await supabase
+            .from('strikes')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('strike_date', { ascending: false });
+
+        if (error || !data) return [];
+
+        return data.map(s => ({
+            id: s.id,
+            userId: s.user_id,
+            strikeDate: s.strike_date,
+            reason: s.reason,
+            detectedAt: s.detected_at,
+        }));
+    },
+
+    createStrike: async (strike: Omit<Strike, 'id' | 'detectedAt'>): Promise<Strike> => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('Not authenticated');
+
+        const { data, error } = await supabase
+            .from('strikes')
+            .insert({
+                user_id: user.id,
+                strike_date: strike.strikeDate,
+                reason: strike.reason,
+            })
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        return {
+            id: data.id,
+            userId: data.user_id,
+            strikeDate: data.strike_date,
+            reason: data.reason,
+            detectedAt: data.detected_at,
+        };
+    },
+
+    checkAndCreateStrike: async (date: string): Promise<Strike | null> => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return null;
+
+        // Check if strike already exists
+        const { data: existing } = await supabase
+            .from('strikes')
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('strike_date', date)
+            .single();
+
+        if (existing) return null;
+
+        // Create new strike
+        try {
+            return await SupabaseDataStore.createStrike({
+                userId: user.id,
+                strikeDate: date,
+                reason: 'Sin actividad registrada',
+            });
+        } catch (error) {
+            console.error('Error creating strike:', error);
+            return null;
+        }
     },
 };

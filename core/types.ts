@@ -19,7 +19,8 @@ export interface DailyRecord {
     id: string;
     actionId: string;
     actionName: string;
-    date: string; // ISO date string
+    date: string; // ISO date string (YYYY-MM-DD in Argentina timezone)
+    timestamp?: string; // ISO datetime string with timezone info
     durationMinutes: number;
     metricValue?: number; // Added for tracking pages, km, etc.
     pointsCalculated: number;
@@ -64,4 +65,19 @@ export interface Balance {
     periodEnd: string;   // ISO
     totalPoints: number;
     timeGainedMinutes: number;
+}
+
+export interface Strike {
+    id: string;
+    userId: string;
+    strikeDate: string; // YYYY-MM-DD
+    reason: string;
+    detectedAt: string; // ISO datetime
+}
+
+export interface StrikeStats {
+    totalStrikes: number;
+    currentStreak: number; // Días consecutivos sin strikes
+    longestStreak: number;
+    lastStrikeDate?: string;
 }
