@@ -9,10 +9,12 @@ import ActivityModal from '@/ui/components/ActivityModal';
 import StaticTimeDisplay from '@/ui/components/StaticTimeDisplay';
 import UserLevel from '@/ui/components/UserLevel';
 import GoalTracker from '@/ui/components/GoalTracker';
+import StrikeWarning from '@/ui/components/StrikeWarning';
 import { SupabaseDataStore } from '@/data/supabaseData';
 import { BalanceCalculator } from '@/core/services/BalanceCalculator';
 import { PointsCalculator } from '@/core/services/PointsCalculator';
-import { Action, DailyRecord, Goal } from '@/core/types';
+import { StrikeDetector } from '@/core/services/StrikeDetector';
+import { Action, DailyRecord, Goal, Strike } from '@/core/types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { getTodayString, getArgentinaDate } from '@/core/utils/dateUtils';
@@ -27,8 +29,12 @@ export default function Dashboard() {
 
     const [selectedAction, setSelectedAction] = useState<Action | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [accumulatedPoints, setAccumulatedPoints] = useState(0); // Changed from accumulatedTimeMinutes
+    const [accumulatedPoints, setAccumulatedPoints] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
+
+    // Strike State
+    const [latestStrike, setLatestStrike] = useState<Strike | null>(null);
+    const [showStrikeWarning, setShowStrikeWarning] = useState(false);
 
     useEffect(() => {
         loadData();
@@ -56,6 +62,17 @@ export default function Dashboard() {
             // Calculate total points (already in points, no conversion needed)
             const totalPoints = fetchedRecords.reduce((sum, r) => sum + r.pointsCalculated, 0);
             setAccumulatedPoints(totalPoints);
+
+            // Check for strikes (yesterday)
+            const strikeCheck = StrikeDetector.detectYesterdayStrike(fetchedRecords);
+            if (strikeCheck.hasStrike) {
+                // Try to create strike (it handles duplication)
+                const newStrike = await SupabaseDataStore.checkAndCreateStrike(strikeCheck.date);
+                if (newStrike) {
+                    setLatestStrike(newStrike);
+                    setShowStrikeWarning(true);
+                }
+            }
         } catch (error) {
             console.error('Error loading data:', error);
         } finally {
@@ -68,10 +85,10 @@ export default function Dashboard() {
         setIsModalOpen(true);
     };
 
-    const handleQuickAdd = async (actionId: string, minutes: number, note: string) => {
+    const handleQuickAdd = async (actionId: string, minutes: number, note: string, metricValue?: number) => {
         const action = actions.find(a => a.id === actionId);
         if (!action) return;
-        await handleModalSubmit({ durationMinutes: minutes, notes: note }, action);
+        await handleModalSubmit({ durationMinutes: minutes, metricValue, notes: note }, action);
     };
 
     const handleModalSubmit = async (data: { durationMinutes: number; metricValue?: number; notes: string }, overrideAction?: Action) => {
@@ -79,10 +96,12 @@ export default function Dashboard() {
         if (!actionToUse) return;
 
         try {
+            // PointsCalculator.createRecord now defaults to getTodayString() for date
+            // and generates timestamp automatically in Argentina timezone
             const newRecord = PointsCalculator.createRecord(
                 actionToUse,
                 data.durationMinutes,
-                new Date().toISOString().split('T')[0],
+                undefined, // Let it default to getTodayString()
                 data.notes,
                 data.metricValue
             );
@@ -151,7 +170,7 @@ export default function Dashboard() {
                     </button>
                 )}
                 {readAction && (
-                    <button className="quick-add-btn" onClick={() => handleQuickAdd(readAction.id, 30, '10 páginas (aprox)')}>
+                    <button className="quick-add-btn" onClick={() => handleQuickAdd(readAction.id, 30, '10 páginas (aprox)', 10)}>
                         ⚡ Leer 10 pág
                     </button>
                 )}
@@ -177,6 +196,7 @@ export default function Dashboard() {
                     <div className="header-actions">
                         <Link href="/leaderboard" className="nav-link">🏆 Leaderboard</Link>
                         <Link href="/estadisticas" className="nav-link">📊 Estadísticas</Link>
+                        <Link href="/strikes" className="nav-link" style={{ color: '#ff4444', borderColor: '#ff4444' }}>⚠️ Strikes</Link>
                         <Link href="/analisis-ia" className="nav-link">🤖 Análisis IA</Link>
                         <button className="logout-btn" onClick={handleLogout}>Salir</button>
                     </div>
@@ -210,18 +230,32 @@ export default function Dashboard() {
                                 <p className="no-records">No hay actividades hoy</p>
                             ) : (
                                 <div className="records-list">
-                                    {todayRecords.map(record => (
-                                        <div key={record.id} className="record-item">
-                                            <div className="record-header">
-                                                <span className="record-name">{record.actionName}</span>
-                                                <button className="record-delete" onClick={() => handleDeleteRecord(record.id)}>✕</button>
+                                    {todayRecords.map(record => {
+                                        // Format timestamp to show time
+                                        let timeStr = '';
+                                        if (record.timestamp) {
+                                            const recordDate = new Date(record.timestamp);
+                                            timeStr = recordDate.toLocaleTimeString('es-AR', {
+                                                hour: '2-digit',
+                                                minute: '2-digit',
+                                                hour12: false
+                                            });
+                                        }
+
+                                        return (
+                                            <div key={record.id} className="record-item">
+                                                <div className="record-header">
+                                                    <span className="record-name">{record.actionName}</span>
+                                                    <button className="record-delete" onClick={() => handleDeleteRecord(record.id)}>✕</button>
+                                                </div>
+                                                {timeStr && <p className="record-time">{timeStr}</p>}
+                                                <p className="record-notes">{record.notes}</p>
+                                                <p className={`record-impact ${record.pointsCalculated >= 0 ? 'positive' : 'negative'}`}>
+                                                    {record.pointsCalculated >= 0 ? '+' : ''}{Math.floor(record.pointsCalculated)} pts
+                                                </p>
                                             </div>
-                                            <p className="record-notes">{record.notes}</p>
-                                            <p className={`record-impact ${record.pointsCalculated >= 0 ? 'positive' : 'negative'}`}>
-                                                {record.pointsCalculated >= 0 ? '+' : ''}{Math.floor(record.pointsCalculated)} pts
-                                            </p>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             )}
                             <div className="today-summary">
@@ -264,6 +298,13 @@ export default function Dashboard() {
                     isOpen={isModalOpen}
                     onClose={() => setIsModalOpen(false)}
                     onSubmit={(data) => handleModalSubmit(data)}
+                />
+            )}
+
+            {showStrikeWarning && latestStrike && (
+                <StrikeWarning
+                    strikeDate={latestStrike.strikeDate}
+                    onDismiss={() => setShowStrikeWarning(false)}
                 />
             )}
         </main>

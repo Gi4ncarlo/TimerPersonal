@@ -1,5 +1,6 @@
 // Pure calculation service - No side effects, immutable
 import { Action, DailyRecord } from '../types';
+import { getTodayString, getArgentinaDate } from '../utils/dateUtils';
 
 export class PointsCalculator {
     /**
@@ -26,23 +27,25 @@ export class PointsCalculator {
      * Create a daily record with calculated points
      * @param action - The action performed
      * @param durationMinutes - Duration
-     * @param date - Date of the activity
+     * @param date - Date of the activity (optional, defaults to today in Argentina timezone)
      * @param notes - Optional notes
-     * @returns New DailyRecord with calculated points
+     * @returns New DailyRecord with calculated points and timestamp
      */
     static createRecord(
         action: Action,
         durationMinutes: number,
-        date: string,
+        date?: string,
         notes?: string,
         metricValue?: number
     ): Omit<DailyRecord, 'id'> {
         const pointsCalculated = this.calculatePoints(action, durationMinutes);
+        const now = getArgentinaDate();
 
         return {
             actionId: action.id,
             actionName: action.name,
-            date,
+            date: date || getTodayString(),
+            timestamp: now.toISOString(),
             durationMinutes,
             metricValue,
             pointsCalculated,
