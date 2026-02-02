@@ -3,79 +3,95 @@
 .dashboard {
     min-height: 100vh;
     padding: var(--space-2xl);
-    background: radial-gradient(circle at top right, rgba(0, 212, 255, 0.05), transparent),
-        radial-gradient(circle at bottom left, rgba(17, 26, 69, 0.4), var(--color-background));
+    background: radial-gradient(circle at top right, rgba(139, 92, 246, 0.08), transparent),
+        radial-gradient(circle at bottom left, rgba(26, 31, 46, 0.6), var(--color-background));
 }
 
 .dashboard-container-new {
-    max-width: 1300px;
+    max-width: 1400px;
     margin: 0 auto;
 }
 
 .dashboard-header {
     display: flex;
     justify-content: space-between;
-    align-items: flex-end;
+    align-items: flex-start;
     margin-bottom: var(--space-3xl);
+    gap: var(--space-2xl);
     flex-wrap: wrap;
-    gap: var(--space-xl);
+}
+
+.title-area {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
 }
 
 .header-actions {
     display: flex;
     gap: var(--space-md);
     align-items: center;
+    flex-wrap: wrap;
 }
 
 .nav-link {
     font-family: var(--font-display);
-    font-size: 0.9rem;
+    font-size: var(--font-sm);
+    font-weight: 600;
     padding: var(--space-sm) var(--space-lg);
-    background: transparent;
-    border: 1px solid var(--color-border);
+    background: var(--color-background-card);
+    border: 1px solid var(--color-border-light);
     color: var(--color-text-secondary);
     border-radius: var(--radius-md);
-    transition: var(--transition-fast);
-    letter-spacing: 0.05em;
+    transition: all var(--transition-normal);
+    letter-spacing: 0.03em;
     text-decoration: none;
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    white-space: nowrap;
 }
 
 .nav-link:hover {
     border-color: var(--color-primary);
     color: var(--color-primary);
-    box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+    background: var(--color-background-card-hover);
+    box-shadow: 0 0 16px var(--color-primary-glow);
+    transform: translateY(-1px);
 }
 
 .main-title {
     font-family: var(--font-display);
-    font-size: 3rem;
-    font-weight: 900;
-    letter-spacing: 0.1em;
-    color: var(--color-primary);
-    text-shadow:
-        0 0 30px var(--color-primary),
-        0 0 60px rgba(0, 212, 255, 0.4);
+    font-size: var(--font-4xl);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
     margin: 0;
 }
 
 .logout-btn {
     font-family: var(--font-display);
-    font-size: 0.9rem;
+    font-size: var(--font-sm);
+    font-weight: 600;
     padding: var(--space-sm) var(--space-lg);
-    background: transparent;
-    border: 1px solid var(--color-border);
+    background: var(--color-background-card);
+    border: 1px solid var(--color-border-light);
     color: var(--color-text-secondary);
     border-radius: var(--radius-md);
     cursor: pointer;
-    transition: var(--transition-fast);
-    letter-spacing: 0.05em;
+    transition: all var(--transition-normal);
+    letter-spacing: 0.03em;
 }
 
 .logout-btn:hover {
     border-color: var(--color-negative);
     color: var(--color-negative);
-    box-shadow: 0 0 10px rgba(255, 68, 102, 0.3);
+    background: rgba(239, 68, 68, 0.05);
+    box-shadow: 0 0 16px var(--color-negative-glow);
+    transform: translateY(-1px);
 }
 
 .accumulated-time-card {

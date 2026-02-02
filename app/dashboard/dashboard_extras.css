@@ -1,38 +1,42 @@
-/* Add to existing dashboard.css */
-
-.title-area {
-    display: flex;
-    align-items: center;
-    gap: var(--space-xl);
-}
+/* Dashboard Extras - Quick Add and Layout Enhancements */
 
 .quick-add-bar {
     display: flex;
     gap: var(--space-md);
-    margin-bottom: var(--space-lg);
+    margin-bottom: var(--space-2xl);
     flex-wrap: wrap;
+    padding: var(--space-md);
+    background: var(--color-background-card);
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--radius-lg);
 }
 
 .quick-add-btn {
-    background: rgba(0, 212, 255, 0.1);
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(139, 92, 246, 0.05));
     border: 1px solid var(--color-primary);
     color: var(--color-primary);
-    padding: 8px 16px;
+    padding: var(--space-sm) var(--space-lg);
     border-radius: var(--radius-md);
     font-family: var(--font-display);
+    font-size: var(--font-sm);
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all var(--transition-normal);
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--space-xs);
+    white-space: nowrap;
 }
 
 .quick-add-btn:hover {
-    background: var(--color-primary);
-    color: var(--color-background);
-    box-shadow: 0 0 15px var(--color-primary-glow);
+    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+    color: white;
+    box-shadow: 0 0 20px var(--color-primary-glow);
     transform: translateY(-2px);
+}
+
+.quick-add-btn:active {
+    transform: translateY(0);
 }
 
 .loading {
@@ -41,30 +45,42 @@
     align-items: center;
     justify-content: center;
     color: var(--color-text-secondary);
+    font-family: var(--font-display);
+    font-size: var(--font-lg);
 }
 
 /* Adjust grid for new layout */
 .dashboard-grid-new {
     display: grid;
-    grid-template-columns: 1fr 350px;
-    /* Wider left column for complex components */
-    gap: var(--space-xl);
+    grid-template-columns: 1fr 400px;
+    gap: var(--space-2xl);
 }
 
 .left-column {
     display: flex;
     flex-direction: column;
-    gap: var(--space-xl);
+    gap: var(--space-2xl);
 }
 
-@media (max-width: 1000px) {
+.actions-panel {
+    display: flex;
+    flex-direction: column;
+}
+
+@media (max-width: 1200px) {
     .dashboard-grid-new {
         grid-template-columns: 1fr;
     }
+}
 
-    .title-area {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: var(--space-md);
+@media (max-width: 768px) {
+    .quick-add-bar {
+        padding: var(--space-sm);
+        gap: var(--space-sm);
+    }
+
+    .quick-add-btn {
+        font-size: var(--font-xs);
+        padding: var(--space-xs) var(--space-md);
     }
 }

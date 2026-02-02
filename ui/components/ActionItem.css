@@ -41,6 +41,13 @@
     gap: var(--space-md);
 }
 
+.action-emoji {
+    margin-right: 8px;
+    font-size: 1.4rem;
+    display: flex;
+    align-items: center;
+}
+
 .action-name {
     font-family: var(--font-body);
     font-size: 0.95rem;
