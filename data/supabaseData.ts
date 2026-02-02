@@ -13,8 +13,8 @@ export const SupabaseDataStore = {
             const { data } = await supabase
                 .from('users')
                 .select('email')
-                .eq('username', usernameOrEmail)
-                .single();
+                .ilike('username', usernameOrEmail) // Case insensitive lookup
+                .maybeSingle(); // Use maybeSingle to avoid 406 if multiple matches (should be unique) or none
 
             if (data?.email) {
                 email = data.email;
@@ -56,7 +56,42 @@ export const SupabaseDataStore = {
             preferences: profile.preferences || {},
             level: profile.level || 1,
             xp: profile.xp || 0,
+            avatarUrl: profile.avatar_url,
         };
+    },
+
+    updatePassword: async (newPassword: string): Promise<{ success: boolean; error?: string }> => {
+        const { error } = await supabase.auth.updateUser({ password: newPassword });
+        if (error) return { success: false, error: error.message };
+        return { success: true };
+    },
+
+    updateProfilePicture: async (userId: string, avatarUrl: string): Promise<{ success: boolean; error?: string }> => {
+        const { error } = await supabase
+            .from('users')
+            .update({ avatar_url: avatarUrl })
+            .eq('id', userId);
+
+        if (error) return { success: false, error: error.message };
+        return { success: true };
+    },
+
+    uploadAvatar: async (userId: string, file: File): Promise<{ url: string | null; error?: string }> => {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${userId}-${Math.random()}.${fileExt}`;
+        const filePath = `${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+            .from('avatars')
+            .upload(filePath, file);
+
+        if (uploadError) return { url: null, error: uploadError.message };
+
+        const { data } = supabase.storage
+            .from('avatars')
+            .getPublicUrl(filePath);
+
+        return { url: data.publicUrl };
     },
 
     updateUserProgress: async (userId: string, xpToAdd: number): Promise<void> => {
@@ -429,48 +464,16 @@ export const SupabaseDataStore = {
             return [];
         }
 
-        return (data || []).map(stat => {
+        const result = (data || []).map(stat => {
             // "Last 24h" logic check for staleness
             // If the record wasn't updated 'today' (Argentina Time), then the 24h stats are old.
             const todayStr = getTodayString();
             const lastUpdate = stat.updated_at ? new Date(stat.updated_at) : new Date(0);
-            // We compare dates. Ideally we convert updated_at to Argentina time to be precise, 
-            // but just checking if the ISO string date part matches todayStr (or is very recent) is a good proxy.
-            // Since we store updated_at as ISO UTC, let's just make sure it's recent.
-            // A simpler way: if the date hasn't changed since the last update.
-            // But wait, user might have updated at 23:59 yesterday.
-            // Let's rely on our previous logic: we only write to points_last_24h if it happened TODAY.
-            // So if the row was NOT updated TODAY, it means no activity happened ONLY for today.
-            // Wait, if I do nothing today, my row isn't updated, so it holds yesterday's data. Correct.
-            // So we need to detect if 'updated_at' is from Today.
 
-            // Convert update time to Argentina Date string to compare
-            // We can reuse getArgentinaDate logic but we'd need to parse the ISO string.
-            // For simplicity/speed: use basic date comparison if specific timezone lib usage is too complex here.
-            // Actually, we imported 'toZonedTime' in dateUtils, but didn't export it. 
-            // Let's just do a rough check or import date-fns helpers.
-            // Actually, simply:
-            const isUpdatedToday = stat.updated_at && stat.updated_at.includes(todayStr);
-            // Note: updated_at in DB is usually UTC. todayStr is Argentina. 
-            // This might mismatch around midnight. 
-            // Robust fix: Check if updated_at is older than ~24h? No, user wants "Today's points".
-            // If I haven't acted today, my 'points_last_24h' (which means Today's points in our new logic) should be 0.
-            // Use 'getTodayString' and compare with stat.updated_at converted to Argentina.
-
-            // Let's assume for now that if it's not from today string (roughly), we zero it.
-            // Since updated_at is UTC, we need to be careful.
-            // Let's just use a "freshness" timeout. If older than 24h, definitely 0.
-            // But better: if (now - updated_at) > 24h, it's 0.
-            // User complained about "30h ago". 
-
+            // Check freshness
             const msSinceUpdate = new Date().getTime() - new Date(stat.updated_at).getTime();
             const hoursSinceUpdate = msSinceUpdate / (1000 * 60 * 60);
-            const isFresh = hoursSinceUpdate < 16; // 16 hours "freshness" buffer to cover "the day". 
-            // If I act at 8am, and check at 10pm, it's 14h. It shows up.
-            // If I act yesterday at 10pm, and check today 10am (12h diff), it might still show up?
-            // Yes, "Last 24h" technically includes yesterday.
-            // But the user said: "A user yesterday did nothing... today I see what he did BEFORE yesterday".
-            // So the data is VERY old.
+            const isFresh = hoursSinceUpdate < 16;
 
             return {
                 id: stat.id,
@@ -482,10 +485,111 @@ export const SupabaseDataStore = {
                 goalsCompleted: stat.goals_completed,
                 pointsLast24hPositive: isFresh ? (stat.points_last_24h_positive || 0) : 0,
                 pointsLast24hNegative: isFresh ? (stat.points_last_24h_negative || 0) : 0,
+                strikes: stat.strikes || 0,
                 weekStart: stat.week_start,
                 weekEnd: stat.week_end,
             };
         });
+
+        // Fallback: If strikes are consistently 0 (column might trigger error or be missing if select * didn't catch it properly or migration failed),
+        // we might want to fetch them manually. 
+        // However, since we couldn't migrate, the select * might not have 'strikes'.
+        // Let's do a manual fetch of strikes for this week for the users in the leaderboard to be safe.
+        // Actually, let's fetch ALL strikes for the users to show "Total Strikes" or "Weekly Strikes"?
+        // Request said: "una columna ... muestren la cantidad de strykes que tiene el usuario". 
+        // usually implies TOTAL strikes.
+
+        const userIds = data?.map(d => d.user_id) || [];
+        if (userIds.length > 0) {
+            const { data: userData } = await supabase
+                .from('users')
+                .select('id, avatar_url')
+                .in('id', userIds);
+
+            const { data: strikesData } = await supabase
+                .from('strikes')
+                .select('user_id')
+                .in('user_id', userIds);
+
+            const userMap = (userData || []).reduce((acc, curr) => {
+                acc[curr.id] = curr.avatar_url;
+                return acc;
+            }, {} as Record<string, string>);
+
+            const strikeCounts = (strikesData || []).reduce((acc, curr) => {
+                acc[curr.user_id] = (acc[curr.user_id] || 0) + 1;
+                return acc;
+            }, {} as Record<string, number>);
+
+            return result.map(r => ({
+                ...r,
+                avatarUrl: userMap[r.userId],
+                strikes: strikeCounts[r.userId] || 0
+            }));
+        }
+
+        return result;
+    },
+
+    getAllTimeLeaderboard: async (): Promise<any[]> => {
+        // Since we don't have a pre-aggregated table for all-time, we might need to aggregate on the fly.
+        // Or we can use the 'users' table if we kept total XP there? 
+        // Users table has 'xp' which is basically total points (if points = xp).
+        // Let's check: updateUserProgress updates 'xp' with 'xpToAdd'.
+        // createRecord calls updateUserProgress with 'durationMinutes' only if points positive?
+        // Wait, line 239: updateUserProgress(user.id, record.durationMinutes).
+        // It seems XP is based on DURATION, not POINTS.
+        // Leaderboard is based on POINTS.
+        // So we cannot use 'users.xp' for Points Leaderboard.
+
+        // We need to sum daily_records.points_calculated for each user.
+        const { data, error } = await supabase
+            .from('daily_records')
+            .select('user_id, points_calculated');
+
+        if (error || !data) return [];
+
+        // Aggregate in memory (assuming not millions of records yet)
+        const aggregator: Record<string, number> = {};
+        data.forEach(r => {
+            aggregator[r.user_id] = (aggregator[r.user_id] || 0) + Number(r.points_calculated);
+        });
+
+        // We also need usernames.
+        const userIds = Object.keys(aggregator);
+        const { data: users } = await supabase
+            .from('users')
+            .select('id, username, avatar_url')
+            .in('id', userIds);
+
+        const userMap = (users || []).reduce((acc, u) => {
+            acc[u.id] = { username: u.username, avatarUrl: u.avatar_url };
+            return acc;
+        }, {} as Record<string, { username: string; avatarUrl: string }>);
+
+        // Also fetch strikes
+        const { data: strikesData } = await supabase.from('strikes').select('user_id');
+        const strikeCounts = (strikesData || []).reduce((acc, curr) => {
+            acc[curr.user_id] = (acc[curr.user_id] || 0) + 1;
+            return acc;
+        }, {} as Record<string, number>);
+
+
+        const leaderboard = Object.entries(aggregator).map(([userId, totalPoints]) => ({
+            id: userId, // distinct ID
+            userId,
+            username: userMap[userId]?.username || 'Usuario',
+            avatarUrl: userMap[userId]?.avatarUrl,
+            totalPoints,
+            positiveActivities: 0, // Not calculating for all-time details for now
+            negativeActivities: 0,
+            goalsCompleted: 0,
+            strikes: strikeCounts[userId] || 0,
+            weekStart: 'All Time',
+            weekEnd: 'All Time'
+        }));
+
+        return leaderboard.sort((a, b) => b.totalPoints - a.totalPoints);
     },
 
     updateUserWeeklyStats: async (userId: string, username: string, weekStart: string, weekEnd: string) => {
@@ -598,6 +702,9 @@ export const SupabaseDataStore = {
 
         // Create new strike
         try {
+            // Apply Penalty FIRST
+            await SupabaseDataStore.applyStrikePenalty(user.id, date);
+
             return await SupabaseDataStore.createStrike({
                 userId: user.id,
                 strikeDate: date,
@@ -607,5 +714,100 @@ export const SupabaseDataStore = {
             console.error('Error creating strike:', error);
             return null;
         }
+    },
+
+    applyStrikePenalty: async (userId: string, strikeDate: string): Promise<void> => {
+        // 1. Calculate Total Points up to strikeDate (inclusive or exclusive? usually up to that moment)
+        // Since granularity is Day, we typically sum everything BEFORE this penalty record.
+        // But to be precise "Total de puntos ganados que tenes actualmente".
+        // Use all records.
+        const { data: records, error } = await supabase
+            .from('daily_records')
+            .select('points_calculated')
+            .eq('user_id', userId);
+
+        if (error || !records) return;
+
+        const currentTotal = records.reduce((sum, r) => sum + Number(r.points_calculated), 0);
+
+        // If total is <= 0 using logic "points gained", maybe we don't penalize? 
+        // User said: "reste ... del total de puntos ganados". 
+        // If I have 100 points, penalty is 40. New total 60.
+        // If I have -50 points? Penalty logic might differ. 
+        // Assuming we only penalize POSITIVE totals or simply mathematically 40% of net.
+        // "40% del total de puntos ganados que tenes actualmente".
+        // Let's assume Net Total.
+        if (currentTotal <= 0) return;
+
+        const penalty = Math.floor(currentTotal * 0.40);
+
+        if (penalty > 0) {
+            console.log(`Applying strike penalty of ${penalty} points (Total: ${currentTotal})`);
+
+            // Create penalty record
+            await supabase.from('daily_records').insert({
+                user_id: userId,
+                action_name: 'Penalizacion por Stryke',
+                // No action_id needed or use a system one
+                date: getTodayString(), // The penalty happens NOW/TODAY when detected.
+                timestamp: new Date().toISOString(),
+                duration_minutes: 0,
+                points_calculated: -penalty,
+                notes: `Strike detectado el ${strikeDate}. Penalización del 40% sobre ${currentTotal} puntos.`
+            });
+
+            // We should also update leaderboard cache if needed, but the triggers/createRecord wrapper might handle it.
+            // But here we inserted directly to avoid 'createRecord' overhead or circular deps. 
+            // Let's manually trigger cache update
+            const weekStart = getWeekStartString();
+            const weekEnd = getWeekEndString();
+
+            // Fetch username
+            const { data: user } = await supabase.from('users').select('username').eq('id', userId).single();
+            if (user) {
+                await SupabaseDataStore.updateUserWeeklyStats(userId, user.username, weekStart, weekEnd);
+            }
+        }
+    },
+
+    scanAndApplyRetroactiveStrikes: async (): Promise<string> => {
+        // 1. Get all users? Or just current user if client-side? 
+        // Admin usually implies all users. 
+        // But Supabase client availability depends on RLS. 
+        // Assuming I'm logged in as someone who can see strikes or checking for MYSELF.
+        // "Revisa si algun usuario tiene strykes". 
+        // I will try to fetch ALL strikes if RLS allows, or iterate users if possible.
+        // For simplicity/safety in this app context, let's assume we scan for the current user 
+        // OR better, we try to fetch all strikes (admin mode).
+
+        const { data: strikes, error } = await supabase.from('strikes').select('*');
+
+        if (error || !strikes) return 'Error fetching strikes';
+
+        let appliedCount = 0;
+
+        for (const strike of strikes) {
+            // Check if penalty exists for this strike date (approx)
+            // We search for a record with action_name 'Penalizacion por Stryke' created around that date?
+            // Or just checks if ANY penalty exists for this user?
+            // A user might have multiple strikes. We need 1 penalty per strike.
+            // But we didn't link penalty to strike ID.
+            // Let's search for "Penalizacion por Stryke" records for this user.
+
+            const { data: penalties } = await supabase
+                .from('daily_records')
+                .select('*')
+                .eq('user_id', strike.user_id)
+                .eq('action_name', 'Penalizacion por Stryke')
+                .ilike('notes', `%${strike.strike_date}%`); // Ensure we match the specific strike via notes
+
+            if (!penalties || penalties.length === 0) {
+                // Apply penalty!
+                await SupabaseDataStore.applyStrikePenalty(strike.user_id, strike.strike_date);
+                appliedCount++;
+            }
+        }
+
+        return `Proceso completado. Se aplicaron ${appliedCount} penalizaciones retroactivas.`;
     },
 };

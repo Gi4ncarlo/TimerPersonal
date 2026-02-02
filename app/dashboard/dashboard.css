@@ -2,21 +2,23 @@
 
 .dashboard {
     min-height: 100vh;
-    padding: var(--space-xl);
+    padding: var(--space-2xl);
+    background: radial-gradient(circle at top right, rgba(0, 212, 255, 0.05), transparent),
+        radial-gradient(circle at bottom left, rgba(17, 26, 69, 0.4), var(--color-background));
 }
 
 .dashboard-container-new {
-    max-width: 1400px;
+    max-width: 1300px;
     margin: 0 auto;
 }
 
 .dashboard-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    margin-bottom: var(--space-2xl);
+    align-items: flex-end;
+    margin-bottom: var(--space-3xl);
     flex-wrap: wrap;
-    gap: var(--space-md);
+    gap: var(--space-xl);
 }
 
 .header-actions {

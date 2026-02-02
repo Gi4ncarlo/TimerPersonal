@@ -10,11 +10,12 @@ import StaticTimeDisplay from '@/ui/components/StaticTimeDisplay';
 import UserLevel from '@/ui/components/UserLevel';
 import GoalTracker from '@/ui/components/GoalTracker';
 import StrikeWarning from '@/ui/components/StrikeWarning';
+import ProfileModal from '@/ui/components/ProfileModal';
 import { SupabaseDataStore } from '@/data/supabaseData';
 import { BalanceCalculator } from '@/core/services/BalanceCalculator';
 import { PointsCalculator } from '@/core/services/PointsCalculator';
 import { StrikeDetector } from '@/core/services/StrikeDetector';
-import { Action, DailyRecord, Goal, Strike } from '@/core/types';
+import { Action, DailyRecord, Goal, Strike, User } from '@/core/types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { getTodayString, getArgentinaDate } from '@/core/utils/dateUtils';
@@ -26,9 +27,11 @@ export default function Dashboard() {
     const [records, setRecords] = useState<DailyRecord[]>([]);
     const [goals, setGoals] = useState<Goal[]>([]);
     const [userLevel, setUserLevel] = useState({ level: 1, xp: 0 });
+    const [currentUser, setCurrentUser] = useState<User | null>(null);
 
     const [selectedAction, setSelectedAction] = useState<Action | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
     const [accumulatedPoints, setAccumulatedPoints] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -47,6 +50,7 @@ export default function Dashboard() {
                 router.push('/login');
                 return;
             }
+            setCurrentUser(user);
             setUserLevel({ level: user.level, xp: user.xp });
 
             const [fetchedActions, fetchedRecords, fetchedGoals] = await Promise.all([
@@ -189,8 +193,13 @@ export default function Dashboard() {
                 <header className="dashboard-header">
                     <div className="title-area">
                         <h1 className="main-title">Actividad Personal</h1>
-                        {/* User Level Component */}
-                        <UserLevel level={userLevel.level} xp={userLevel.xp} />
+                        {/* User Level Component - Now Clickable */}
+                        <UserLevel
+                            level={userLevel.level}
+                            xp={userLevel.xp}
+                            avatarUrl={currentUser?.avatarUrl}
+                            onClick={() => setIsProfileModalOpen(true)}
+                        />
                     </div>
 
                     <div className="header-actions">
@@ -305,6 +314,15 @@ export default function Dashboard() {
                 <StrikeWarning
                     strikeDate={latestStrike.strikeDate}
                     onDismiss={() => setShowStrikeWarning(false)}
+                />
+            )}
+
+            {currentUser && (
+                <ProfileModal
+                    user={currentUser}
+                    isOpen={isProfileModalOpen}
+                    onClose={() => setIsProfileModalOpen(false)}
+                    onUpdate={() => loadData()}
                 />
             )}
         </main>

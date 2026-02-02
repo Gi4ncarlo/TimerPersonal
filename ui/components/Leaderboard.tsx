@@ -13,6 +13,8 @@ interface LeaderboardEntry {
     goalsCompleted: number;
     pointsLast24hPositive?: number;
     pointsLast24hNegative?: number;
+    strikes: number;
+    avatarUrl?: string;
     weekStart: string;
     weekEnd: string;
 }
@@ -72,6 +74,7 @@ export default function Leaderboard({ currentEntry, entries, isLoading, onRowCli
                     <div className="header-cell rank-col">Pos</div>
                     <div className="header-cell username-col">Usuario</div>
                     <div className="header-cell points-col">Puntos Totales</div>
+                    <div className="header-cell strikes-col">Strykes</div>
                     <div className="header-cell points-24h-col">24h (+/-)</div>
                     <div className="header-cell goals-col">Objetivos</div>
                 </div>
@@ -93,13 +96,29 @@ export default function Leaderboard({ currentEntry, entries, isLoading, onRowCli
                                     <span className="rank-emoji">{getRankEmoji(rank)}</span>
                                 </div>
                                 <div className="row-cell username-col">
-                                    {entry.username}
-                                    {isCurrentUser && <span className="current-badge">TÚ</span>}
+                                    <div className="avatar-info-group">
+                                        {entry.avatarUrl ? (
+                                            <img src={entry.avatarUrl} alt="" className="user-avatar-small" />
+                                        ) : (
+                                            <div className="avatar-placeholder-small">{entry.username.charAt(0).toUpperCase()}</div>
+                                        )}
+                                        <div className="user-info-stack">
+                                            <span className="username-text">{entry.username}</span>
+                                            {isCurrentUser && <span className="current-badge">TÚ</span>}
+                                        </div>
+                                    </div>
                                 </div>
                                 <div className="row-cell points-col">
                                     <span className={entry.totalPoints >= 0 ? 'points-positive' : 'points-negative'}>
                                         {Math.floor(entry.totalPoints).toLocaleString('es-ES')} pts
                                     </span>
+                                </div>
+                                <div className="row-cell strikes-col">
+                                    {entry.strikes > 0 ? (
+                                        <span className="strikes-count">⚡ {entry.strikes}</span>
+                                    ) : (
+                                        <span className="strikes-empty">-</span>
+                                    )}
                                 </div>
                                 <div className="row-cell points-24h-col">
                                     <div className="stats-24h">
