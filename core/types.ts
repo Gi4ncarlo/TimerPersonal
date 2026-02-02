@@ -33,6 +33,7 @@ export interface User {
     preferences: Record<string, any>;
     level: number;
     xp: number;
+    avatarUrl?: string;
 }
 
 export interface Goal {

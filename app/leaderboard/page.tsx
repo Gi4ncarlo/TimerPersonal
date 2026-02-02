@@ -20,12 +20,14 @@ interface LeaderboardEntry {
     goalsCompleted: number;
     pointsLast24hPositive?: number;
     pointsLast24hNegative?: number;
+    strikes: number;
     weekStart: string;
     weekEnd: string;
 }
 
 export default function LeaderboardPage() {
     const router = useRouter();
+    const [viewMode, setViewMode] = useState<'weekly' | 'general'>('weekly');
     const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
     const [currentEntry, setCurrentEntry] = useState<LeaderboardEntry | undefined>();
     const [isLoading, setIsLoading] = useState(true);
@@ -33,7 +35,7 @@ export default function LeaderboardPage() {
 
     useEffect(() => {
         loadLeaderboard();
-    }, []);
+    }, [viewMode]);
 
     const loadLeaderboard = async () => {
         setIsLoading(true);
@@ -44,12 +46,16 @@ export default function LeaderboardPage() {
                 return;
             }
 
-            // Match the DataStore logic: Week starts on Monday (Argentina Time)
-            const weekStart = getWeekStartString();
-            const weekEnd = getWeekEndString();
+            let leaderboardData;
 
-            // This function will be implemented in supabaseData.ts
-            const leaderboardData = await SupabaseDataStore.getLeaderboardStats(weekStart, weekEnd);
+            if (viewMode === 'general') {
+                leaderboardData = await SupabaseDataStore.getAllTimeLeaderboard();
+            } else {
+                // Match the DataStore logic: Week starts on Monday (Argentina Time)
+                const weekStart = getWeekStartString();
+                const weekEnd = getWeekEndString();
+                leaderboardData = await SupabaseDataStore.getLeaderboardStats(weekStart, weekEnd);
+            }
 
             setEntries(leaderboardData);
             const userEntry = leaderboardData.find(e => e.userId === user.id);
@@ -66,10 +72,24 @@ export default function LeaderboardPage() {
             <div className="leaderboard-container-wrapper">
                 <header className="page-header">
                     <div className="title-area">
-                        <h1 className="page-title">🏆 Clasificación Semanal</h1>
-                        <p className="page-subtitle">Ranking de usuarios por puntos</p>
+                        <h1 className="page-title">🏆 Clasificación {viewMode === 'weekly' ? 'Semanal' : 'General'}</h1>
+                        <p className="page-subtitle">{viewMode === 'weekly' ? 'Ranking de esta semana' : 'Ranking histórico de usuarios'}</p>
                     </div>
                     <div className="header-controls">
+                        <div className="view-toggle">
+                            <button
+                                className={`toggle-btn ${viewMode === 'weekly' ? 'active' : ''}`}
+                                onClick={() => setViewMode('weekly')}
+                            >
+                                Semanal
+                            </button>
+                            <button
+                                className={`toggle-btn ${viewMode === 'general' ? 'active' : ''}`}
+                                onClick={() => setViewMode('general')}
+                            >
+                                General
+                            </button>
+                        </div>
                         <button onClick={loadLeaderboard} className="refresh-btn" disabled={isLoading}>
                             {isLoading ? '...' : '🔄 Refrescar'}
                         </button>
