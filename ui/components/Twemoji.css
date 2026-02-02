@@ -1,0 +1,12 @@
+.twemoji-wrapper {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.twemoji-wrapper img {
+    height: 1.2em;
+    width: 1.2em;
+    margin: 0 0.1em;
+    vertical-align: -0.1em;
+}

@@ -76,23 +76,84 @@ export const SupabaseDataStore = {
         return { success: true };
     },
 
-    uploadAvatar: async (userId: string, file: File): Promise<{ url: string | null; error?: string }> => {
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${userId}-${Math.random()}.${fileExt}`;
-        const filePath = `${fileName}`;
+    updateUsername: async (userId: string, newUsername: string): Promise<{ success: boolean; error?: string }> => {
+        // Check if username is already taken
+        const { data: existing } = await supabase
+            .from('users')
+            .select('id')
+            .ilike('username', newUsername)
+            .neq('id', userId)
+            .maybeSingle();
 
-        const { error: uploadError } = await supabase.storage
-            .from('avatars')
-            .upload(filePath, file);
+        if (existing) {
+            return { success: false, error: 'Este nombre de usuario ya está en uso' };
+        }
 
-        if (uploadError) return { url: null, error: uploadError.message };
+        const { error } = await supabase
+            .from('users')
+            .update({ username: newUsername })
+            .eq('id', userId);
 
-        const { data } = supabase.storage
-            .from('avatars')
-            .getPublicUrl(filePath);
-
-        return { url: data.publicUrl };
+        if (error) return { success: false, error: error.message };
+        return { success: true };
     },
+
+    uploadAvatar: async (userId: string, file: File): Promise<{ url?: string; error?: string }> => {
+        try {
+            // Validate file type
+            const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+            if (!validTypes.includes(file.type)) {
+                return { error: 'Formato no válido. Solo se aceptan JPG, PNG o WEBP' };
+            }
+
+            // Validate file size (max 5MB)
+            const maxSize = 5 * 1024 * 1024;
+            if (file.size > maxSize) {
+                return { error: 'El archivo es muy grande. Máximo 5MB' };
+            }
+
+            // Generate unique filename
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${userId}-${Date.now()}.${fileExt}`;
+            const filePath = `avatars/${fileName}`;
+
+            // Delete old avatar if exists
+            const { data: userData } = await supabase
+                .from('users')
+                .select('avatar_url')
+                .eq('id', userId)
+                .single();
+
+            if (userData?.avatar_url) {
+                const oldPath = userData.avatar_url.split('/').pop();
+                if (oldPath) {
+                    await supabase.storage.from('avatars').remove([`avatars/${oldPath}`]);
+                }
+            }
+
+            // Upload new avatar
+            const { error: uploadError } = await supabase.storage
+                .from('avatars')
+                .upload(filePath, file, {
+                    cacheControl: '3600',
+                    upsert: true
+                });
+
+            if (uploadError) {
+                return { error: uploadError.message };
+            }
+
+            // Get public URL
+            const { data: { publicUrl } } = supabase.storage
+                .from('avatars')
+                .getPublicUrl(filePath);
+
+            return { url: publicUrl };
+        } catch (error) {
+            return { error: 'Error al subir la imagen' };
+        }
+    },
+
 
     updateUserProgress: async (userId: string, xpToAdd: number): Promise<void> => {
         // 1. Get current data
@@ -104,15 +165,39 @@ export const SupabaseDataStore = {
 
         if (!user) return;
 
+        const oldLevel = user.level || 1;
         const newXp = (user.xp || 0) + xpToAdd;
-        // Simple logic: Level = 1 + floor(XP / 1000)
-        const newLevel = 1 + Math.floor(newXp / 1000);
+        // Simple logic: Level = 1 + floor(XP / 1000), capped at MAX_LEVEL (50)
+        const newLevel = Math.min(50, 1 + Math.floor(newXp / 1000));
 
-        // 2. Update
+        // 2. Update user level and XP
         await supabase
             .from('users')
             .update({ xp: newXp, level: newLevel })
             .eq('id', userId);
+
+        // 3. Check for level up and award bonus points
+        if (newLevel > oldLevel) {
+            const { getLevelReward } = await import('@/core/config/levelRewards');
+
+            // Award bonus for each level gained
+            for (let level = oldLevel + 1; level <= newLevel; level++) {
+                const reward = getLevelReward(level);
+                if (reward && reward.bonusPoints > 0) {
+                    // Create a bonus record for the level up
+                    const { getTodayString } = await import('@/core/utils/dateUtils');
+                    await supabase.from('daily_records').insert({
+                        user_id: userId,
+                        action_name: `🎉 Bonus Nivel ${level}`,
+                        date: getTodayString(),
+                        timestamp: new Date().toISOString(),
+                        duration_minutes: 0,
+                        points_calculated: reward.bonusPoints,
+                        notes: `Recompensa por alcanzar ${reward.title} - Nivel ${level}`,
+                    });
+                }
+            }
+        }
     },
 
     // Actions
@@ -178,7 +263,8 @@ export const SupabaseDataStore = {
             .from('daily_records')
             .select('*')
             .eq('user_id', user.id)
-            .order('date', { ascending: false });
+            .order('date', { ascending: false })
+            .order('timestamp', { ascending: false });
 
         if (error || !data) return [];
 
@@ -532,64 +618,89 @@ export const SupabaseDataStore = {
     },
 
     getAllTimeLeaderboard: async (): Promise<any[]> => {
-        // Since we don't have a pre-aggregated table for all-time, we might need to aggregate on the fly.
-        // Or we can use the 'users' table if we kept total XP there? 
-        // Users table has 'xp' which is basically total points (if points = xp).
-        // Let's check: updateUserProgress updates 'xp' with 'xpToAdd'.
-        // createRecord calls updateUserProgress with 'durationMinutes' only if points positive?
-        // Wait, line 239: updateUserProgress(user.id, record.durationMinutes).
-        // It seems XP is based on DURATION, not POINTS.
-        // Leaderboard is based on POINTS.
-        // So we cannot use 'users.xp' for Points Leaderboard.
+        try {
+            // Fetch ALL users first
+            const { data: allUsers, error: usersError } = await supabase
+                .from('users')
+                .select('id, username, avatar_url');
 
-        // We need to sum daily_records.points_calculated for each user.
-        const { data, error } = await supabase
-            .from('daily_records')
-            .select('user_id, points_calculated');
+            console.log('getAllTimeLeaderboard - Total users:', allUsers?.length);
 
-        if (error || !data) return [];
+            if (usersError) {
+                console.error('Error fetching users:', usersError);
+                return [];
+            }
 
-        // Aggregate in memory (assuming not millions of records yet)
-        const aggregator: Record<string, number> = {};
-        data.forEach(r => {
-            aggregator[r.user_id] = (aggregator[r.user_id] || 0) + Number(r.points_calculated);
-        });
+            if (!allUsers || allUsers.length === 0) {
+                console.warn('No users found in database');
+                return [];
+            }
 
-        // We also need usernames.
-        const userIds = Object.keys(aggregator);
-        const { data: users } = await supabase
-            .from('users')
-            .select('id, username, avatar_url')
-            .in('id', userIds);
+            // Fetch all daily records
+            const { data: records } = await supabase
+                .from('daily_records')
+                .select('user_id, points_calculated');
 
-        const userMap = (users || []).reduce((acc, u) => {
-            acc[u.id] = { username: u.username, avatarUrl: u.avatar_url };
-            return acc;
-        }, {} as Record<string, { username: string; avatarUrl: string }>);
+            const pointsAggregator: Record<string, number> = {};
+            const positiveCountAggregator: Record<string, number> = {};
+            const negativeCountAggregator: Record<string, number> = {};
 
-        // Also fetch strikes
-        const { data: strikesData } = await supabase.from('strikes').select('user_id');
-        const strikeCounts = (strikesData || []).reduce((acc, curr) => {
-            acc[curr.user_id] = (acc[curr.user_id] || 0) + 1;
-            return acc;
-        }, {} as Record<string, number>);
+            if (records) {
+                records.forEach(r => {
+                    const points = Number(r.points_calculated);
+                    pointsAggregator[r.user_id] = (pointsAggregator[r.user_id] || 0) + points;
 
+                    if (points >= 0) {
+                        positiveCountAggregator[r.user_id] = (positiveCountAggregator[r.user_id] || 0) + 1;
+                    } else {
+                        negativeCountAggregator[r.user_id] = (negativeCountAggregator[r.user_id] || 0) + 1;
+                    }
+                });
+            }
 
-        const leaderboard = Object.entries(aggregator).map(([userId, totalPoints]) => ({
-            id: userId, // distinct ID
-            userId,
-            username: userMap[userId]?.username || 'Usuario',
-            avatarUrl: userMap[userId]?.avatarUrl,
-            totalPoints,
-            positiveActivities: 0, // Not calculating for all-time details for now
-            negativeActivities: 0,
-            goalsCompleted: 0,
-            strikes: strikeCounts[userId] || 0,
-            weekStart: 'All Time',
-            weekEnd: 'All Time'
-        }));
+            // Fetch completed goals
+            const { data: completedGoals } = await supabase
+                .from('goals')
+                .select('user_id')
+                .eq('is_completed', true);
 
-        return leaderboard.sort((a, b) => b.totalPoints - a.totalPoints);
+            const goalsAggregator: Record<string, number> = {};
+            if (completedGoals) {
+                completedGoals.forEach(g => {
+                    goalsAggregator[g.user_id] = (goalsAggregator[g.user_id] || 0) + 1;
+                });
+            }
+
+            // Fetch strikes for all users
+            const { data: strikesData } = await supabase.from('strikes').select('user_id');
+            const strikeCounts = (strikesData || []).reduce((acc, curr) => {
+                acc[curr.user_id] = (acc[curr.user_id] || 0) + 1;
+                return acc;
+            }, {} as Record<string, number>);
+
+            // Create leaderboard entry for EVERY user
+            const leaderboard = allUsers.map(user => ({
+                id: user.id,
+                userId: user.id,
+                username: user.username || 'Usuario',
+                avatarUrl: user.avatar_url,
+                totalPoints: pointsAggregator[user.id] || 0,
+                positiveActivities: positiveCountAggregator[user.id] || 0,
+                negativeActivities: negativeCountAggregator[user.id] || 0,
+                goalsCompleted: goalsAggregator[user.id] || 0,
+                strikes: strikeCounts[user.id] || 0,
+                weekStart: 'All Time',
+                weekEnd: 'All Time'
+            }));
+
+            console.log('getAllTimeLeaderboard - Leaderboard entries:', leaderboard.length);
+
+            // Sort by total points descending
+            return leaderboard.sort((a, b) => b.totalPoints - a.totalPoints);
+        } catch (error) {
+            console.error('getAllTimeLeaderboard error:', error);
+            return [];
+        }
     },
 
     updateUserWeeklyStats: async (userId: string, username: string, weekStart: string, weekEnd: string) => {

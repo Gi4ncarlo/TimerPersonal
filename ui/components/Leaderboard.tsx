@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Twemoji from './Twemoji';
 import './Leaderboard.css';
 
 interface LeaderboardEntry {
@@ -93,7 +94,9 @@ export default function Leaderboard({ currentEntry, entries, isLoading, onRowCli
                             >
                                 <div className="row-cell rank-col">
                                     <span className="rank-number">{rank}</span>
-                                    <span className="rank-emoji">{getRankEmoji(rank)}</span>
+                                    <span className="rank-emoji">
+                                        <Twemoji emoji={getRankEmoji(rank)} />
+                                    </span>
                                 </div>
                                 <div className="row-cell username-col">
                                     <div className="avatar-info-group">

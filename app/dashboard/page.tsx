@@ -8,6 +8,7 @@ import ActionItem from '@/ui/components/ActionItem';
 import ActivityModal from '@/ui/components/ActivityModal';
 import StaticTimeDisplay from '@/ui/components/StaticTimeDisplay';
 import UserLevel from '@/ui/components/UserLevel';
+import Twemoji from '@/ui/components/Twemoji';
 import GoalTracker from '@/ui/components/GoalTracker';
 import StrikeWarning from '@/ui/components/StrikeWarning';
 import ProfileModal from '@/ui/components/ProfileModal';
@@ -165,17 +166,17 @@ export default function Dashboard() {
             <div className="quick-add-bar">
                 {studyAction && (
                     <button className="quick-add-btn" onClick={() => handleQuickAdd(studyAction.id, 60, 'Sesión rápida 1h')}>
-                        ⚡ Estudiar 1h
+                        <Twemoji emoji="⚡" /> Estudiar 1h
                     </button>
                 )}
                 {workAction && (
                     <button className="quick-add-btn" onClick={() => handleQuickAdd(workAction.id, 30, 'Sprint 30min')}>
-                        ⚡ Trabajo 30m
+                        <Twemoji emoji="⚡" /> Trabajo 30m
                     </button>
                 )}
                 {readAction && (
                     <button className="quick-add-btn" onClick={() => handleQuickAdd(readAction.id, 30, '10 páginas (aprox)', 10)}>
-                        ⚡ Leer 10 pág
+                        <Twemoji emoji="📚" /> Leer 10 pág
                     </button>
                 )}
             </div>

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { SupabaseDataStore } from '@/data/supabaseData';
 import { User } from '@/core/types';
+import { getLevelTitle } from '@/core/config/levelRewards';
 import './ProfileModal.css';
 
 interface ProfileModalProps {
@@ -13,6 +14,7 @@ interface ProfileModalProps {
 }
 
 export default function ProfileModal({ user, isOpen, onClose, onUpdate }: ProfileModalProps) {
+    const [newUsername, setNewUsername] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [isUpdating, setIsUpdating] = useState(false);
@@ -20,17 +22,20 @@ export default function ProfileModal({ user, isOpen, onClose, onUpdate }: Profil
 
     if (!isOpen) return null;
 
+    const levelTitle = getLevelTitle(user.level);
+
     const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!e.target.files || e.target.files.length === 0) return;
 
         setIsUpdating(true);
+        setMessage({ text: '', type: '' });
         const file = e.target.files[0];
 
         try {
             const result = await SupabaseDataStore.uploadAvatar(user.id, file);
             if (result.url) {
                 await SupabaseDataStore.updateProfilePicture(user.id, result.url);
-                setMessage({ text: 'Foto actualizada correctamente', type: 'success' });
+                setMessage({ text: '✓ Foto actualizada correctamente', type: 'success' });
                 onUpdate();
             } else {
                 setMessage({ text: result.error || 'Error al subir imagen', type: 'error' });
@@ -42,22 +47,59 @@ export default function ProfileModal({ user, isOpen, onClose, onUpdate }: Profil
         }
     };
 
-    const handlePasswordUpdate = async (e: React.FormEvent) => {
+    const handleProfileUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (newPassword !== confirmPassword) {
+
+        // Validate that at least one field is filled
+        if (!newUsername && !newPassword) {
+            setMessage({ text: 'Debes completar al menos un campo para actualizar', type: 'error' });
+            return;
+        }
+
+        // Validate password match if password is provided
+        if (newPassword && newPassword !== confirmPassword) {
             setMessage({ text: 'Las contraseñas no coinciden', type: 'error' });
             return;
         }
 
         setIsUpdating(true);
+        setMessage({ text: '', type: '' });
+        const updates: string[] = [];
+
         try {
-            const result = await SupabaseDataStore.updatePassword(newPassword);
-            if (result.success) {
-                setMessage({ text: 'Contraseña actualizada', type: 'success' });
-                setNewPassword('');
-                setConfirmPassword('');
-            } else {
-                setMessage({ text: result.error || 'Error al actualizar', type: 'error' });
+            // Update username if provided
+            if (newUsername && newUsername.trim() !== '') {
+                const result = await SupabaseDataStore.updateUsername(user.id, newUsername.trim());
+                if (result.success) {
+                    updates.push('nombre de usuario');
+                    setNewUsername('');
+                } else {
+                    setMessage({ text: result.error || 'Error al actualizar usuario', type: 'error' });
+                    setIsUpdating(false);
+                    return;
+                }
+            }
+
+            // Update password if provided
+            if (newPassword && newPassword.trim() !== '') {
+                const result = await SupabaseDataStore.updatePassword(newPassword);
+                if (result.success) {
+                    updates.push('contraseña');
+                    setNewPassword('');
+                    setConfirmPassword('');
+                } else {
+                    setMessage({ text: result.error || 'Error al actualizar contraseña', type: 'error' });
+                    setIsUpdating(false);
+                    return;
+                }
+            }
+
+            if (updates.length > 0) {
+                setMessage({
+                    text: `✓ ${updates.join(' y ')} actualizado${updates.length > 1 ? 's' : ''}`,
+                    type: 'success'
+                });
+                onUpdate();
             }
         } catch (error) {
             setMessage({ text: 'Error inesperado', type: 'error' });
@@ -78,7 +120,7 @@ export default function ProfileModal({ user, isOpen, onClose, onUpdate }: Profil
                         ) : (
                             <div className="avatar-placeholder">{user.username.charAt(0).toUpperCase()}</div>
                         )}
-                        <label htmlFor="avatar-upload" className="change-avatar-label">
+                        <label htmlFor="avatar-upload" className="change-avatar-label" title="Cambiar foto">
                             📷
                         </label>
                         <input
@@ -87,10 +129,12 @@ export default function ProfileModal({ user, isOpen, onClose, onUpdate }: Profil
                             accept="image/*"
                             style={{ display: 'none' }}
                             onChange={handleAvatarChange}
+                            disabled={isUpdating}
                         />
                     </div>
 
                     <h2 className="profile-username">{user.username}</h2>
+                    <p className="profile-rank">{levelTitle}</p>
                     <p className="profile-email">{sessionStorage.getItem('currentUserEmail') || 'Usuario Antigravity'}</p>
                 </header>
 
@@ -102,13 +146,29 @@ export default function ProfileModal({ user, isOpen, onClose, onUpdate }: Profil
                         </div>
                         <div className="profile-stat-item">
                             <span className="stat-lbl">XP Total</span>
-                            <span className="stat-val">{user.xp}</span>
+                            <span className="stat-val">{user.xp.toLocaleString()}</span>
                         </div>
                     </div>
 
-                    <div className="password-section">
-                        <h3>Cambiar Contraseña</h3>
-                        <form className="password-form" onSubmit={handlePasswordUpdate}>
+                    <div className="profile-settings-section">
+                        <h3>Configuración de Perfil</h3>
+                        <p className="section-description">Actualiza solo los campos que deseas cambiar</p>
+
+                        <form className="profile-form" onSubmit={handleProfileUpdate}>
+                            <div className="input-group">
+                                <label>Nuevo Nombre de Usuario</label>
+                                <input
+                                    type="text"
+                                    value={newUsername}
+                                    onChange={e => setNewUsername(e.target.value)}
+                                    placeholder={user.username}
+                                    disabled={isUpdating}
+                                    minLength={3}
+                                    maxLength={20}
+                                />
+                                <span className="input-hint">Opcional - Déjalo vacío para mantener el actual</span>
+                            </div>
+
                             <div className="input-group">
                                 <label>Nueva Contraseña</label>
                                 <input
@@ -116,27 +176,35 @@ export default function ProfileModal({ user, isOpen, onClose, onUpdate }: Profil
                                     value={newPassword}
                                     onChange={e => setNewPassword(e.target.value)}
                                     placeholder="••••••••"
-                                    required
+                                    disabled={isUpdating}
+                                    minLength={6}
                                 />
+                                <span className="input-hint">Opcional - Mínimo 6 caracteres</span>
                             </div>
-                            <div className="input-group">
-                                <label>Confirmar Contraseña</label>
-                                <input
-                                    type="password"
-                                    value={confirmPassword}
-                                    onChange={e => setConfirmPassword(e.target.value)}
-                                    placeholder="••••••••"
-                                    required
-                                />
-                            </div>
-                            <button className="update-pw-btn" disabled={isUpdating}>
-                                {isUpdating ? 'Actualizando...' : 'Guardar Cambios'}
+
+                            {newPassword && (
+                                <div className="input-group">
+                                    <label>Confirmar Contraseña</label>
+                                    <input
+                                        type="password"
+                                        value={confirmPassword}
+                                        onChange={e => setConfirmPassword(e.target.value)}
+                                        placeholder="••••••••"
+                                        disabled={isUpdating}
+                                    />
+                                </div>
+                            )}
+
+                            <button className="update-profile-btn" type="submit" disabled={isUpdating}>
+                                {isUpdating ? 'Guardando...' : 'Guardar Cambios'}
                             </button>
                         </form>
                     </div>
 
                     {message.text && (
-                        <p className={`msg-${message.type}`}>{message.text}</p>
+                        <div className={`profile-message msg-${message.type}`}>
+                            {message.text}
+                        </div>
                     )}
                 </div>
             </div>

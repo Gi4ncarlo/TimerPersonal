@@ -1,4 +1,6 @@
 import { Action } from '@/core/types';
+import { getActionEmoji } from '@/core/config/actionEmojis';
+import Twemoji from './Twemoji';
 import './ActionItem.css';
 
 interface ActionItemProps {
@@ -15,10 +17,12 @@ export default function ActionItem({
     showAddButton = true
 }: ActionItemProps) {
     const isPositive = action.type === 'positive';
+    const emoji = getActionEmoji(action.name, action.type as 'positive' | 'negative');
 
     return (
         <div className={`action-item ${isPositive ? 'positive' : 'negative'}`}>
             <div className="action-info">
+                <Twemoji emoji={emoji} className="action-emoji" />
                 <span className="action-name">{action.name}</span>
                 <span className="action-progress">{progress}</span>
             </div>

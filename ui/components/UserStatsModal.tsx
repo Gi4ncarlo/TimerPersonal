@@ -58,7 +58,9 @@ export default function UserStatsModal({ entry, isOpen, onClose }: UserStatsModa
 
                 <div className="stats-modal-body">
                     <div className="main-stat-badge">
-                        <span className="label">Puntos Totales (Semana)</span>
+                        <span className="label">
+                            {entry.weekStart === 'All Time' ? 'Puntos Totales (Histórico)' : 'Puntos Totales (Semana)'}
+                        </span>
                         <span className={`value ${entry.totalPoints >= 0 ? 'positive' : 'negative'}`}>
                             {Math.floor(entry.totalPoints)} pts
                         </span>
