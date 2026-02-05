@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { SupabaseDataStore } from '@/data/supabaseData';
 import { BalanceCalculator } from '@/core/services/BalanceCalculator';
-import { format, subDays, parseISO } from 'date-fns';
-import { getArgentinaDate } from '@/core/utils/dateUtils';
+import { StrikeDetector } from '@/core/services/StrikeDetector';
+import { format, subDays, parseISO, startOfWeek } from 'date-fns';
+import { getArgentinaDate, getTodayString } from '@/core/utils/dateUtils';
 import { es } from 'date-fns/locale';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import './estadisticas.css';
@@ -103,9 +104,45 @@ export default function EstadisticasPage() {
 
     // Calculate global stats from all records
     const allRecords = stats.flatMap(s => s.records);
-    const globalBalance = allRecords.reduce((sum, r) => sum + r.pointsCalculated, 0);
+    const globalPoints = allRecords.reduce((sum, r) => sum + r.pointsCalculated, 0);
     const totalDaysWithActivity = stats.filter(s => s.records.length > 0).length;
-    const positiveDays = stats.filter(s => s.isPositive && s.records.length > 0).length;
+
+    // Streaks calculation using StrikeDetector
+    const activityStreaks = StrikeDetector.calculateActivityStreaks(allRecords);
+
+    // Weekly comparison
+    const comparison = StrikeDetector.getWeeklyComparison(allRecords);
+
+    // Feedback logic
+    const getFeedback = () => {
+        if (comparison.difference > 0) {
+            if (comparison.percent > 50) return {
+                icon: '🚀',
+                text: `¡Brutal! Estás rindiendo un ${Math.round(comparison.percent)}% mejor que la semana pasada. ¡Forja tu destino!`,
+                class: 'awesome'
+            };
+            return {
+                icon: '📈',
+                text: `Vas por buen camino. Tenés un balance de ${Math.floor(comparison.difference)} puntos más que la semana pasada.`,
+                class: 'good'
+            };
+        } else if (comparison.difference < 0) {
+            return {
+                icon: '⚠️',
+                text: `Esta semana venís un poco más flojo (${Math.round(Math.abs(comparison.percent))}% menos). ¡Todavía hay tiempo de remontar!`,
+                class: 'warning'
+            };
+        }
+        return { icon: '✨', text: 'Mantén la constancia para alcanzar tus objetivos semanales.', class: 'neutral' };
+    };
+
+    const feedback = getFeedback();
+
+    // Get top 3 activity streaks
+    const topStreaks = Object.entries(activityStreaks)
+        .filter(([_, s]) => s.current > 1)
+        .sort((a, b) => b[1].current - a[1].current)
+        .slice(0, 3);
 
     return (
         <main className="estadisticas-page">
@@ -120,21 +157,54 @@ export default function EstadisticasPage() {
                     </Link>
                 </header>
 
-                {/* Global Stats */}
-                <div className="global-stats">
-                    <div className="stat-box">
-                        <span className="stat-label">Balance Global (60d)</span>
-                        <span className={`stat-big ${globalBalance >= 0 ? 'positive' : 'negative'}`}>
-                            {globalBalance >= 0 ? '+' : ''}{Math.floor(globalBalance)} pts
+                {/* Dynamic Feedback */}
+                <div className={`feedback-card ${feedback.class}`}>
+                    <div className="feedback-icon">{feedback.icon}</div>
+                    <div className="feedback-content">
+                        <h3>Análisis de Rendimiento</h3>
+                        <p>{feedback.text}</p>
+                    </div>
+                </div>
+
+                {/* Main Stats Grid */}
+                <div className="stats-main-grid">
+                    {/* Comparison Box */}
+                    <div className="stat-box-new comparison">
+                        <span className="stat-label">Rendimiento Semanal</span>
+                        <div className="stat-value-container">
+                            <span className="stat-big-new">
+                                {comparison.thisWeekPoints >= 0 ? '+' : ''}{Math.floor(comparison.thisWeekPoints)}
+                            </span>
+                            <span className={`stat-change ${comparison.difference >= 0 ? 'pos' : 'neg'}`}>
+                                {comparison.difference >= 0 ? '↑' : '↓'} {Math.round(Math.abs(comparison.percent))}%
+                            </span>
+                        </div>
+                        <span className="stat-subtext">vs semana pasada ({Math.floor(comparison.lastWeekPoints)} pts)</span>
+                    </div>
+
+                    {/* Streak Box */}
+                    <div className="stat-box-new streaks">
+                        <span className="stat-label">Rachas Activas</span>
+                        <div className="streaks-list">
+                            {topStreaks.length > 0 ? (
+                                topStreaks.map(([name, s]) => (
+                                    <div key={name} className="streak-item-mini">
+                                        <span className="streak-name">{name}</span>
+                                        <span className="streak-count">🔥 {s.current} días</span>
+                                    </div>
+                                ))
+                            ) : (
+                                <p className="no-streaks">Registrá la misma actividad 2 días seguidos para iniciar una racha.</p>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="stat-box-new total">
+                        <span className="stat-label">Puntos Totales (60d)</span>
+                        <span className={`stat-big-new ${globalPoints >= 0 ? 'positive' : 'negative'}`}>
+                            {globalPoints >= 0 ? '+' : ''}{Math.floor(globalPoints)}
                         </span>
-                    </div>
-                    <div className="stat-box">
-                        <span className="stat-label">Días Activos</span>
-                        <span className="stat-big">{totalDaysWithActivity}/60</span>
-                    </div>
-                    <div className="stat-box">
-                        <span className="stat-label">Días Positivos</span>
-                        <span className="stat-big positive">{positiveDays}/{totalDaysWithActivity}</span>
+                        <span className="stat-subtext">{totalDaysWithActivity} días con actividad</span>
                     </div>
                 </div>
 

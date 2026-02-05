@@ -1,7 +1,7 @@
 // Strike detection and statistics service
 import { DailyRecord, Strike, StrikeStats } from '../types';
 import { getTodayString } from '../utils/dateUtils';
-import { subDays, format, differenceInDays, parseISO } from 'date-fns';
+import { subDays, format, differenceInDays, parseISO, startOfWeek } from 'date-fns';
 
 export class StrikeDetector {
     /**
@@ -81,10 +81,88 @@ export class StrikeDetector {
     }
 
     /**
-     * Encuentra strikes recientes (últimos 30 días)
+     * Finds recent strikes (últimos 30 días)
      */
     static getRecentStrikes(strikes: Strike[], days: number = 30): Strike[] {
         const cutoffDate = format(subDays(new Date(), days), 'yyyy-MM-dd');
         return strikes.filter(s => s.strikeDate >= cutoffDate);
+    }
+
+    /**
+     * Calcula rachas por actividad específica
+     */
+    static calculateActivityStreaks(records: DailyRecord[]): Record<string, { current: number; longest: number }> {
+        const streaks: Record<string, { current: number; longest: number; lastDate: string; temp: number }> = {};
+
+        // Sort records by date ascending
+        const sortedRecords = [...records].sort((a, b) => a.date.localeCompare(b.date));
+        const today = getTodayString();
+        const yesterday = format(subDays(new Date(), 1), 'yyyy-MM-dd');
+
+        sortedRecords.forEach(record => {
+            const name = record.actionName;
+            if (!streaks[name]) {
+                streaks[name] = { current: 0, longest: 0, lastDate: '', temp: 0 };
+            }
+
+            const s = streaks[name];
+            if (s.lastDate === '') {
+                s.temp = 1;
+            } else {
+                const diff = differenceInDays(parseISO(record.date), parseISO(s.lastDate));
+                if (diff === 1) {
+                    s.temp++;
+                } else if (diff > 1) {
+                    s.temp = 1;
+                }
+            }
+            s.lastDate = record.date;
+            s.longest = Math.max(s.longest, s.temp);
+        });
+
+        // Final current streak check: if last activity was not today or yesterday, current is 0
+        const result: Record<string, { current: number; longest: number }> = {};
+        Object.keys(streaks).forEach(name => {
+            const s = streaks[name];
+            const isActive = s.lastDate === today || s.lastDate === yesterday;
+            result[name] = {
+                current: isActive ? s.temp : 0,
+                longest: s.longest
+            };
+        });
+
+        return result;
+    }
+
+    /**
+     * Compara los puntos de esta semana vs la anterior
+     */
+    static getWeeklyComparison(records: DailyRecord[]): {
+        thisWeekPoints: number;
+        lastWeekPoints: number;
+        difference: number;
+        percent: number;
+    } {
+        const today = new Date();
+        const startThisWeek = startOfWeek(today, { weekStartsOn: 1 });
+        const startLastWeek = subDays(startThisWeek, 7);
+        const endLastWeek = subDays(startThisWeek, 1);
+
+        const thisWeekRecords = records.filter(r => {
+            const d = parseISO(r.date);
+            return d >= startThisWeek;
+        });
+
+        const lastWeekRecords = records.filter(r => {
+            const d = parseISO(r.date);
+            return d >= startLastWeek && d <= endLastWeek;
+        });
+
+        const thisWeekPoints = thisWeekRecords.reduce((sum, r) => sum + r.pointsCalculated, 0);
+        const lastWeekPoints = lastWeekRecords.reduce((sum, r) => sum + r.pointsCalculated, 0);
+        const difference = thisWeekPoints - lastWeekPoints;
+        const percent = lastWeekPoints !== 0 ? (difference / Math.abs(lastWeekPoints)) * 100 : 100;
+
+        return { thisWeekPoints, lastWeekPoints, difference, percent };
     }
 }

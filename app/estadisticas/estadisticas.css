@@ -51,53 +51,167 @@
     box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
 }
 
-/* Global Stats */
-.global-stats {
+/* Feedback Card */
+.feedback-card {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xl);
+    background: var(--color-background-card);
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-xl) var(--space-2xl);
+    margin-bottom: var(--space-xl);
+    position: relative;
+    overflow: hidden;
+    transition: var(--transition-normal);
+}
+
+.feedback-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: var(--color-primary);
+}
+
+.feedback-card.awesome {
+    border-color: var(--color-accent);
+    white-space: normal;
+}
+
+.feedback-card.awesome::before {
+    background: var(--color-accent);
+}
+
+.feedback-card.good::before {
+    background: var(--color-positive);
+}
+
+.feedback-card.warning::before {
+    background: var(--color-warning);
+}
+
+.feedback-icon {
+    font-size: 3rem;
+    filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.2));
+}
+
+.feedback-content h3 {
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 4px;
+}
+
+.feedback-content p {
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    color: var(--color-text-primary);
+    line-height: 1.4;
+    margin: 0;
+}
+
+/* New Stats Grid */
+.stats-main-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    grid-template-columns: 1fr 1fr 1fr;
     gap: var(--space-lg);
     margin-bottom: var(--space-2xl);
 }
 
-.stat-box {
+.stat-box-new {
     background: var(--color-background-card);
-    border: 2px solid var(--color-border);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
     padding: var(--space-xl);
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: var(--space-md);
+    justify-content: center;
+    min-height: 160px;
     transition: var(--transition-fast);
 }
 
-.stat-box:hover {
+.stat-box-new:hover {
     border-color: var(--color-border-glow);
     box-shadow: var(--shadow-glow);
+    transform: translateY(-2px);
 }
 
-.stat-label {
-    font-family: var(--font-body);
-    font-size: 0.9rem;
-    color: var(--color-text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+.stat-value-container {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-md);
+    margin: var(--space-xs) 0;
 }
 
-.stat-big {
+.stat-big-new {
     font-family: var(--font-display);
-    font-size: 2.5rem;
-    font-weight: 900;
-    color: var(--color-primary);
-    text-shadow: 0 0 20px var(--color-primary-glow);
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: var(--color-text-primary);
 }
 
-.stat-big.positive {
+.stat-change {
+    font-size: 0.9rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+.stat-change.pos {
     color: var(--color-positive);
+    background: rgba(16, 185, 129, 0.1);
 }
 
-.stat-big.negative {
+.stat-change.neg {
     color: var(--color-negative);
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.stat-subtext {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+}
+
+/* Streaks in Stats */
+.streaks-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.streak-item-mini {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.streak-name {
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+    font-weight: 500;
+}
+
+.streak-count {
+    font-family: var(--font-display);
+    font-weight: 700;
+    color: var(--color-accent);
+    font-size: 0.9rem;
+}
+
+.no-streaks {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    font-style: italic;
+    line-height: 1.4;
 }
 
 /* Charts */

@@ -38,8 +38,9 @@ export default function LoginPage() {
         <div className="login-page">
             <div className="login-container">
                 <div className="login-card">
-                    <h1 className="login-title">Quest Tracker</h1>
-                    <p className="login-subtitle">Actividad Personal</p>
+                    <img src="/logo.png" alt="Senda de Logros Logo" className="login-logo" />
+                    <h1 className="login-title">Senda de Logros</h1>
+                    <p className="login-subtitle">Forja tu destino, paso a paso</p>
 
                     <form onSubmit={handleLogin} className="login-form">
                         <div className="form-group">

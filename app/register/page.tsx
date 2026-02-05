@@ -121,8 +121,9 @@ export default function RegisterPage() {
         <div className="login-page">
             <div className="login-container">
                 <div className="login-card">
-                    <h1 className="login-title">Quest Tracker</h1>
-                    <p className="login-subtitle">Crear Cuenta</p>
+                    <img src="/logo.png" alt="Senda de Logros Logo" className="login-logo" />
+                    <h1 className="login-title">Senda de Logros</h1>
+                    <p className="login-subtitle">Comienza tu aventura</p>
 
                     <form onSubmit={handleRegister} className="login-form">
                         <div className="form-group">
