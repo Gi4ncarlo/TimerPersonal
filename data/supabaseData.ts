@@ -505,7 +505,7 @@ export const SupabaseDataStore = {
                 metric_type: goal.metricType,
                 metric_unit: goal.metricUnit,
                 start_date: goal.startDate,
-                end_date: goal.endDate,
+                end_date: goal.endDate || getWeekEndString(),
             })
             .select()
             .single();
@@ -580,33 +580,40 @@ export const SupabaseDataStore = {
             // Check filters
             if (goal.action_id && goal.action_id !== actionId) continue;
 
-            // Calculate increments
-            if (metricValue && goal.metric_type) {
-                // If goal has a specific metric type (e.g., 'kilometers', 'pages'), use metricValue
-                // This covers cases like "Run 54km" -> 20km activity
-                increment = metricValue;
-            } else if (goal.type === 'duration') {
-                // Handle unit conversion: Input is usually minutes.
-                // If goal unit is hours, convert.
-                if (goal.metric_unit === 'horas' || goal.metric_unit === 'hours') {
-                    increment = duration / 60;
+            // Calculate increments with high specificity
+            if (goal.metric_type === 'pages' || goal.metric_type === 'kilometers') {
+                // Pages and Kilometers are always tracked via metricValue
+                increment = Number(metricValue || 0);
+            } else if (goal.type === 'duration' || goal.metric_type === 'hours') {
+                // Duration goals (Work, Study)
+                if (goal.metric_unit === 'horas' || goal.metric_unit === 'hours' || goal.metric_type === 'hours') {
+                    increment = Number(duration || 0) / 60;
                 } else {
-                    increment = duration;
+                    increment = Number(duration || 0);
                 }
-            } else if (goal.type === 'points') {
-                increment = points;
-            } else if (goal.type === 'count') {
+            } else if (goal.type === 'points' || goal.metric_type === 'points') {
+                // Points goals
+                increment = Number(points || 0);
+            } else if (goal.metric_type === 'activities' || goal.type === 'count') {
+                // "Activities" goal is a simple count (1 per record)
                 increment = 1;
-            } else if (metricValue) {
-                // Fallback
-                increment = metricValue;
+            } else if (metricValue !== undefined && metricValue !== null && metricValue > 0) {
+                // Fallback: If metricValue exists and we have a metric type, use it
+                increment = Number(metricValue);
+            } else {
+                // Final fallback
+                increment = 1;
             }
 
-            if (increment > 0) {
-                const newValue = goal.current_value + increment;
-                const isCompleted = newValue >= goal.target_value;
 
-                await supabase
+            if (increment > 0 && !isNaN(increment)) {
+                const currentValue = Number(goal.current_value || 0);
+                const newValue = currentValue + increment;
+                const isCompleted = newValue >= Number(goal.target_value);
+
+                console.log(`Updating goal "${goal.title}": ${currentValue} -> ${newValue} (increment: ${increment})`);
+
+                const { error: updateError } = await supabase
                     .from('goals')
                     .update({
                         current_value: newValue,
@@ -614,8 +621,12 @@ export const SupabaseDataStore = {
                     })
                     .eq('id', goal.id);
 
+                if (updateError) {
+                    console.error(`Error updating goal ${goal.id}:`, updateError);
+                }
+
                 // Bonus XP for completing goal
-                if (isCompleted) {
+                if (isCompleted && !goal.is_completed) {
                     await SupabaseDataStore.updateUserProgress(userId, 200); // +200 XP Bonus
                 }
             }
@@ -644,20 +655,20 @@ export const SupabaseDataStore = {
             if (goal.action_id && goal.action_id !== actionId) continue;
 
             // Calculate decrements
-            if (metricValue && goal.metric_type) {
-                decrement = metricValue;
-            } else if (goal.type === 'duration') {
-                if (goal.metric_unit === 'horas' || goal.metric_unit === 'hours') {
+            if (metricValue !== undefined && metricValue !== null && goal.metric_type && goal.metric_type !== 'hours' && goal.metric_type !== 'points') {
+                decrement = Number(metricValue);
+            } else if (goal.type === 'duration' || goal.metric_type === 'hours') {
+                if (goal.metric_unit === 'horas' || goal.metric_unit === 'hours' || goal.metric_type === 'hours') {
                     decrement = duration / 60;
                 } else {
                     decrement = duration;
                 }
-            } else if (goal.type === 'points') {
+            } else if (goal.type === 'points' || goal.metric_type === 'points') {
                 decrement = points;
             } else if (goal.type === 'count') {
                 decrement = 1;
-            } else if (metricValue) {
-                decrement = metricValue;
+            } else if (metricValue !== undefined && metricValue !== null) {
+                decrement = Number(metricValue);
             }
 
             if (decrement > 0) {

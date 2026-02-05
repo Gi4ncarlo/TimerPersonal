@@ -1,12 +1,12 @@
-'use client';
-
 import { useState } from 'react';
 import { Goal, Action } from '@/core/types';
+import WeeklyCountdown from './WeeklyCountdown';
+import { getTodayString } from '@/core/utils/dateUtils';
 import './GoalTracker.css';
 
 interface GoalTrackerProps {
     goals: Goal[];
-    actions: Action[]; // NEW: Need actions list to select from
+    actions: Action[];
     onCreateGoal: (title: string, target: number, actionId?: string, metricType?: string, metricUnit?: string) => void;
     onDeleteGoal: (id: string) => void;
 }
@@ -18,14 +18,17 @@ export default function GoalTracker({ goals, actions, onCreateGoal, onDeleteGoal
     const [selectedActionId, setSelectedActionId] = useState<string>('');
     const [selectedMetricType, setSelectedMetricType] = useState<string>('activities');
     const [showCompleted, setShowCompleted] = useState(false);
+    const [showFailed, setShowFailed] = useState(false);
 
-    const activeGoals = goals.filter(g => !g.isCompleted);
+    const today = getTodayString();
+
+    const activeGoals = goals.filter(g => !g.isCompleted && (!g.endDate || g.endDate >= today));
     const completedGoals = goals.filter(g => g.isCompleted);
+    const failedGoals = goals.filter(g => !g.isCompleted && g.endDate && g.endDate < today);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (newTitle && newTarget > 0) {
-            // Determine metric unit based on selected action and metric type
             let metricUnit = '';
             if (selectedActionId) {
                 const action = actions.find(a => a.id === selectedActionId);
@@ -49,14 +52,19 @@ export default function GoalTracker({ goals, actions, onCreateGoal, onDeleteGoal
         }
     };
 
-    // Get display text for goal progress
     const getProgressDisplay = (goal: Goal) => {
         const unit = goal.metricUnit || '';
-        return `${goal.currentValue} / ${goal.targetValue} ${unit}`.trim();
+        // If it's a duration goal, and current value is not integer, show 1 decimal
+        const displayValue = goal.type === 'duration' || goal.metricType === 'hours'
+            ? Number(goal.currentValue).toFixed(1).replace('.0', '')
+            : goal.currentValue;
+        return `${displayValue} / ${goal.targetValue} ${unit}`.trim();
     };
 
     return (
         <div className="goal-tracker-card">
+            <WeeklyCountdown />
+
             <div className="goal-header">
                 <h3 className="goal-section-title">🎯 Objetivos Semanales</h3>
                 <button
@@ -88,7 +96,6 @@ export default function GoalTracker({ goals, actions, onCreateGoal, onDeleteGoal
                                 value={selectedActionId}
                                 onChange={(e) => {
                                     setSelectedActionId(e.target.value);
-                                    // Auto-detect metric type based on action
                                     const action = actions.find(a => a.id === e.target.value);
                                     if (action?.metadata?.inputType === 'pages') {
                                         setSelectedMetricType('pages');
@@ -168,6 +175,42 @@ export default function GoalTracker({ goals, actions, onCreateGoal, onDeleteGoal
                 ))}
             </div>
 
+            {failedGoals.length > 0 && (
+                <div className="failed-goals-section">
+                    <button
+                        className="toggle-failed-btn"
+                        onClick={() => setShowFailed(!showFailed)}
+                    >
+                        {showFailed ? 'Ocultar' : 'Ver'} incumplidos ({failedGoals.length})
+                    </button>
+
+                    {showFailed && (
+                        <div className="goals-list failed-list">
+                            {failedGoals.map(goal => (
+                                <div key={goal.id} className="goal-item failed">
+                                    <div className="goal-info">
+                                        <span className="goal-title">{goal.title}</span>
+                                        <span className="goal-badge failed">INCUMPLIDO</span>
+                                    </div>
+                                    <div className="goal-bar-bg">
+                                        <div
+                                            className="goal-bar-fill"
+                                            style={{ width: `${Math.min(100, (goal.currentValue / goal.targetValue) * 100)}%`, background: '#ff4444' }}
+                                        />
+                                    </div>
+                                    <button
+                                        className="delete-goal-btn"
+                                        onClick={(e) => { e.stopPropagation(); onDeleteGoal(goal.id); }}
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+
             {completedGoals.length > 0 && (
                 <div className="completed-goals-section">
                     <button
@@ -206,3 +249,4 @@ export default function GoalTracker({ goals, actions, onCreateGoal, onDeleteGoal
         </div>
     );
 }
+
