@@ -33,18 +33,18 @@ export async function POST(request: NextRequest) {
 
         // Insert actions
         const actions = [
-            { name: 'Ver Stream', type: 'negative', points_per_minute: -8, metadata: { inputType: 'hours', unit: 'horas' } },
-            { name: 'Jugar videojuegos', type: 'negative', points_per_minute: -7, metadata: { inputType: 'hours', unit: 'horas' } },
-            { name: 'Ver Videos YT', type: 'negative', points_per_minute: -6, metadata: { inputType: 'hours', unit: 'horas' } },
-            { name: 'Salir a bailar', type: 'negative', points_per_minute: -9, metadata: { inputType: 'hours', unit: 'horas' } },
-            { name: 'Redes Sociales', type: 'negative', points_per_minute: -7, metadata: { inputType: 'hours', unit: 'horas' } },
-            { name: 'Netflix/Series', type: 'negative', points_per_minute: -6, metadata: { inputType: 'hours', unit: 'horas' } },
-            { name: 'Procrastinar', type: 'negative', points_per_minute: -8, metadata: { inputType: 'hours', unit: 'horas' } },
-            { name: 'Leer', type: 'positive', points_per_minute: 5, metadata: { inputType: 'pages', unit: 'páginas', estimatedMinutesPerPage: 3 } },
+            { name: 'Ver Stream', type: 'negative', points_per_minute: -11, metadata: { inputType: 'hours', unit: 'horas' } },
+            { name: 'Jugar videojuegos', type: 'negative', points_per_minute: -12, metadata: { inputType: 'hours', unit: 'horas' } },
+            { name: 'Ver Videos YT', type: 'negative', points_per_minute: -8, metadata: { inputType: 'hours', unit: 'horas' } },
+            { name: 'Salir a bailar', type: 'negative', points_per_minute: -12, metadata: { inputType: 'hours', unit: 'horas' } },
+            { name: 'Redes Sociales', type: 'negative', points_per_minute: -9, metadata: { inputType: 'hours', unit: 'horas' } },
+            { name: 'Netflix/Series', type: 'negative', points_per_minute: -8, metadata: { inputType: 'hours', unit: 'horas' } },
+            { name: 'Procrastinar', type: 'negative', points_per_minute: -10, metadata: { inputType: 'hours', unit: 'horas' } },
+            { name: 'Leer', type: 'positive', points_per_minute: 8, metadata: { inputType: 'pages', unit: 'páginas', estimatedMinutesPerPage: 3 } },
             { name: 'Correr', type: 'positive', points_per_minute: 12, metadata: { inputType: 'distance-time', unit: 'km' } },
-            { name: 'Actividad Física general', type: 'positive', points_per_minute: 10, metadata: { inputType: 'time', unit: 'minutos' } },
+            { name: 'Actividad Física general', type: 'positive', points_per_minute: 9, metadata: { inputType: 'time', unit: 'minutos' } },
             { name: 'Trabajar activamente', type: 'positive', points_per_minute: 8, metadata: { inputType: 'time-note', unit: 'minutos' } },
-            { name: 'Estudiar', type: 'positive', points_per_minute: 10, metadata: { inputType: 'time-subject', unit: 'minutos' } },
+            { name: 'Estudiar', type: 'positive', points_per_minute: 12, metadata: { inputType: 'time-subject', unit: 'minutos' } },
         ];
 
         const { data: insertedActions } = await supabase
