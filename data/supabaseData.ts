@@ -395,8 +395,42 @@ export const SupabaseDataStore = {
     },
 
     deleteRecord: async (id: string): Promise<boolean> => {
-        const { error } = await supabase.from('daily_records').delete().eq('id', id);
-        return !error;
+        // 1. Fetch record before deletion to know what to revert
+        const { data: record, error: fetchError } = await supabase
+            .from('daily_records')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        if (fetchError || !record) return false;
+
+        // 2. Revert XP if it was positive (createRecord adds XP based on durationMinutes)
+        if (Number(record.points_calculated) > 0) {
+            await SupabaseDataStore.updateUserProgress(record.user_id, -Number(record.duration_minutes));
+        }
+
+        // 3. Revert Goals Progress
+        await SupabaseDataStore.revertGoalsProgress(
+            record.user_id,
+            record.action_id,
+            Number(record.duration_minutes),
+            Number(record.points_calculated),
+            Number(record.metric_value)
+        );
+
+        // 4. Delete the record
+        const { error: deleteError } = await supabase.from('daily_records').delete().eq('id', id);
+        if (deleteError) return false;
+
+        // 5. Update Weekly Stats
+        const weekStart = getWeekStartString();
+        const weekEnd = getWeekEndString();
+        const currentUser = await SupabaseDataStore.getCurrentUser();
+        if (currentUser) {
+            await SupabaseDataStore.updateUserWeeklyStats(record.user_id, currentUser.username, weekStart, weekEnd);
+        }
+
+        return true;
     },
 
     // Goals
@@ -468,9 +502,33 @@ export const SupabaseDataStore = {
     },
 
     deleteGoal: async (id: string): Promise<boolean> => {
-        // Corrected delete syntax
-        const { error } = await supabase.from('goals').delete().eq('id', id);
-        return !error;
+        // 1. Fetch goal to check if it was completed
+        const { data: goal, error: fetchError } = await supabase
+            .from('goals')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        if (fetchError || !goal) return false;
+
+        // 2. If it was completed, revert bonus XP (200 XP completion bonus)
+        if (goal.is_completed) {
+            await SupabaseDataStore.updateUserProgress(goal.user_id, -200);
+        }
+
+        // 3. Delete
+        const { error: deleteError } = await supabase.from('goals').delete().eq('id', id);
+        if (deleteError) return false;
+
+        // 4. Update stats to reflect loss of completed goal in leaderboard
+        const weekStart = getWeekStartString();
+        const weekEnd = getWeekEndString();
+        const currentUser = await SupabaseDataStore.getCurrentUser();
+        if (currentUser) {
+            await SupabaseDataStore.updateUserWeeklyStats(goal.user_id, currentUser.username, weekStart, weekEnd);
+        }
+
+        return true;
     },
 
     updateGoalsProgress: async (
@@ -532,6 +590,67 @@ export const SupabaseDataStore = {
                 // Bonus XP for completing goal
                 if (isCompleted) {
                     await SupabaseDataStore.updateUserProgress(userId, 200); // +200 XP Bonus
+                }
+            }
+        }
+    },
+
+    revertGoalsProgress: async (
+        userId: string,
+        actionId: string,
+        duration: number,
+        points: number,
+        metricValue?: number
+    ): Promise<void> => {
+        // Fetch all goals for this user (we need to check if any previously completed goal becomes active again)
+        const { data: goals, error } = await supabase
+            .from('goals')
+            .select('*')
+            .eq('user_id', userId);
+
+        if (error || !goals) return;
+
+        for (const goal of goals) {
+            let decrement = 0;
+
+            // Check filters (matching goal logic in updateGoalsProgress)
+            if (goal.action_id && goal.action_id !== actionId) continue;
+
+            // Calculate decrements
+            if (metricValue && goal.metric_type) {
+                decrement = metricValue;
+            } else if (goal.type === 'duration') {
+                if (goal.metric_unit === 'horas' || goal.metric_unit === 'hours') {
+                    decrement = duration / 60;
+                } else {
+                    decrement = duration;
+                }
+            } else if (goal.type === 'points') {
+                decrement = points;
+            } else if (goal.type === 'count') {
+                decrement = 1;
+            } else if (metricValue) {
+                decrement = metricValue;
+            }
+
+            if (decrement > 0) {
+                const oldValue = Number(goal.current_value);
+                const newValue = Math.max(0, oldValue - decrement);
+                const wasCompleted = goal.is_completed;
+                const isStillCompleted = newValue >= Number(goal.target_value);
+
+                // Update goal state
+                await supabase
+                    .from('goals')
+                    .update({
+                        current_value: newValue,
+                        is_completed: isStillCompleted
+                    })
+                    .eq('id', goal.id);
+
+                // Revert bonus XP if it was completed but no longer is
+                if (wasCompleted && !isStillCompleted) {
+                    await SupabaseDataStore.updateUserProgress(userId, -200); // Revert +200 XP Bonus
                 }
             }
         }

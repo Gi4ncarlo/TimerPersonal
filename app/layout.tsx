@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-    title: 'Quest Tracker - Level Up Your Time',
-    description: 'Gamified time tracking with AI-powered insights',
+    title: 'Senda de Logros - Forja tu Destino',
+    description: 'Gamifica tu productividad y alcanza tus metas con IA',
 };
 
 export default function RootLayout({

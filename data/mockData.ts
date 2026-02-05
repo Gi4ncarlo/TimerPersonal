@@ -28,7 +28,7 @@ export const mockActions: Action[] = [
         id: 'action-2',
         name: 'Jugar videojuegos',
         type: 'negative',
-        pointsPerMinute: -7,
+        pointsPerMinute: -11,
         metadata: {
             inputType: 'hours',
             unit: 'horas',
@@ -38,7 +38,7 @@ export const mockActions: Action[] = [
         id: 'action-3',
         name: 'Ver Videos YT',
         type: 'negative',
-        pointsPerMinute: -6,
+        pointsPerMinute: -8,
         metadata: {
             inputType: 'hours',
             unit: 'horas',
@@ -48,7 +48,7 @@ export const mockActions: Action[] = [
         id: 'action-9',
         name: 'Salir a bailar',
         type: 'negative',
-        pointsPerMinute: -9,
+        pointsPerMinute: -10,
         metadata: {
             inputType: 'hours',
             unit: 'horas',
@@ -58,7 +58,7 @@ export const mockActions: Action[] = [
         id: 'action-10',
         name: 'Redes Sociales',
         type: 'negative',
-        pointsPerMinute: -7,
+        pointsPerMinute: -8,
         metadata: {
             inputType: 'hours',
             unit: 'horas',
@@ -68,7 +68,7 @@ export const mockActions: Action[] = [
         id: 'action-11',
         name: 'Netflix/Series',
         type: 'negative',
-        pointsPerMinute: -6,
+        pointsPerMinute: -7,
         metadata: {
             inputType: 'hours',
             unit: 'horas',
@@ -111,7 +111,7 @@ export const mockActions: Action[] = [
         id: 'action-6',
         name: 'Actividad Física general',
         type: 'positive',
-        pointsPerMinute: 10,
+        pointsPerMinute: 9,
         metadata: {
             inputType: 'time',
             unit: 'minutos',

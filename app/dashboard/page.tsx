@@ -35,6 +35,7 @@ export default function Dashboard() {
     const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
     const [accumulatedPoints, setAccumulatedPoints] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
+    const [loadingActionId, setLoadingActionId] = useState<string | null>(null);
 
     // Strike State
     const [latestStrike, setLatestStrike] = useState<Strike | null>(null);
@@ -93,7 +94,13 @@ export default function Dashboard() {
     const handleQuickAdd = async (actionId: string, minutes: number, note: string, metricValue?: number) => {
         const action = actions.find(a => a.id === actionId);
         if (!action) return;
-        await handleModalSubmit({ durationMinutes: minutes, metricValue, notes: note }, action);
+
+        setLoadingActionId(actionId);
+        try {
+            await handleModalSubmit({ durationMinutes: minutes, metricValue, notes: note }, action);
+        } finally {
+            setLoadingActionId(null);
+        }
     };
 
     const handleModalSubmit = async (data: { durationMinutes: number; metricValue?: number; notes: string }, overrideAction?: Action) => {
@@ -165,18 +172,42 @@ export default function Dashboard() {
         return (
             <div className="quick-add-bar">
                 {studyAction && (
-                    <button className="quick-add-btn" onClick={() => handleQuickAdd(studyAction.id, 60, 'Sesión rápida 1h')}>
-                        <Twemoji emoji="⚡" /> Estudiar 1h
+                    <button
+                        className="quick-add-btn"
+                        onClick={() => handleQuickAdd(studyAction.id, 60, 'Sesión rápida 1h')}
+                        disabled={loadingActionId === studyAction.id}
+                    >
+                        {loadingActionId === studyAction.id ? (
+                            <span className="btn-loader"></span>
+                        ) : (
+                            <><Twemoji emoji="⚡" /> Estudiar 1h</>
+                        )}
                     </button>
                 )}
                 {workAction && (
-                    <button className="quick-add-btn" onClick={() => handleQuickAdd(workAction.id, 30, 'Sprint 30min')}>
-                        <Twemoji emoji="⚡" /> Trabajo 30m
+                    <button
+                        className="quick-add-btn"
+                        onClick={() => handleQuickAdd(workAction.id, 30, 'Sprint 30min')}
+                        disabled={loadingActionId === workAction.id}
+                    >
+                        {loadingActionId === workAction.id ? (
+                            <span className="btn-loader"></span>
+                        ) : (
+                            <><Twemoji emoji="⚡" /> Trabajo 30m</>
+                        )}
                     </button>
                 )}
                 {readAction && (
-                    <button className="quick-add-btn" onClick={() => handleQuickAdd(readAction.id, 30, '10 páginas (aprox)', 10)}>
-                        <Twemoji emoji="📚" /> Leer 10 pág
+                    <button
+                        className="quick-add-btn"
+                        onClick={() => handleQuickAdd(readAction.id, 30, '10 páginas (aprox)', 10)}
+                        disabled={loadingActionId === readAction.id}
+                    >
+                        {loadingActionId === readAction.id ? (
+                            <span className="btn-loader"></span>
+                        ) : (
+                            <><Twemoji emoji="📚" /> Leer 10 pág</>
+                        )}
                     </button>
                 )}
             </div>
@@ -193,7 +224,7 @@ export default function Dashboard() {
             <div className="dashboard-container-new">
                 <header className="dashboard-header">
                     <div className="title-area">
-                        <h1 className="main-title">Actividad Personal</h1>
+                        <h1 className="main-title">Senda de Logros</h1>
                         {/* User Level Component - Now Clickable */}
                         <UserLevel
                             level={userLevel.level}
