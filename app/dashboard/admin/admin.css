@@ -1,0 +1,199 @@
+.admin-panel {
+    min-height: 100vh;
+    padding: var(--space-2xl);
+    background: radial-gradient(circle at top right, rgba(139, 92, 246, 0.08), transparent),
+        radial-gradient(circle at bottom left, rgba(26, 31, 46, 0.6), var(--color-background));
+}
+
+.admin-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-3xl);
+}
+
+.admin-title {
+    font-family: var(--font-display);
+    font-size: var(--font-3xl);
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--color-accent), var(--color-primary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin: 0;
+}
+
+.admin-card {
+    background: var(--color-background-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-2xl);
+    box-shadow: var(--shadow-md);
+    margin-bottom: var(--space-2xl);
+}
+
+.actions-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 8px;
+    margin-top: var(--space-lg);
+}
+
+.actions-table th {
+    text-align: left;
+    padding: var(--space-md);
+    color: var(--color-text-muted);
+    font-family: var(--font-display);
+    font-size: var(--font-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+.action-row {
+    background: rgba(17, 26, 69, 0.3);
+    transition: all var(--transition-fast);
+}
+
+.action-row:hover {
+    background: rgba(17, 26, 69, 0.5);
+    transform: scale(1.005);
+}
+
+.action-row td {
+    padding: var(--space-md);
+    border-top: 1px solid var(--color-border-light);
+    border-bottom: 1px solid var(--color-border-light);
+}
+
+.action-row td:first-child {
+    border-left: 1px solid var(--color-border-light);
+    border-top-left-radius: var(--radius-md);
+    border-bottom-left-radius: var(--radius-md);
+}
+
+.action-row td:last-child {
+    border-right: 1px solid var(--color-border-light);
+    border-top-right-radius: var(--radius-md);
+    border-bottom-right-radius: var(--radius-md);
+}
+
+.points-input {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-primary);
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
+    width: 80px;
+    font-family: var(--font-display);
+    font-weight: 700;
+}
+
+.points-input:focus {
+    border-color: var(--color-primary);
+    outline: none;
+    box-shadow: 0 0 8px var(--color-primary-glow);
+}
+
+.badge {
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.badge-positive {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--color-positive);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.badge-negative {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--color-negative);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.admin-btn {
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-weight: 600;
+    font-size: var(--font-xs);
+    transition: all 0.2s;
+    border: 1px solid transparent;
+}
+
+.btn-save {
+    background: var(--color-primary);
+    color: white;
+}
+
+.btn-save:hover {
+    background: var(--color-primary-dark);
+    box-shadow: 0 0 12px var(--color-primary-glow);
+}
+
+.btn-delete {
+    background: transparent;
+    color: var(--color-text-muted);
+    border-color: var(--color-border);
+}
+
+.btn-delete:hover {
+    color: var(--color-negative);
+    border-color: var(--color-negative);
+    background: rgba(239, 68, 68, 0.05);
+}
+
+.new-action-form {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr auto;
+    gap: var(--space-md);
+    align-items: end;
+    margin-top: var(--space-xl);
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+
+.form-group label {
+    font-size: var(--font-xs);
+    color: var(--color-text-muted);
+    font-weight: 600;
+}
+
+.form-control {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-primary);
+    padding: var(--space-sm);
+    border-radius: var(--radius-md);
+}
+
+.success-msg {
+    color: var(--color-positive);
+    font-size: var(--font-sm);
+    margin-top: var(--space-md);
+    animation: fadeIn 0.3s forwards;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

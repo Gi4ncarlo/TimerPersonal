@@ -77,8 +77,6 @@ export default function LoginPage() {
                     </form>
 
                     <div className="login-hint">
-                        <p className="hint-title">Usuario de prueba:</p>
-                        <p className="hint-text">• Usuario: <strong>demo</strong> / Contraseña: <strong>demo123</strong></p>
                         <p className="hint-note">Los datos ahora se guardan permanentemente en Supabase 🎉</p>
                         <p className="hint-text" style={{ marginTop: '1rem' }}>
                             ¿No tienes cuenta? <Link href="/register"><strong>Regístrate aquí</strong></Link>
