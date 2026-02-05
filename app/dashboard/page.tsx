@@ -237,6 +237,9 @@ export default function Dashboard() {
                     <div className="header-actions">
                         <Link href="/leaderboard" className="nav-link">🏆 Leaderboard</Link>
                         <Link href="/estadisticas" className="nav-link">📊 Estadísticas</Link>
+                        {currentUser?.role === 'admin' && (
+                            <Link href="/dashboard/admin" className="nav-link" style={{ borderColor: 'var(--color-accent)', color: 'var(--color-accent)' }}>🛠 Admin</Link>
+                        )}
                         <Link href="/strikes" className="nav-link" style={{ color: '#ff4444', borderColor: '#ff4444' }}>⚠️ Strikes</Link>
                         <Link href="/analisis-ia" className="nav-link">🤖 Análisis IA</Link>
                         <button className="logout-btn" onClick={handleLogout}>Salir</button>

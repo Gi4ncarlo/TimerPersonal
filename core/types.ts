@@ -4,6 +4,7 @@ export type ActionType = 'positive' | 'negative';
 
 export interface Action {
     id: string;
+    userId?: string | null;
     name: string;
     type: ActionType;
     pointsPerMinute: number;
@@ -30,6 +31,8 @@ export interface DailyRecord {
 export interface User {
     id: string;
     username: string;
+    email?: string;
+    role: 'admin' | 'user';
     preferences: Record<string, any>;
     level: number;
     xp: number;

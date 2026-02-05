@@ -53,6 +53,8 @@ export const SupabaseDataStore = {
         return {
             id: profile.id,
             username: profile.username,
+            email: profile.email,
+            role: profile.role || 'user',
             preferences: profile.preferences || {},
             level: profile.level || 1,
             xp: profile.xp || 0,
@@ -205,16 +207,27 @@ export const SupabaseDataStore = {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return [];
 
-        const { data, error } = await supabase
-            .from('actions')
-            .select('*')
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: true });
+        // Fetch personal and global actions separately to avoid .or() issues with NULL
+        const [personalRes, globalRes] = await Promise.all([
+            supabase.from('actions').select('*').eq('user_id', user.id),
+            supabase.from('actions').select('*').is('user_id', null)
+        ]);
 
-        if (error || !data) return [];
+        const data = [...(personalRes.data || []), ...(globalRes.data || [])];
+        const error = personalRes.error || globalRes.error;
 
-        return data.map(a => ({
+        // Deduplicate by name, preferring Global (null user_id)
+        const uniqueActions: Record<string, any> = {};
+        data.forEach(action => {
+            if (uniqueActions[action.name] && uniqueActions[action.name].user_id === null) {
+                return;
+            }
+            uniqueActions[action.name] = action;
+        });
+
+        return Object.values(uniqueActions).map(a => ({
             id: a.id,
+            userId: a.user_id,
             name: a.name,
             type: a.type as 'positive' | 'negative',
             pointsPerMinute: Number(a.points_per_minute),
@@ -229,7 +242,7 @@ export const SupabaseDataStore = {
         const { data, error } = await supabase
             .from('actions')
             .insert({
-                user_id: user.id,
+                user_id: action.pointsPerMinute !== undefined ? null : user.id, // Logic to decide if global or not (Admin will use separate method)
                 name: action.name,
                 type: action.type,
                 points_per_minute: action.pointsPerMinute,
@@ -247,6 +260,20 @@ export const SupabaseDataStore = {
             pointsPerMinute: Number(data.points_per_minute),
             metadata: data.metadata,
         };
+    },
+
+    updateAction: async (id: string, updates: Partial<Action>): Promise<void> => {
+        const { error } = await supabase
+            .from('actions')
+            .update({
+                name: updates.name,
+                points_per_minute: updates.pointsPerMinute,
+                type: updates.type,
+                metadata: updates.metadata
+            })
+            .eq('id', id);
+
+        if (error) throw error;
     },
 
     deleteAction: async (id: string): Promise<boolean> => {
