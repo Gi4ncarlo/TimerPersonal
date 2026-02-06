@@ -39,3 +39,25 @@ export const getWeekEndString = (): string => {
     const sunday = new Date(now.setDate(diff));
     return format(sunday, 'yyyy-MM-dd', { timeZone: TIMEZONE });
 };
+/**
+ * Returns the time remaining in the current week (until Sunday midnight)
+ * @returns { days: number, hours: number, minutes: number, totalMs: number }
+ */
+export const getTimeRemainingInWeek = () => {
+    const now = getArgentinaDate();
+
+    // Get next Monday 00:00:00
+    const nextMonday = new Date(getWeekEndString());
+    nextMonday.setDate(nextMonday.getDate() + 1);
+    nextMonday.setHours(0, 0, 0, 0);
+
+    const diff = nextMonday.getTime() - now.getTime();
+
+    if (diff <= 0) return { days: 0, hours: 0, minutes: 0, totalMs: 0 };
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+    return { days, hours, minutes, totalMs: diff };
+};
