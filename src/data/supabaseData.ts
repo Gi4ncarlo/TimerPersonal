@@ -1,7 +1,7 @@
 import { supabase } from '@/lib/supabase/client';
 import { Action, DailyRecord, User, Goal, Strike } from '@/core/types';
 import { getTodayString, getWeekStartString, getWeekEndString, getArgentinaDate } from '@/core/utils/dateUtils';
-import { subDays } from 'date-fns';
+import { subDays, differenceInDays, parseISO } from 'date-fns';
 
 export const SupabaseDataStore = {
     // Authentication
@@ -954,83 +954,111 @@ export const SupabaseDataStore = {
         };
     },
 
-    checkAndCreateStrike: async (date: string): Promise<Strike | null> => {
+    processMissedStrikes: async (dates: string[]): Promise<Strike[]> => {
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return null;
+        if (!user || dates.length === 0) return [];
 
-        // Check if strike already exists
-        const { data: existing } = await supabase
-            .from('strikes')
-            .select('*')
-            .eq('user_id', user.id)
-            .eq('strike_date', date)
-            .single();
+        const createdStrikes: Strike[] = [];
 
-        if (existing) return null;
+        // Sort dates ascending to apply penalties in order
+        const sortedDates = [...dates].sort();
 
-        // Create new strike
-        try {
-            // Apply Penalty FIRST
-            await SupabaseDataStore.applyStrikePenalty(user.id, date);
+        for (const date of sortedDates) {
+            // Check if strike already exists
+            const { data: existing } = await supabase
+                .from('strikes')
+                .select('*')
+                .eq('user_id', user.id)
+                .eq('strike_date', date)
+                .maybeSingle();
 
-            return await SupabaseDataStore.createStrike({
-                userId: user.id,
-                strikeDate: date,
-                reason: 'Sin actividad registrada',
-            });
-        } catch (error) {
-            console.error('Error creating strike:', error);
-            return null;
+            if (existing) continue;
+
+            try {
+                // Apply Penalty FIRST
+                await SupabaseDataStore.applyStrikePenalty(user.id, date);
+
+                const strike = await SupabaseDataStore.createStrike({
+                    userId: user.id,
+                    strikeDate: date,
+                    reason: 'Sin actividad registrada',
+                });
+
+                createdStrikes.push(strike);
+            } catch (error) {
+                console.error(`Error processing strike for ${date}:`, error);
+            }
         }
+
+        return createdStrikes;
+    },
+
+    /**
+     * @deprecated Use processMissedStrikes
+     */
+    checkAndCreateStrike: async (date: string): Promise<Strike | null> => {
+        const strikes = await SupabaseDataStore.processMissedStrikes([date]);
+        return strikes.length > 0 ? strikes[0] : null;
     },
 
     applyStrikePenalty: async (userId: string, strikeDate: string): Promise<void> => {
-        // 1. Calculate Total Points up to strikeDate (inclusive or exclusive? usually up to that moment)
-        // Since granularity is Day, we typically sum everything BEFORE this penalty record.
-        // But to be precise "Total de puntos ganados que tenes actualmente".
-        // Use all records.
-        const { data: records, error } = await supabase
-            .from('daily_records')
-            .select('points_calculated')
-            .eq('user_id', userId);
+        // 1. Get all records and strikes to calculate consecutiveness
+        const [{ data: records }, { data: strikes }] = await Promise.all([
+            supabase.from('daily_records').select('points_calculated').eq('user_id', userId),
+            supabase.from('strikes').select('strike_date').eq('user_id', userId).order('strike_date', { ascending: false })
+        ]);
 
-        if (error || !records) return;
+        if (!records) return;
 
         const currentTotal = records.reduce((sum, r) => sum + Number(r.points_calculated), 0);
-
-        // If total is <= 0 using logic "points gained", maybe we don't penalize? 
-        // User said: "reste ... del total de puntos ganados". 
-        // If I have 100 points, penalty is 40. New total 60.
-        // If I have -50 points? Penalty logic might differ. 
-        // Assuming we only penalize POSITIVE totals or simply mathematically 40% of net.
-        // "40% del total de puntos ganados que tenes actualmente".
-        // Let's assume Net Total.
         if (currentTotal <= 0) return;
 
-        const penalty = Math.floor(currentTotal * 0.40);
+        // 2. Determine penalty percentage
+        // If the last strike was "yesterday" relative to strikeDate, increase penalty
+        let penaltyPercent = 0.40; // Base 40%
+
+        if (strikes && strikes.length > 0) {
+            const lastStrikeDate = strikes[0].strike_date;
+            const diff = differenceInDays(parseISO(strikeDate), parseISO(lastStrikeDate));
+
+            if (diff === 1) {
+                // If consecutive, we want to know HOW MANY consecutive ones there are to escalate
+                // We count backwards from the most recent strike
+                let consecutiveCount = 1;
+                for (let i = 0; i < strikes.length - 1; i++) {
+                    const current = parseISO(strikes[i].strike_date);
+                    const prev = parseISO(strikes[i + 1].strike_date);
+                    if (differenceInDays(current, prev) === 1) {
+                        consecutiveCount++;
+                    } else {
+                        break;
+                    }
+                }
+                // Escalate: 40% + 10% for each consecutive day after the first strike
+                penaltyPercent = Math.min(1.0, 0.40 + (consecutiveCount * 0.10));
+            }
+        }
+
+        const penalty = Math.floor(currentTotal * penaltyPercent);
 
         if (penalty > 0) {
-            console.log(`Applying strike penalty of ${penalty} points (Total: ${currentTotal})`);
+            console.log(`Applying strike penalty of ${penalty} points (${(penaltyPercent * 100).toFixed(0)}% of ${currentTotal})`);
 
             // Create penalty record
             await supabase.from('daily_records').insert({
                 user_id: userId,
                 action_name: 'Penalizacion por Stryke',
-                // No action_id needed or use a system one
-                date: getTodayString(), // The penalty happens NOW/TODAY when detected.
+                date: getTodayString(),
                 timestamp: new Date().toISOString(),
                 duration_minutes: 0,
                 points_calculated: -penalty,
-                notes: `Strike detectado el ${strikeDate}. Penalización del 40% sobre ${currentTotal} puntos.`
+                notes: `Strike detectado el ${strikeDate}. Penalización del ${(penaltyPercent * 100).toFixed(0)}% sobre ${currentTotal} puntos.`
             });
 
-            // We should also update leaderboard cache if needed, but the triggers/createRecord wrapper might handle it.
-            // But here we inserted directly to avoid 'createRecord' overhead or circular deps. 
-            // Let's manually trigger cache update
+            // Update leaderboard cache
             const weekStart = getWeekStartString();
             const weekEnd = getWeekEndString();
 
-            // Fetch username
             const { data: user } = await supabase.from('users').select('username').eq('id', userId).single();
             if (user) {
                 await SupabaseDataStore.updateUserWeeklyStats(userId, user.username, weekStart, weekEnd);
