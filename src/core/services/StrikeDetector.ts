@@ -16,8 +16,32 @@ export class StrikeDetector {
     }
 
     /**
+     * Detecta todos los días perdidos (sin actividad) entre la última actividad y hoy
+     * Se usa para detectar strikes múltiples si el usuario no entró varios días
+     */
+    static detectMissedDays(records: DailyRecord[]): string[] {
+        if (records.length === 0) return [];
+
+        // Sort records by date descending to find the last one
+        const sortedRecords = [...records].sort((a, b) => b.date.localeCompare(a.date));
+        const lastActivityDate = parseISO(sortedRecords[0].date);
+        const today = parseISO(getTodayString());
+        
+        const missedDays: string[] = [];
+        const diff = differenceInDays(today, lastActivityDate);
+
+        // Si la diferencia es mayor a 1, hubo días en el medio sin actividad (excluyendo hoy)
+        // Ejemplo: última actividad lunes (10), hoy miércoles (12). Ayer martes (11) es strike.
+        for (let i = 1; i < diff; i++) {
+            missedDays.push(format(subDays(today, diff - i), 'yyyy-MM-dd'));
+        }
+
+        return missedDays;
+    }
+
+    /**
      * Detecta si hubo un strike ayer
-     * Se usa para verificar al cargar el dashboard
+     * @deprecated Usar detectMissedDays para un manejo más robusto
      */
     static detectYesterdayStrike(records: DailyRecord[]): { hasStrike: boolean; date: string } {
         const yesterday = format(subDays(new Date(), 1), 'yyyy-MM-dd');

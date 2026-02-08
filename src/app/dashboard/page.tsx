@@ -38,7 +38,7 @@ export default function Dashboard() {
     const [loadingActionId, setLoadingActionId] = useState<string | null>(null);
 
     // Strike State
-    const [latestStrike, setLatestStrike] = useState<Strike | null>(null);
+    const [latestStrikes, setLatestStrikes] = useState<Strike[]>([]);
     const [showStrikeWarning, setShowStrikeWarning] = useState(false);
 
     useEffect(() => {
@@ -69,13 +69,12 @@ export default function Dashboard() {
             const totalPoints = fetchedRecords.reduce((sum, r) => sum + r.pointsCalculated, 0);
             setAccumulatedPoints(totalPoints);
 
-            // Check for strikes (yesterday)
-            const strikeCheck = StrikeDetector.detectYesterdayStrike(fetchedRecords);
-            if (strikeCheck.hasStrike) {
-                // Try to create strike (it handles duplication)
-                const newStrike = await SupabaseDataStore.checkAndCreateStrike(strikeCheck.date);
-                if (newStrike) {
-                    setLatestStrike(newStrike);
+            // Check for missed days (multi-day strikes)
+            const missedDays = StrikeDetector.detectMissedDays(fetchedRecords);
+            if (missedDays.length > 0) {
+                const newStrikes = await SupabaseDataStore.processMissedStrikes(missedDays);
+                if (newStrikes.length > 0) {
+                    setLatestStrikes(newStrikes);
                     setShowStrikeWarning(true);
                 }
             }
@@ -345,9 +344,9 @@ export default function Dashboard() {
                 />
             )}
 
-            {showStrikeWarning && latestStrike && (
+            {showStrikeWarning && latestStrikes.length > 0 && (
                 <StrikeWarning
-                    strikeDate={latestStrike.strikeDate}
+                    strikeDates={latestStrikes.map(s => s.strikeDate)}
                     onDismiss={() => setShowStrikeWarning(false)}
                 />
             )}
