@@ -1,14 +1,15 @@
-import { Action } from '@/core/types';
+import { Action, Goal } from '@/core/types';
 import './ActivityModal.css';
 
 interface ActivityModalProps {
     action: Action;
+    goals?: Goal[]; // NEW: Pass goals to allow milestone selection
     isOpen: boolean;
     onClose: () => void;
-    onSubmit: (data: { durationMinutes: number; metricValue: number; notes: string }) => void;
+    onSubmit: (data: { durationMinutes: number; metricValue: number; notes: string; targetGoalId?: string }) => void;
 }
 
-export default function ActivityModal({ action, isOpen, onClose, onSubmit }: ActivityModalProps) {
+export default function ActivityModal({ action, goals = [], isOpen, onClose, onSubmit }: ActivityModalProps) {
     if (!isOpen) return null;
 
     const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -61,6 +62,22 @@ export default function ActivityModal({ action, isOpen, onClose, onSubmit }: Act
                 const subject = formData.get('subject') as string || '';
                 notes = `${subject} (${durationMinutes} min)`;
                 break;
+
+            case 'impact':
+                metricValue = parseFloat(formData.get('impact') as string || '0');
+                durationMinutes = 0; // Impact activities don't necessarily take time in the app context
+                notes = formData.get('notes') as string || 'Hito alcanzado';
+                break;
+
+            case 'milestone':
+                const goalId = formData.get('milestoneId') as string;
+                const goal = goals.find(g => g.id === goalId);
+                metricValue = goal ? goal.targetValue : 1; // Complete it
+                durationMinutes = 0;
+                notes = `Hito Completado: ${goal ? goal.title : 'Desconocido'}`;
+                onSubmit({ durationMinutes, metricValue, notes, targetGoalId: goalId });
+                onClose();
+                return; // Early return because we call onSubmit with targetGoalId
         }
 
         onSubmit({ durationMinutes, metricValue, notes });
@@ -202,6 +219,53 @@ export default function ActivityModal({ action, isOpen, onClose, onSubmit }: Act
                             />
                         </div>
                     </>
+                );
+
+            case 'impact':
+                return (
+                    <>
+                        <div className="form-group">
+                            <label htmlFor="impact">Puntos de Impacto</label>
+                            <input
+                                id="impact"
+                                name="impact"
+                                type="number"
+                                min="1"
+                                placeholder="Ej: 1000"
+                                required
+                                autoFocus
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label htmlFor="notes">¿Qué lograste?</label>
+                            <input
+                                id="notes"
+                                name="notes"
+                                type="text"
+                                placeholder="Ej: Compré la camioneta, Vendí 10 productos..."
+                                required
+                            />
+                        </div>
+                    </>
+                );
+
+            case 'milestone':
+                const milestoneGoals = goals.filter(g => g.isMilestone && !g.isCompleted);
+                return (
+                    <div className="form-group">
+                        <label htmlFor="milestoneId">¿Qué Hito completaste?</label>
+                        {milestoneGoals.length > 0 ? (
+                            <select id="milestoneId" name="milestoneId" required autoFocus>
+                                <option value="">Selecciona un hito...</option>
+                                {milestoneGoals.map(g => (
+                                    <option key={g.id} value={g.id}>{g.title}</option>
+                                ))}
+                            </select>
+                        ) : (
+                            <div className="no-goals-message">No tienes hitos activos para completar.</div>
+                        )}
+                        <p className="impact-hint">✨ Este logro te sumará 20,000 puntos automáticamente.</p>
+                    </div>
                 );
 
             default:

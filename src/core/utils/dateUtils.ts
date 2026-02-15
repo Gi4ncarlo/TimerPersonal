@@ -61,3 +61,28 @@ export const getTimeRemainingInWeek = () => {
 
     return { days, hours, minutes, totalMs: diff };
 };
+
+/**
+ * Returns the end of the current month in Argentina timezone as YYYY-MM-DD.
+ */
+export const getMonthEndString = (): string => {
+    const now = getArgentinaDate();
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    return format(lastDay, 'yyyy-MM-dd', { timeZone: TIMEZONE });
+};
+
+/**
+ * Returns the end of the current year in Argentina timezone as YYYY-MM-DD.
+ */
+export const getYearEndString = (): string => {
+    const now = getArgentinaDate();
+    const lastDay = new Date(now.getFullYear(), 11, 31);
+    return format(lastDay, 'yyyy-MM-dd', { timeZone: TIMEZONE });
+};
+
+/**
+ * Returns a far future date for milestones.
+ */
+export const getFarFutureString = (): string => {
+    return '2099-12-31';
+};

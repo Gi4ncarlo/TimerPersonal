@@ -9,7 +9,13 @@ export class PointsCalculator {
      * @param durationMinutes - Duration in minutes
      * @returns Calculated points (can be negative)
      */
-    static calculatePoints(action: Action, durationMinutes: number): number {
+    static calculatePoints(action: Action, durationMinutes: number, metricValue?: number): number {
+        if (action.metadata?.inputType === 'impact' && metricValue !== undefined) {
+            return metricValue;
+        }
+        if (action.metadata?.inputType === 'milestone') {
+            return 20000; // Fixed reward for completing a milestone
+        }
         return action.pointsPerMinute * durationMinutes;
     }
 
@@ -36,9 +42,10 @@ export class PointsCalculator {
         durationMinutes: number,
         date?: string,
         notes?: string,
-        metricValue?: number
+        metricValue?: number,
+        targetGoalId?: string
     ): Omit<DailyRecord, 'id'> {
-        const pointsCalculated = this.calculatePoints(action, durationMinutes);
+        const pointsCalculated = this.calculatePoints(action, durationMinutes, metricValue);
         const now = getArgentinaDate();
 
         return {
@@ -49,6 +56,7 @@ export class PointsCalculator {
             durationMinutes,
             metricValue,
             pointsCalculated,
+            targetGoalId,
             notes,
         };
     }

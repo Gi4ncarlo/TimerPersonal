@@ -12,6 +12,7 @@ import Twemoji from '@/ui/components/Twemoji';
 import GoalTracker from '@/ui/components/GoalTracker';
 import StrikeWarning from '@/ui/components/StrikeWarning';
 import ProfileModal from '@/ui/components/ProfileModal';
+import CreateActionModal from '@/ui/components/CreateActionModal';
 import { SupabaseDataStore } from '@/data/supabaseData';
 import { BalanceCalculator } from '@/core/services/BalanceCalculator';
 import { PointsCalculator } from '@/core/services/PointsCalculator';
@@ -33,6 +34,7 @@ export default function Dashboard() {
     const [selectedAction, setSelectedAction] = useState<Action | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+    const [isCreateActionModalOpen, setIsCreateActionModalOpen] = useState(false);
     const [accumulatedPoints, setAccumulatedPoints] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
     const [loadingActionId, setLoadingActionId] = useState<string | null>(null);
@@ -102,7 +104,7 @@ export default function Dashboard() {
         }
     };
 
-    const handleModalSubmit = async (data: { durationMinutes: number; metricValue?: number; notes: string }, overrideAction?: Action) => {
+    const handleModalSubmit = async (data: { durationMinutes: number; metricValue?: number; notes: string; targetGoalId?: string }, overrideAction?: Action) => {
         const actionToUse = overrideAction || selectedAction;
         if (!actionToUse) return;
 
@@ -114,7 +116,8 @@ export default function Dashboard() {
                 data.durationMinutes,
                 undefined, // Let it default to getTodayString()
                 data.notes,
-                data.metricValue
+                data.metricValue,
+                data.targetGoalId // Passes the selective milestone ID if present
             );
 
             await SupabaseDataStore.createRecord(newRecord);
@@ -125,7 +128,7 @@ export default function Dashboard() {
         }
     };
 
-    const handleCreateGoal = async (title: string, targetValue: number, actionId?: string, metricType?: string, metricUnit?: string) => {
+    const handleCreateGoal = async (title: string, targetValue: number, actionId?: string, metricType?: string, metricUnit?: string, period?: string) => {
         try {
             await SupabaseDataStore.createGoal({
                 title,
@@ -134,6 +137,8 @@ export default function Dashboard() {
                 actionId,
                 metricType: metricType as any,
                 metricUnit,
+                period: (period as any) || 'weekly',
+                isMilestone: period === 'milestone',
                 startDate: new Date().toISOString().split('T')[0],
             });
             await loadData();
@@ -160,6 +165,21 @@ export default function Dashboard() {
     const handleLogout = async () => {
         await SupabaseDataStore.logout();
         router.push('/login');
+    };
+
+    const handleCreateAction = async (name: string, type: 'positive' | 'negative', points: number) => {
+        try {
+            await SupabaseDataStore.createAction({
+                name,
+                type,
+                pointsPerMinute: points,
+                metadata: { inputType: 'impact' } // Personal actions are usually impact-based (fixed points)
+            });
+            await loadData();
+        } catch (error) {
+            console.error('Error creating action:', error);
+            alert('Error al crear la actividad');
+        }
     };
 
     // Quick Add Presets (Hardcoded for common use cases or based on existing actons)
@@ -315,7 +335,19 @@ export default function Dashboard() {
 
                     {/* RIGHT COLUMN - Actions Selection */}
                     <div className="actions-panel">
-                        <QuestCard title="AGREGAR ACTIVIDAD" subtitle={format(new Date(), 'dd/MM/yyyy', { locale: es })}>
+                        <QuestCard
+                            title="AGREGAR ACTIVIDAD"
+                            subtitle={format(new Date(), 'dd/MM/yyyy', { locale: es })}
+                            action={
+                                <button
+                                    className="add-custom-action-btn"
+                                    onClick={() => setIsCreateActionModalOpen(true)}
+                                    title="Crear mi propia actividad"
+                                >
+                                    + Crear
+                                </button>
+                            }
+                        >
                             {/* Same Actions List code... */}
                             <div className="actions-section">
                                 <h3 className="goal-title">Positivas</h3>
@@ -338,6 +370,7 @@ export default function Dashboard() {
             {selectedAction && (
                 <ActivityModal
                     action={selectedAction}
+                    goals={goals}
                     isOpen={isModalOpen}
                     onClose={() => setIsModalOpen(false)}
                     onSubmit={(data) => handleModalSubmit(data)}
@@ -359,6 +392,12 @@ export default function Dashboard() {
                     onUpdate={() => loadData()}
                 />
             )}
+
+            <CreateActionModal
+                isOpen={isCreateActionModalOpen}
+                onClose={() => setIsCreateActionModalOpen(false)}
+                onSubmit={handleCreateAction}
+            />
         </main>
     );
 }
