@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase/client';
 import { Action, DailyRecord, User, Goal, Strike } from '@/core/types';
-import { getTodayString, getWeekStartString, getWeekEndString, getArgentinaDate } from '@/core/utils/dateUtils';
+import { getTodayString, getWeekStartString, getWeekEndString, getArgentinaDate, getMonthEndString, getYearEndString, getFarFutureString } from '@/core/utils/dateUtils';
 import { subDays, differenceInDays, parseISO } from 'date-fns';
 
 export const SupabaseDataStore = {
@@ -242,21 +242,21 @@ export const SupabaseDataStore = {
         const { data, error } = await supabase
             .from('actions')
             .insert({
-                user_id: action.pointsPerMinute !== undefined ? null : user.id, // Logic to decide if global or not (Admin will use separate method)
+                user_id: action.userId || user.id, // Explicitly use provided userId or current user
                 name: action.name,
                 type: action.type,
-                points_per_minute: action.pointsPerMinute,
+                points_per_minute: action.pointsPerMinute || 0,
                 metadata: action.metadata || {},
             })
             .select()
             .single();
 
         if (error) throw error;
-
         return {
             id: data.id,
+            userId: data.user_id,
             name: data.name,
-            type: data.type,
+            type: data.type as 'positive' | 'negative',
             pointsPerMinute: Number(data.points_per_minute),
             metadata: data.metadata,
         };
@@ -375,6 +375,7 @@ export const SupabaseDataStore = {
                 duration_minutes: record.durationMinutes,
                 points_calculated: record.pointsCalculated,
                 metric_value: record.metricValue || 0,
+                target_goal_id: record.targetGoalId,
                 notes: record.notes,
             })
             .select()
@@ -393,7 +394,8 @@ export const SupabaseDataStore = {
             record.actionId,
             record.durationMinutes,
             record.pointsCalculated,
-            record.metricValue
+            record.metricValue,
+            record
         );
 
         // 4. Update Leaderboard Stats (Weekly)
@@ -484,6 +486,8 @@ export const SupabaseDataStore = {
             actionId: g.action_id,
             metricType: g.metric_type,
             metricUnit: g.metric_unit,
+            period: g.period || 'weekly',
+            isMilestone: g.is_milestone || false,
             startDate: g.start_date,
             endDate: g.end_date,
             isCompleted: g.is_completed,
@@ -504,8 +508,15 @@ export const SupabaseDataStore = {
                 action_id: goal.actionId,
                 metric_type: goal.metricType,
                 metric_unit: goal.metricUnit,
+                period: goal.period,
+                is_milestone: goal.isMilestone,
                 start_date: goal.startDate,
-                end_date: goal.endDate || getWeekEndString(),
+                end_date: goal.endDate || (
+                    goal.period === 'monthly' ? getMonthEndString() :
+                        goal.period === 'annual' ? getYearEndString() :
+                            goal.period === 'milestone' ? getFarFutureString() :
+                                getWeekEndString()
+                ),
             })
             .select()
             .single();
@@ -522,6 +533,8 @@ export const SupabaseDataStore = {
             actionId: data.action_id,
             metricType: data.metric_type,
             metricUnit: data.metric_unit,
+            period: data.period,
+            isMilestone: data.is_milestone,
             startDate: data.start_date,
             endDate: data.end_date,
             isCompleted: false,
@@ -563,7 +576,8 @@ export const SupabaseDataStore = {
         actionId: string,
         duration: number,
         points: number,
-        metricValue?: number
+        metricValue?: number,
+        record?: any
     ): Promise<void> => {
         // Fetch active goals
         const { data: goals } = await supabase
@@ -577,57 +591,63 @@ export const SupabaseDataStore = {
         for (const goal of goals) {
             let increment = 0;
 
-            // Check filters
-            if (goal.action_id && goal.action_id !== actionId) continue;
-
-            // Calculate increments with high specificity
-            if (goal.metric_type === 'pages' || goal.metric_type === 'kilometers') {
-                // Pages and Kilometers are always tracked via metricValue
-                increment = Number(metricValue || 0);
-            } else if (goal.type === 'duration' || goal.metric_type === 'hours') {
-                // Duration goals (Work, Study)
-                if (goal.metric_unit === 'horas' || goal.metric_unit === 'hours' || goal.metric_type === 'hours') {
-                    increment = Number(duration || 0) / 60;
-                } else {
-                    increment = Number(duration || 0);
-                }
-            } else if (goal.type === 'points' || goal.metric_type === 'points') {
-                // Points goals
-                increment = Number(points || 0);
-            } else if (goal.metric_type === 'activities' || goal.type === 'count') {
-                // "Activities" goal is a simple count (1 per record)
-                increment = 1;
-            } else if (metricValue !== undefined && metricValue !== null && metricValue > 0) {
-                // Fallback: If metricValue exists and we have a metric type, use it
-                increment = Number(metricValue);
+            // NEW: Direct completion for selected goal
+            if (record.targetGoalId && goal.id === record.targetGoalId) {
+                increment = Number(goal.target_value); // Force completion
+            } else if (record.targetGoalId) {
+                // If it's a specific goal completion record, don't increment others
+                continue;
             } else {
-                // Final fallback
-                increment = 1;
-            }
+                // Standard logic for regular activities
+                if (goal.action_id && goal.action_id !== record.actionId) continue;
 
-
-            if (increment > 0 && !isNaN(increment)) {
-                const currentValue = Number(goal.current_value || 0);
-                const newValue = currentValue + increment;
-                const isCompleted = newValue >= Number(goal.target_value);
-
-                console.log(`Updating goal "${goal.title}": ${currentValue} -> ${newValue} (increment: ${increment})`);
-
-                const { error: updateError } = await supabase
-                    .from('goals')
-                    .update({
-                        current_value: newValue,
-                        is_completed: isCompleted
-                    })
-                    .eq('id', goal.id);
-
-                if (updateError) {
-                    console.error(`Error updating goal ${goal.id}:`, updateError);
+                // Calculate increments with high specificity
+                if (goal.metric_type === 'pages' || goal.metric_type === 'kilometers') {
+                    // Pages and Kilometers are always tracked via metricValue
+                    increment = Number(metricValue || 0);
+                } else if (goal.type === 'duration' || goal.metric_type === 'hours') {
+                    // Duration goals (Work, Study)
+                    if (goal.metric_unit === 'horas' || goal.metric_unit === 'hours' || goal.metric_type === 'hours') {
+                        increment = Number(duration || 0) / 60;
+                    } else {
+                        increment = Number(duration || 0);
+                    }
+                } else if (goal.type === 'points' || goal.metric_type === 'points') {
+                    // Points goals
+                    increment = Number(points || 0);
+                } else if (goal.metric_type === 'activities' || goal.type === 'count') {
+                    // "Activities" goal is a simple count (1 per record)
+                    increment = 1;
+                } else if (metricValue !== undefined && metricValue !== null && metricValue > 0) {
+                    // Fallback: If metricValue exists and we have a metric type, use it
+                    increment = Number(metricValue);
+                } else {
+                    // Final fallback
+                    increment = 1;
                 }
 
-                // Bonus XP for completing goal
-                if (isCompleted && !goal.is_completed) {
-                    await SupabaseDataStore.updateUserProgress(userId, 200); // +200 XP Bonus
+
+                if (increment > 0 && !isNaN(increment)) {
+                    const currentValue = Number(goal.current_value || 0);
+                    const newValue = currentValue + increment;
+                    const isCompleted = newValue >= Number(goal.target_value);
+
+                    const { error: updateError } = await supabase
+                        .from('goals')
+                        .update({
+                            current_value: newValue,
+                            is_completed: isCompleted
+                        })
+                        .eq('id', goal.id);
+
+                    if (updateError) {
+                        console.error(`Error updating goal ${goal.id}:`, updateError);
+                    }
+
+                    // Bonus XP for completing goal
+                    if (isCompleted && !goal.is_completed) {
+                        await SupabaseDataStore.updateUserProgress(userId, 200); // +200 XP Bonus
+                    }
                 }
             }
         }
@@ -781,8 +801,6 @@ export const SupabaseDataStore = {
                 .from('users')
                 .select('id, username, avatar_url');
 
-            console.log('getAllTimeLeaderboard - Total users:', allUsers?.length);
-
             if (usersError) {
                 console.error('Error fetching users:', usersError);
                 return [];
@@ -849,8 +867,6 @@ export const SupabaseDataStore = {
                 weekStart: 'All Time',
                 weekEnd: 'All Time'
             }));
-
-            console.log('getAllTimeLeaderboard - Leaderboard entries:', leaderboard.length);
 
             // Sort by total points descending
             return leaderboard.sort((a, b) => b.totalPoints - a.totalPoints);

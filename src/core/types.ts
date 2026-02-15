@@ -9,7 +9,7 @@ export interface Action {
     type: ActionType;
     pointsPerMinute: number;
     metadata?: {
-        inputType?: 'hours' | 'pages' | 'distance-time' | 'time' | 'time-note' | 'time-subject';
+        inputType?: 'hours' | 'pages' | 'distance-time' | 'time' | 'time-note' | 'time-subject' | 'impact' | 'milestone';
         unit?: string;
         estimatedMinutesPerPage?: number;
         [key: string]: any;
@@ -25,6 +25,7 @@ export interface DailyRecord {
     durationMinutes: number;
     metricValue?: number; // Added for tracking pages, km, etc.
     pointsCalculated: number;
+    targetGoalId?: string; // NEW: Specific goal this record should complete
     notes?: string;
 }
 
@@ -49,6 +50,8 @@ export interface Goal {
     actionId?: string; // Optional specific action constraint
     metricType?: 'pages' | 'kilometers' | 'hours' | 'points' | 'activities'; // NEW: Type of metric to track
     metricUnit?: string; // NEW: Display unit (e.g., "páginas", "km", "horas")
+    period: 'weekly' | 'monthly' | 'annual' | 'milestone'; // NEW: Goal period
+    isMilestone: boolean; // NEW: Whether it's a long-term milestone
     startDate: string;
     endDate?: string;
     isCompleted: boolean;
