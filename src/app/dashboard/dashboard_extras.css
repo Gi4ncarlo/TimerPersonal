@@ -3,36 +3,41 @@
 .quick-add-bar {
     display: flex;
     gap: var(--space-md);
-    margin-bottom: var(--space-2xl);
+    margin-bottom: var(--space-3xl);
     flex-wrap: wrap;
-    padding: var(--space-md);
-    background: var(--color-background-card);
-    border: 1px solid var(--color-border-light);
-    border-radius: var(--radius-lg);
+    padding: var(--space-md) var(--space-lg);
+    background: var(--color-surface-elevated);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(168, 85, 247, 0.1);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md), var(--shadow-inner-glow);
+    animation: materialize 1s ease-out;
 }
 
 .quick-add-btn {
-    background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(139, 92, 246, 0.05));
-    border: 1px solid var(--color-primary);
+    background: rgba(168, 85, 247, 0.05);
+    border: 1px solid rgba(168, 85, 247, 0.3);
     color: var(--color-primary);
-    padding: var(--space-sm) var(--space-lg);
-    border-radius: var(--radius-md);
+    padding: var(--space-sm) var(--space-xl);
+    border-radius: var(--radius-sm);
     font-family: var(--font-display);
-    font-size: var(--font-sm);
-    font-weight: 600;
+    font-size: 0.8rem;
+    font-weight: 700;
     cursor: pointer;
-    transition: all var(--transition-normal);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     display: flex;
     align-items: center;
-    gap: var(--space-xs);
-    white-space: nowrap;
+    gap: var(--space-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
 }
 
 .quick-add-btn:hover {
-    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+    background: var(--color-primary);
     color: white;
-    box-shadow: 0 0 20px var(--color-primary-glow);
-    transform: translateY(-2px);
+    box-shadow: 0 0 25px var(--color-primary-glow);
+    transform: scale(1.05) translateY(-2px);
+    border-color: white;
 }
 
 .quick-add-btn:active {
@@ -72,27 +77,114 @@
     font-size: var(--font-lg);
 }
 
-/* Adjust grid for new layout */
-.dashboard-grid-new {
-    display: grid;
-    grid-template-columns: 1fr 400px;
-    gap: var(--space-2xl);
+/* Command Hub Responsive and Interactive Fixes */
+.nav-link,
+.logout-btn,
+.armory-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 38px;
+    /* Fixed height for all navbar items */
+    padding: 0 var(--space-lg);
+    font-size: 0.75rem;
+    font-weight: 700;
 }
 
-.left-column {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2xl);
+.armory-toggle {
+    position: relative;
+    overflow: visible !important;
+    /* Allow the dot to be seen */
 }
 
-.actions-panel {
-    display: flex;
-    flex-direction: column;
+/* Pulsing notification dot */
+.armory-toggle::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    width: 10px;
+    height: 10px;
+    background: var(--color-primary);
+    border-radius: 50%;
+    box-shadow: 0 0 10px var(--color-primary-glow);
+    animation: pulse-dot 2s infinite;
+    z-index: 2;
+}
+
+@keyframes pulse-dot {
+    0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(168, 85, 247, 0.7);
+    }
+
+    70% {
+        transform: scale(1.1);
+        box-shadow: 0 0 0 10px rgba(168, 85, 247, 0);
+    }
+
+    100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(168, 85, 247, 0);
+    }
+}
+
+.console-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
+    z-index: 250;
+    /* Below the console (300) but above content */
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s ease;
+}
+
+.console-backdrop.visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.armory-toggle:hover {
+    background: var(--color-primary);
+    color: white;
+    box-shadow: 0 0 20px var(--color-primary-glow);
+    transform: translateY(-2px);
+}
+
+.armory-toggle.active {
+    background: var(--color-primary) !important;
+    color: white !important;
+    border-color: white !important;
+    box-shadow: 0 0 25px var(--color-primary-glow);
+}
+
+.close-console:hover {
+    color: var(--color-primary);
+    transform: rotate(90deg);
+}
+
+.close-console {
+    transition: all 0.3s ease;
 }
 
 @media (max-width: 1200px) {
-    .dashboard-grid-new {
+    .hero-row {
         grid-template-columns: 1fr;
+    }
+
+    .command-console {
+        width: 100%;
+        right: -100%;
+        border-radius: 0;
+    }
+
+    .command-console.open {
+        transform: translateX(-100%);
     }
 }
 

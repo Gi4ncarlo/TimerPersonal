@@ -231,6 +231,44 @@
     }
 }
 
+@media (max-width: 600px) {
+
+    .leaderboard-header,
+    .leaderboard-row {
+        grid-template-columns: 40px 1fr 80px 60px;
+        /* Hide XP and Streak columns on mobile */
+    }
+
+    .row-cell:nth-child(5),
+    .row-cell:nth-child(6),
+    .header-cell:nth-child(5),
+    .header-cell:nth-child(6) {
+        display: none;
+    }
+
+    .avatar-info-group {
+        gap: var(--space-sm);
+    }
+}
+
+@media (max-width: 450px) {
+
+    .leaderboard-header,
+    .leaderboard-row {
+        grid-template-columns: 35px 1fr 70px 50px;
+        padding: var(--space-sm) var(--space-xs);
+    }
+
+    .username-text {
+        font-size: 0.85rem;
+    }
+
+    .points-positive,
+    .points-negative {
+        font-size: 0.85rem;
+    }
+}
+
 /* 24h Stats */
 .stats-24h {
     display: flex;

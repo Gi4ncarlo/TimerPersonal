@@ -1,11 +1,12 @@
 .goal-tracker-card {
-    background: rgba(13, 25, 48, 0.7);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(0, 212, 255, 0.1);
-    border-radius: var(--radius-lg);
+    background: var(--color-surface-elevated);
+    backdrop-filter: blur(15px);
+    border: var(--border-ethereal);
+    border-radius: var(--radius-md);
     padding: var(--space-xl);
     margin-bottom: var(--space-2xl);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-lg), var(--shadow-inner-glow);
+    animation: materialize 1.2s ease-out;
 }
 
 .goal-header {
@@ -13,87 +14,86 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: var(--space-lg);
-    margin-top: var(--space-md);
 }
 
 /* Tabs */
 .goal-tabs {
     display: flex;
     gap: 4px;
-    background: rgba(0, 0, 0, 0.3);
+    background: rgba(0, 0, 0, 0.4);
     padding: 4px;
-    border-radius: var(--radius-md);
-    margin-bottom: var(--space-lg);
+    border-radius: var(--radius-sm);
+    margin-bottom: var(--space-xl);
 }
 
 .tab-btn {
     flex: 1;
     background: none;
     border: none;
-    color: var(--color-text-muted);
-    padding: 8px 4px;
-    border-radius: var(--radius-sm);
+    color: var(--color-text-secondary);
+    padding: 10px 4px;
+    border-radius: 2px;
     font-family: var(--font-display);
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.1em;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.3s ease;
 }
 
 .tab-btn:hover {
-    color: var(--color-text-primary);
-    background: rgba(255, 255, 255, 0.05);
+    color: var(--color-primary);
+    background: rgba(168, 85, 247, 0.05);
 }
 
 .tab-btn.active {
     background: var(--color-primary);
-    color: #000;
-    box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+    color: white;
+    box-shadow: 0 0 15px var(--color-primary-glow);
 }
 
 .goal-section-title {
     font-family: var(--font-display);
-    font-size: 1.25rem;
+    font-size: 1.1rem;
     color: var(--color-text-primary);
     text-transform: uppercase;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.15em;
     margin: 0;
-    text-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+    font-weight: 900;
 }
 
 .add-goal-btn {
-    background: rgba(0, 212, 255, 0.1);
+    background: rgba(168, 85, 247, 0.1);
     border: 1px solid var(--color-primary);
     color: var(--color-primary);
     padding: 6px 16px;
-    border-radius: 20px;
+    border-radius: var(--radius-sm);
     font-family: var(--font-display);
-    font-size: 0.85rem;
-    font-weight: 600;
+    font-size: 0.75rem;
+    font-weight: 700;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.1em;
 }
 
 .add-goal-btn:hover {
     background: var(--color-primary);
-    color: #000;
-    box-shadow: 0 0 15px rgba(0, 212, 255, 0.4);
+    color: white;
+    box-shadow: 0 0 20px var(--color-primary-glow);
 }
 
 .new-goal-form {
-    background: rgba(0, 0, 0, 0.3);
+    background: rgba(0, 0, 0, 0.4);
     padding: var(--space-lg);
-    border-radius: var(--radius-md);
-    margin-bottom: var(--space-lg);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-sm);
+    margin-bottom: var(--space-xl);
+    border: 1px solid rgba(168, 85, 247, 0.15);
     display: flex;
     flex-direction: column;
     gap: var(--space-md);
-    animation: slideDown 0.3s ease-out;
+    animation: materialize 0.5s ease-out;
 }
 
 @keyframes slideDown {
@@ -188,29 +188,31 @@
 .goal-item {
     position: relative;
     padding: var(--space-md);
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    border-radius: var(--radius-md);
-    transition: all 0.2s;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(168, 85, 247, 0.1);
+    border-radius: var(--radius-sm);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .goal-item:hover {
-    background: rgba(255, 255, 255, 0.06);
-    transform: translateX(4px);
-    border-color: rgba(255, 255, 255, 0.1);
+    background: rgba(168, 85, 247, 0.05);
+    transform: translateX(6px);
+    border-color: var(--color-primary);
+    box-shadow: 0 0 20px var(--color-primary-glow);
 }
 
 .goal-info {
     display: flex;
     justify-content: space-between;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
     align-items: baseline;
 }
 
 .goal-title {
-    font-size: 1rem;
-    font-weight: 600;
+    font-size: 0.95rem;
+    font-weight: 700;
     color: var(--color-text-primary);
+    font-family: var(--font-body);
 }
 
 .title-stack {

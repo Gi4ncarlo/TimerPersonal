@@ -80,6 +80,9 @@ export interface Strike {
     strikeDate: string; // YYYY-MM-DD
     reason: string;
     detectedAt: string; // ISO datetime
+    pointsBefore?: number;
+    pointsDeducted?: number;
+    balanceAfter?: number;
 }
 
 export interface StrikeStats {

@@ -25,6 +25,20 @@
     justify-content: center;
     align-items: center;
     gap: var(--space-sm);
+    flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+    .timer-display {
+        font-size: 2.5rem;
+        gap: var(--space-xs);
+    }
+}
+
+@media (max-width: 480px) {
+    .timer-display {
+        font-size: 2rem;
+    }
 }
 
 .timer-digit {
