@@ -171,3 +171,18 @@
     color: var(--color-primary);
     font-family: var(--font-display);
 }
+
+@media (max-width: 480px) {
+    .login-card {
+        padding: var(--space-xl) var(--space-lg);
+    }
+
+    .login-title {
+        font-size: 2rem;
+    }
+
+    .login-logo {
+        width: 100px;
+        height: 100px;
+    }
+}

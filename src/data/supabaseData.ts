@@ -936,13 +936,25 @@ export const SupabaseDataStore = {
 
         if (error || !data) return [];
 
-        return data.map(s => ({
-            id: s.id,
-            userId: s.user_id,
-            strikeDate: s.strike_date,
-            reason: s.reason,
-            detectedAt: s.detected_at,
-        }));
+        return data.map(s => {
+            const pb = s.points_before !== null ? Number(s.points_before) : null;
+            const pd = s.points_deducted !== null ? Number(s.points_deducted) : null;
+            const ba = s.balance_after !== null ? Number(s.balance_after) : null;
+
+            // Si todos son 0 o null, es un registro antiguo sin data Real
+            const isLegacy = (pb === 0 || pb === null) && (pd === 0 || pd === null) && (ba === 0 || ba === null);
+
+            return {
+                id: s.id,
+                userId: s.user_id,
+                strikeDate: s.strike_date,
+                reason: s.reason,
+                detectedAt: s.detected_at,
+                pointsBefore: isLegacy ? undefined : pb ?? undefined,
+                pointsDeducted: isLegacy ? undefined : pd ?? undefined,
+                balanceAfter: isLegacy ? undefined : ba ?? undefined,
+            };
+        });
     },
 
     createStrike: async (strike: Omit<Strike, 'id' | 'detectedAt'>): Promise<Strike> => {
@@ -955,6 +967,9 @@ export const SupabaseDataStore = {
                 user_id: user.id,
                 strike_date: strike.strikeDate,
                 reason: strike.reason,
+                points_before: strike.pointsBefore || 0,
+                points_deducted: strike.pointsDeducted || 0,
+                balance_after: strike.balanceAfter || 0,
             })
             .select()
             .single();
@@ -967,6 +982,9 @@ export const SupabaseDataStore = {
             strikeDate: data.strike_date,
             reason: data.reason,
             detectedAt: data.detected_at,
+            pointsBefore: Number(data.points_before),
+            pointsDeducted: Number(data.points_deducted),
+            balanceAfter: Number(data.balance_after),
         };
     },
 
@@ -991,13 +1009,16 @@ export const SupabaseDataStore = {
             if (existing) continue;
 
             try {
-                // Apply Penalty FIRST
-                await SupabaseDataStore.applyStrikePenalty(user.id, date);
+                // Apply Penalty FIRST and get info
+                const penaltyInfo = await SupabaseDataStore.applyStrikePenalty(user.id, date);
 
                 const strike = await SupabaseDataStore.createStrike({
                     userId: user.id,
                     strikeDate: date,
                     reason: 'Sin actividad registrada',
+                    pointsBefore: penaltyInfo?.pointsBefore,
+                    pointsDeducted: penaltyInfo?.pointsDeducted,
+                    balanceAfter: penaltyInfo?.balanceAfter,
                 });
 
                 createdStrikes.push(strike);
@@ -1017,17 +1038,17 @@ export const SupabaseDataStore = {
         return strikes.length > 0 ? strikes[0] : null;
     },
 
-    applyStrikePenalty: async (userId: string, strikeDate: string): Promise<void> => {
+    applyStrikePenalty: async (userId: string, strikeDate: string): Promise<{ pointsBefore: number; pointsDeducted: number; balanceAfter: number } | null> => {
         // 1. Get all records and strikes to calculate consecutiveness
         const [{ data: records }, { data: strikes }] = await Promise.all([
             supabase.from('daily_records').select('points_calculated').eq('user_id', userId),
             supabase.from('strikes').select('strike_date').eq('user_id', userId).order('strike_date', { ascending: false })
         ]);
 
-        if (!records) return;
+        if (!records) return null;
 
         const currentTotal = records.reduce((sum, r) => sum + Number(r.points_calculated), 0);
-        if (currentTotal <= 0) return;
+        if (currentTotal <= 0) return { pointsBefore: 0, pointsDeducted: 0, balanceAfter: 0 };
 
         // 2. Determine penalty percentage
         // If the last strike was "yesterday" relative to strikeDate, increase penalty
@@ -1079,7 +1100,15 @@ export const SupabaseDataStore = {
             if (user) {
                 await SupabaseDataStore.updateUserWeeklyStats(userId, user.username, weekStart, weekEnd);
             }
+
+            return {
+                pointsBefore: currentTotal,
+                pointsDeducted: penalty,
+                balanceAfter: currentTotal - penalty
+            };
         }
+
+        return { pointsBefore: currentTotal, pointsDeducted: 0, balanceAfter: currentTotal };
     },
 
     scanAndApplyRetroactiveStrikes: async (): Promise<string> => {

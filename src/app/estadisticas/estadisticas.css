@@ -1047,3 +1047,80 @@
         min-width: unset;
     }
 }
+
+.insights-row {
+    flex-direction: column;
+}
+
+@media (max-width: 1200px) {
+    .kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .stats-bottom-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 992px) {
+    .charts-row-2col {
+        grid-template-columns: 1fr;
+    }
+
+    .feedback-card {
+        flex-direction: column;
+        align-items: flex-start;
+        text-align: center;
+        gap: var(--space-md);
+    }
+
+    .feedback-card::before {
+        width: 100%;
+        height: 4px;
+        left: 0;
+        top: 0;
+    }
+
+    .feedback-stats {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 768px) {
+    .stats-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .header-actions {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .stats-title {
+        font-size: 1.75rem;
+    }
+
+    .pie-chart-container {
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 480px) {
+    .kpi-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .insight-chip {
+        min-width: 100%;
+    }
+
+    .personal-bests-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .estadisticas-page {
+        padding: var(--space-md);
+    }
+}

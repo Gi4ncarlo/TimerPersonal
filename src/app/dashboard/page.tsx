@@ -42,6 +42,7 @@ export default function Dashboard() {
     // Strike State
     const [latestStrikes, setLatestStrikes] = useState<Strike[]>([]);
     const [showStrikeWarning, setShowStrikeWarning] = useState(false);
+    const [isArmoryOpen, setIsArmoryOpen] = useState(false);
 
     useEffect(() => {
         loadData();
@@ -260,110 +261,132 @@ export default function Dashboard() {
                             <Link href="/dashboard/admin" className="nav-link" style={{ borderColor: 'var(--color-accent)', color: 'var(--color-accent)' }}>🛠 Admin</Link>
                         )}
                         <Link href="/strikes" className="nav-link" style={{ color: '#ff4444', borderColor: '#ff4444' }}>⚠️ Strikes</Link>
-                        <Link href="/analisis-ia" className="nav-link">🤖 Análisis IA</Link>
+                        <button
+                            className={`nav-link armory-toggle ${isArmoryOpen ? 'active' : ''}`}
+                            onClick={() => setIsArmoryOpen(!isArmoryOpen)}
+                            title="Desplegar Arsenal de Acciones"
+                        >
+                            ⚔️ Arsenal
+                        </button>
                         <button className="logout-btn" onClick={handleLogout}>Salir</button>
                     </div>
                 </header>
 
                 {getQuickAdds()}
 
-                <div className="dashboard-grid-new">
-                    {/* LEFT COLUMN */}
-                    <div className="left-column">
-                        {/* Accumulated Points */}
-                        <div className={`accumulated-time-card ${accumulatedPoints >= 0 ? 'positive' : 'negative'}`}>
-                            <p className="accumulated-label">
-                                {accumulatedPoints >= 0 ? '✓ PUNTOS GANADOS' : '⚠ PUNTOS EN DEUDA'}
-                            </p>
-                            <StaticTimeDisplay totalPoints={accumulatedPoints} />
-                        </div>
+                <div className="command-hub-layout">
+                    {/* ROW 1: THE HEROES (POINTS & HISTORY) */}
+                    <div className="hero-row">
+                        <section className="the-forge materialized">
+                            <div className={`accumulated-time-card ${accumulatedPoints >= 0 ? 'positive' : 'negative'} ethereal-border`}>
+                                <p className="accumulated-label text-arcade">
+                                    {accumulatedPoints >= 0 ? '✓ PUNTOS GANADOS' : '⚠ PUNTOS EN DEUDA'}
+                                </p>
+                                <StaticTimeDisplay totalPoints={accumulatedPoints} />
+                                <div className="hero-decoration"></div>
+                            </div>
+                        </section>
 
-                        {/* Goals Tracker */}
+                        <section className="the-chronicle">
+                            <QuestCard title="Crónica" subtitle={`${todayRecords.length} hoy`}>
+                                {todayRecords.length === 0 ? (
+                                    <p className="no-records">El pergamino está en blanco...</p>
+                                ) : (
+                                    <div className="records-list-hub">
+                                        {todayRecords.map(record => {
+                                            let timeStr = '';
+                                            if (record.timestamp) {
+                                                const recordDate = new Date(record.timestamp);
+                                                timeStr = recordDate.toLocaleTimeString('es-AR', {
+                                                    hour: '2-digit',
+                                                    minute: '2-digit',
+                                                    hour12: false
+                                                });
+                                            }
+                                            const relatedAction = actions.find(a => a.id === record.actionId);
+                                            const unit = relatedAction?.metadata?.unit || 'min';
+                                            const displayQuantity = record.metricValue || record.durationMinutes;
+
+                                            // Format duration for better vibe if it's minutes
+                                            const formatDuration = (val: number, u: string) => {
+                                                if (u === 'min' && val >= 60) {
+                                                    const h = Math.floor(val / 60);
+                                                    const m = val % 60;
+                                                    return `${h}h${m > 0 ? ` ${m}m` : ''}`;
+                                                }
+                                                return `${val} ${u}`;
+                                            };
+
+                                            return (
+                                                <div key={record.id} className="record-item-hub glass-chronicle">
+                                                    <div className="record-header">
+                                                        <span className="record-name">{record.actionName}</span>
+                                                        <p className={`record-impact ${record.pointsCalculated >= 0 ? 'positive' : 'negative'}`}>
+                                                            {record.pointsCalculated >= 0 ? '+' : ''}{Math.floor(record.pointsCalculated)}
+                                                        </p>
+                                                    </div>
+                                                    <div className="record-meta-hub">
+                                                        <span className="record-time-stamp">{timeStr}</span>
+                                                        <span className="record-duration">
+                                                            {formatDuration(displayQuantity, unit)}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                                <div className="today-summary-hub">
+                                    <p className="summary-line">
+                                        <strong className={todayBalance.totalPoints >= 0 ? 'positive' : 'negative'}>
+                                            {todayBalance.totalPoints >= 0 ? '+' : ''}
+                                            {Math.floor(todayBalance.totalPoints)} pts acumulados hoy
+                                        </strong>
+                                    </p>
+                                </div>
+                            </QuestCard>
+                        </section>
+                    </div>
+
+                    {/* ROW 2: THE MISSION (GOALS FULL WIDTH) */}
+                    <div className="mission-row">
                         <GoalTracker
                             goals={goals}
                             actions={actions}
                             onCreateGoal={handleCreateGoal}
                             onDeleteGoal={handleDeleteGoal}
                         />
-
-                        {/* Daily History */}
-                        <QuestCard title="HISTORIAL DE HOY" subtitle={`${todayRecords.length} actividades`}>
-                            {/* Same history list code... */}
-                            {todayRecords.length === 0 ? (
-                                <p className="no-records">No hay actividades hoy</p>
-                            ) : (
-                                <div className="records-list">
-                                    {todayRecords.map(record => {
-                                        // Format timestamp to show time
-                                        let timeStr = '';
-                                        if (record.timestamp) {
-                                            const recordDate = new Date(record.timestamp);
-                                            timeStr = recordDate.toLocaleTimeString('es-AR', {
-                                                hour: '2-digit',
-                                                minute: '2-digit',
-                                                hour12: false
-                                            });
-                                        }
-
-                                        return (
-                                            <div key={record.id} className="record-item">
-                                                <div className="record-header">
-                                                    <span className="record-name">{record.actionName}</span>
-                                                    <button className="record-delete" onClick={() => handleDeleteRecord(record.id)}>✕</button>
-                                                </div>
-                                                {timeStr && <p className="record-time">{timeStr}</p>}
-                                                <p className="record-notes">{record.notes}</p>
-                                                <p className={`record-impact ${record.pointsCalculated >= 0 ? 'positive' : 'negative'}`}>
-                                                    {record.pointsCalculated >= 0 ? '+' : ''}{Math.floor(record.pointsCalculated)} pts
-                                                </p>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                            <div className="today-summary">
-                                <p className="summary-line">
-                                    <span>Balance de hoy:</span>
-                                    <strong className={todayBalance.totalPoints >= 0 ? 'positive' : 'negative'}>
-                                        {todayBalance.totalPoints >= 0 ? '+' : ''}
-                                        {Math.floor(todayBalance.totalPoints)} pts
-                                    </strong>
-                                </p>
-                            </div>
-                        </QuestCard>
                     </div>
 
-                    {/* RIGHT COLUMN - Actions Selection */}
-                    <div className="actions-panel">
-                        <QuestCard
-                            title="AGREGAR ACTIVIDAD"
-                            subtitle={format(new Date(), 'dd/MM/yyyy', { locale: es })}
-                            action={
-                                <button
-                                    className="add-custom-action-btn"
-                                    onClick={() => setIsCreateActionModalOpen(true)}
-                                    title="Crear mi propia actividad"
-                                >
-                                    + Crear
-                                </button>
-                            }
-                        >
-                            {/* Same Actions List code... */}
-                            <div className="actions-section">
-                                <h3 className="goal-title">Positivas</h3>
+                    {/* CONSOLE BACKDROP (Click outside to close) */}
+                    <div
+                        className={`console-backdrop ${isArmoryOpen ? 'visible' : ''}`}
+                        onClick={() => setIsArmoryOpen(false)}
+                    />
+
+                    {/* DYNAMIC SIDEBAR: THE ARMORY (COMMAND CONSOLE) */}
+                    <aside className={`command-console ${isArmoryOpen ? 'open' : ''}`}>
+                        <div className="console-header">
+                            <h2 className="console-title text-arcade">Arsenal de Mando</h2>
+                            <button className="close-console" onClick={() => setIsArmoryOpen(false)}>×</button>
+                        </div>
+
+                        <div className="console-body">
+                            <h3 className="section-label-alt text-arcade">Disciplinas</h3>
+                            <div className="actions-list-console">
                                 {actions.filter(a => a.type === 'positive').map(action => (
                                     <ActionItem key={action.id} action={action} progress="" onAdd={() => handleActionClick(action)} />
                                 ))}
                             </div>
-                            <div className="section-divider" />
-                            <div className="actions-section negative-section">
-                                <h4 className="section-label">Negativas</h4>
+                            <div className="console-divider" />
+                            <h3 className="section-label-alt text-arcade">Debilidades</h3>
+                            <div className="actions-list-console">
                                 {actions.filter(a => a.type === 'negative').map(action => (
                                     <ActionItem key={action.id} action={action} progress="" onAdd={() => handleActionClick(action)} />
                                 ))}
                             </div>
-                        </QuestCard>
-                    </div>
+                        </div>
+                    </aside>
                 </div>
             </div>
 

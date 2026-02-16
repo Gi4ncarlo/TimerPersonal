@@ -4,11 +4,12 @@
     align-items: center;
     padding: var(--space-md);
     margin-bottom: var(--space-sm);
-    background: rgba(17, 26, 69, 0.4);
-    border: 1px solid var(--color-border);
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(168, 85, 247, 0.1);
     border-radius: var(--radius-md);
-    transition: var(--transition-fast);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     position: relative;
+    overflow: hidden;
 }
 
 .action-item::before {
@@ -27,10 +28,25 @@
     background: var(--color-negative);
 }
 
+.action-item::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(168, 85, 247, 0.1) 0%, transparent 70%);
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+}
+
 .action-item:hover {
-    background: rgba(17, 26, 69, 0.6);
-    border-color: var(--color-border-glow);
-    transform: translateX(4px);
+    background: rgba(168, 85, 247, 0.05);
+    border-color: var(--color-primary);
+    transform: translateX(8px);
+    box-shadow: -4px 0 15px var(--color-primary-glow);
+}
+
+.action-item:hover::after {
+    opacity: 1;
 }
 
 .action-info {
@@ -39,6 +55,19 @@
     align-items: center;
     flex: 1;
     gap: var(--space-md);
+    z-index: 1;
+}
+
+@media (max-width: 480px) {
+    .action-info {
+        gap: var(--space-sm);
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .action-item {
+        padding: var(--space-sm);
+    }
 }
 
 .action-emoji {
@@ -46,20 +75,23 @@
     font-size: 1.4rem;
     display: flex;
     align-items: center;
+    filter: drop-shadow(0 0 5px var(--color-primary-glow));
 }
 
 .action-name {
     font-family: var(--font-body);
-    font-size: 0.95rem;
-    color: var(--color-text-primary);
-    font-weight: 500;
+    font-size: 1rem;
+    color: var(--color-text-primary) !important;
+    font-weight: 600;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .action-progress {
     font-family: var(--font-display);
-    font-size: 0.85rem;
-    color: var(--color-text-secondary);
-    letter-spacing: 0.05em;
+    font-size: 0.7rem;
+    color: var(--color-accent);
+    letter-spacing: 0.15em;
+    opacity: 0.8;
 }
 
 .action-add-btn {
