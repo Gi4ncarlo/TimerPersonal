@@ -97,17 +97,25 @@ export default function StrikesPage() {
                                             {strike.pointsBefore !== undefined ? (
                                                 <div className="strike-financials">
                                                     <div className="fin-row">
-                                                        <span>Puntos antes:</span>
+                                                        <span>Balance Global:</span>
                                                         <span className="fin-val">{Math.floor(strike.pointsBefore)}</span>
                                                     </div>
                                                     <div className="fin-row penalty">
                                                         <span>Sanción:</span>
-                                                        <span className="fin-val">-{Math.floor(strike.pointsDeducted || 0)}</span>
+                                                        <span className="fin-val">{strike.pointsDeducted && strike.pointsDeducted > 0 ? `-${Math.floor(strike.pointsDeducted)}` : '0'}</span>
                                                     </div>
-                                                    <div className="fin-row balance">
-                                                        <span>Balance Final:</span>
-                                                        <span className="fin-val">{Math.floor(strike.balanceAfter || 0)}</span>
-                                                    </div>
+                                                    {strike.pointsDeducted && strike.pointsDeducted > 0 ? (
+                                                        <div className="fin-row balance">
+                                                            <span>Balance Posterior:</span>
+                                                            <span className="fin-val">{Math.floor(strike.balanceAfter || 0)}</span>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="fin-row balance" style={{ borderTop: 'none', paddingTop: 0 }}>
+                                                            <span style={{ fontSize: '0.8rem', color: '#888', fontStyle: 'italic' }}>
+                                                                ℹ️ No se aplicó descuento (balance insuficiente o nulo).
+                                                            </span>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             ) : (
                                                 <div className="strike-financials-empty">
