@@ -141,7 +141,8 @@ export default function UserStatsModal({ entry, isOpen, onClose }: UserStatsModa
                                 const y = 120 + 105 * Math.sin(angle);
 
                                 // Adjust text anchor based on position
-                                let textAnchor = "middle";
+                                type TextAnchor = "inherit" | "middle" | "start" | "end";
+                                let textAnchor: TextAnchor = "middle";
                                 if (Math.cos(angle) > 0.1) textAnchor = "start";
                                 if (Math.cos(angle) < -0.1) textAnchor = "end";
 
