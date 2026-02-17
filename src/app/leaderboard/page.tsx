@@ -72,8 +72,12 @@ export default function LeaderboardPage() {
             <div className="leaderboard-container-wrapper">
                 <header className="page-header">
                     <div className="title-area">
-                        <h1 className="page-title">🏆 Clasificación {viewMode === 'weekly' ? 'Semanal' : 'General'}</h1>
-                        <p className="page-subtitle">{viewMode === 'weekly' ? 'Ranking de esta semana' : 'Ranking histórico de usuarios'}</p>
+                        <h1 className="page-title">{viewMode === 'weekly' ? '📡 Clasificación Semanal' : '🪐 Clasificación General'}</h1>
+                        <p className="page-subtitle">
+                            {viewMode === 'weekly'
+                                ? 'Monitoreando el rendimiento del ciclo actual'
+                                : 'Registro histórico de la Orden de Guerreros'}
+                        </p>
                     </div>
                     <div className="header-controls">
                         <div className="view-toggle">
@@ -91,15 +95,18 @@ export default function LeaderboardPage() {
                             </button>
                         </div>
                         <button onClick={loadLeaderboard} className="refresh-btn" disabled={isLoading}>
-                            {isLoading ? '...' : '🔄 Refrescar'}
+                            {isLoading ? '...' : '🔄 Sincronizar'}
                         </button>
                         <Link href="/dashboard" className="back-link">
-                            ← Volver al Dashboard
+                            ← Regresar al Comando
                         </Link>
                     </div>
                 </header>
 
-                <QuestCard title="LEADERBOARD" subtitle="Semana actual">
+                <QuestCard
+                    title={viewMode === 'weekly' ? 'REPORTE SEMANAL' : 'ARCHIVOS GENERALES'}
+                    subtitle={viewMode === 'weekly' ? 'DATOS EN TIEMPO REAL' : 'TOTAL ACUMULADO'}
+                >
                     <Leaderboard
                         entries={entries}
                         currentEntry={currentEntry}

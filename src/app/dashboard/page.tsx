@@ -288,7 +288,7 @@ export default function Dashboard() {
                         </section>
 
                         <section className="the-chronicle">
-                            <QuestCard title="Crónica" subtitle={`${todayRecords.length} hoy`}>
+                            <QuestCard title="Historial" subtitle={`${todayRecords.length} hoy`}>
                                 {todayRecords.length === 0 ? (
                                     <p className="no-records">El pergamino está en blanco...</p>
                                 ) : (
@@ -321,9 +321,21 @@ export default function Dashboard() {
                                                 <div key={record.id} className="record-item-hub glass-chronicle">
                                                     <div className="record-header">
                                                         <span className="record-name">{record.actionName}</span>
-                                                        <p className={`record-impact ${record.pointsCalculated >= 0 ? 'positive' : 'negative'}`}>
-                                                            {record.pointsCalculated >= 0 ? '+' : ''}{Math.floor(record.pointsCalculated)}
-                                                        </p>
+                                                        <div className="record-actions-hub">
+                                                            <p className={`record-impact ${record.pointsCalculated >= 0 ? 'positive' : 'negative'}`}>
+                                                                {record.pointsCalculated >= 0 ? '+' : ''}{Math.floor(record.pointsCalculated)}
+                                                            </p>
+                                                            <button
+                                                                className="record-delete-hub"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleDeleteRecord(record.id);
+                                                                }}
+                                                                title="Eliminar registro"
+                                                            >
+                                                                ×
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                     <div className="record-meta-hub">
                                                         <span className="record-time-stamp">{timeStr}</span>
@@ -331,6 +343,11 @@ export default function Dashboard() {
                                                             {formatDuration(displayQuantity, unit)}
                                                         </span>
                                                     </div>
+                                                    {record.notes && (
+                                                        <div className="record-notes-hub">
+                                                            {record.notes}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             );
                                         })}
