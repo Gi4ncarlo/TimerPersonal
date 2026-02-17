@@ -928,6 +928,10 @@ export const SupabaseDataStore = {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return [];
 
+        // Exclude demo from strike view if desired, or just return empty
+        const currentUser = await SupabaseDataStore.getCurrentUser();
+        if (currentUser?.username === 'demo') return [];
+
         const { data, error } = await supabase
             .from('strikes')
             .select('*')
@@ -941,8 +945,8 @@ export const SupabaseDataStore = {
             const pd = s.points_deducted !== null ? Number(s.points_deducted) : null;
             const ba = s.balance_after !== null ? Number(s.balance_after) : null;
 
-            // Si todos son 0 o null, es un registro antiguo sin data Real
-            const isLegacy = (pb === 0 || pb === null) && (pd === 0 || pd === null) && (ba === 0 || ba === null);
+            // Legacy check only for null values
+            const isLegacy = pb === null && pd === null && ba === null;
 
             return {
                 id: s.id,
@@ -950,9 +954,9 @@ export const SupabaseDataStore = {
                 strikeDate: s.strike_date,
                 reason: s.reason,
                 detectedAt: s.detected_at,
-                pointsBefore: isLegacy ? undefined : pb ?? undefined,
-                pointsDeducted: isLegacy ? undefined : pd ?? undefined,
-                balanceAfter: isLegacy ? undefined : ba ?? undefined,
+                pointsBefore: isLegacy ? undefined : pb ?? 0,
+                pointsDeducted: isLegacy ? undefined : pd ?? 0,
+                balanceAfter: isLegacy ? undefined : ba ?? 0,
             };
         });
     },
@@ -992,10 +996,22 @@ export const SupabaseDataStore = {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user || dates.length === 0) return [];
 
+        // EXCLUDE DEMO
+        const currentUser = await SupabaseDataStore.getCurrentUser();
+        if (currentUser?.username === 'demo') return [];
+
         const createdStrikes: Strike[] = [];
 
         // Sort dates ascending to apply penalties in order
         const sortedDates = [...dates].sort();
+
+        // Get initial global balance to maintain it through the loop (sequential processing)
+        const { data: records } = await supabase
+            .from('daily_records')
+            .select('points_calculated')
+            .eq('user_id', user.id);
+
+        let currentGlobalBalance = (records || []).reduce((sum, r) => sum + Number(r.points_calculated), 0);
 
         for (const date of sortedDates) {
             // Check if strike already exists
@@ -1009,8 +1025,8 @@ export const SupabaseDataStore = {
             if (existing) continue;
 
             try {
-                // Apply Penalty FIRST and get info
-                const penaltyInfo = await SupabaseDataStore.applyStrikePenalty(user.id, date);
+                // Apply Penalty using the current running balance
+                const penaltyInfo = await SupabaseDataStore.applyStrikePenalty(user.id, date, currentGlobalBalance);
 
                 const strike = await SupabaseDataStore.createStrike({
                     userId: user.id,
@@ -1020,6 +1036,11 @@ export const SupabaseDataStore = {
                     pointsDeducted: penaltyInfo?.pointsDeducted,
                     balanceAfter: penaltyInfo?.balanceAfter,
                 });
+
+                // Update the running balance for the next iteration
+                if (penaltyInfo) {
+                    currentGlobalBalance = penaltyInfo.balanceAfter;
+                }
 
                 createdStrikes.push(strike);
             } catch (error) {
@@ -1038,20 +1059,24 @@ export const SupabaseDataStore = {
         return strikes.length > 0 ? strikes[0] : null;
     },
 
-    applyStrikePenalty: async (userId: string, strikeDate: string): Promise<{ pointsBefore: number; pointsDeducted: number; balanceAfter: number } | null> => {
-        // 1. Get all records and strikes to calculate consecutiveness
-        const [{ data: records }, { data: strikes }] = await Promise.all([
-            supabase.from('daily_records').select('points_calculated').eq('user_id', userId),
-            supabase.from('strikes').select('strike_date').eq('user_id', userId).order('strike_date', { ascending: false })
-        ]);
+    applyStrikePenalty: async (userId: string, strikeDate: string, providedBalance?: number): Promise<{ pointsBefore: number; pointsDeducted: number; balanceAfter: number } | null> => {
+        // 1. Get current balance (use providedBalance if available for efficiency in loops)
+        let currentTotal = providedBalance;
 
-        if (!records) return null;
+        const { data: strikes } = await supabase
+            .from('strikes')
+            .select('strike_date')
+            .eq('user_id', userId)
+            .order('strike_date', { ascending: false });
 
-        const currentTotal = records.reduce((sum, r) => sum + Number(r.points_calculated), 0);
-        if (currentTotal <= 0) return { pointsBefore: 0, pointsDeducted: 0, balanceAfter: 0 };
+        if (currentTotal === undefined) {
+            const { data: records } = await supabase.from('daily_records').select('points_calculated').eq('user_id', userId);
+            currentTotal = (records || []).reduce((sum, r) => sum + Number(r.points_calculated), 0);
+        }
+
+        if (currentTotal <= 0) return { pointsBefore: currentTotal, pointsDeducted: 0, balanceAfter: currentTotal };
 
         // 2. Determine penalty percentage
-        // If the last strike was "yesterday" relative to strikeDate, increase penalty
         let penaltyPercent = 0.40; // Base 40%
 
         if (strikes && strikes.length > 0) {
@@ -1059,8 +1084,6 @@ export const SupabaseDataStore = {
             const diff = differenceInDays(parseISO(strikeDate), parseISO(lastStrikeDate));
 
             if (diff === 1) {
-                // If consecutive, we want to know HOW MANY consecutive ones there are to escalate
-                // We count backwards from the most recent strike
                 let consecutiveCount = 1;
                 for (let i = 0; i < strikes.length - 1; i++) {
                     const current = parseISO(strikes[i].strike_date);
@@ -1071,7 +1094,6 @@ export const SupabaseDataStore = {
                         break;
                     }
                 }
-                // Escalate: 40% + 10% for each consecutive day after the first strike
                 penaltyPercent = Math.min(1.0, 0.40 + (consecutiveCount * 0.10));
             }
         }
@@ -1081,7 +1103,7 @@ export const SupabaseDataStore = {
         if (penalty > 0) {
             console.log(`Applying strike penalty of ${penalty} points (${(penaltyPercent * 100).toFixed(0)}% of ${currentTotal})`);
 
-            // Create penalty record
+            // Create penalty record (Always recorded on today's date for accounting, but notes refer to the strike date)
             await supabase.from('daily_records').insert({
                 user_id: userId,
                 action_name: 'Penalizacion por Stryke',
@@ -1089,7 +1111,7 @@ export const SupabaseDataStore = {
                 timestamp: new Date().toISOString(),
                 duration_minutes: 0,
                 points_calculated: -penalty,
-                notes: `Strike detectado el ${strikeDate}. Penalización del ${(penaltyPercent * 100).toFixed(0)}% sobre ${currentTotal} puntos.`
+                notes: `Strike detectado el ${strikeDate}. Penalización del ${(penaltyPercent * 100).toFixed(0)}% sobre ${currentTotal} puntos globales.`
             });
 
             // Update leaderboard cache
