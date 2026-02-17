@@ -80,9 +80,11 @@
         0 0 50px rgba(255, 68, 68, 0.4);
 }
 
-.points-value {
+.static-points-display .points-value {
     display: inline-block;
     letter-spacing: 0.02em;
+    font-size: inherit;
+    /* Refuerzo para asegurar el tamaño masivo de 6.5rem */
 }
 
 .points-unit {

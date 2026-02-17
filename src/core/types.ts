@@ -91,3 +91,20 @@ export interface StrikeStats {
     longestStreak: number;
     lastStrikeDate?: string;
 }
+
+export type LeagueTier = 'Bronce' | 'Plata' | 'Oro' | 'Platino' | 'Diamante';
+
+export interface League {
+    tier: LeagueTier;
+    minPoints: number;
+    color: string;
+    icon: string;
+}
+
+export const LEAGUE_THRESHOLDS: League[] = [
+    { tier: 'Bronce', minPoints: 0, color: '#cd7f32', icon: '🥉' },
+    { tier: 'Plata', minPoints: 5000, color: '#c0c0c0', icon: '🥈' },
+    { tier: 'Oro', minPoints: 15000, color: '#ffd700', icon: '🥇' },
+    { tier: 'Platino', minPoints: 30000, color: '#e5e4e2', icon: '💎' },
+    { tier: 'Diamante', minPoints: 100000, color: '#b9f2ff', icon: '💠' },
+];

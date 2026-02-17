@@ -386,7 +386,8 @@
 }
 
 .countdown-title {
-    font-size: 0.7rem;
+    font-size: 0.95rem;
+    /* Increased from 0.7rem */
     font-weight: 800;
     color: var(--color-primary);
     letter-spacing: 0.2em;
