@@ -92,6 +92,17 @@ export interface StrikeStats {
     lastStrikeDate?: string;
 }
 
+export interface VacationPeriod {
+    id: string;
+    userId: string;
+    startDate: string;      // YYYY-MM-DD
+    endDate: string;         // YYYY-MM-DD
+    reason: string;
+    createdAt: string;       // ISO datetime
+    notifiedStart: boolean;
+    notifiedEndWarning: boolean;
+}
+
 export type LeagueTier = 'Bronce' | 'Plata' | 'Oro' | 'Platino' | 'Diamante';
 
 export interface League {

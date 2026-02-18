@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase/client';
-import { Action, DailyRecord, User, Goal, Strike } from '@/core/types';
+import { Action, DailyRecord, User, Goal, Strike, VacationPeriod } from '@/core/types';
 import { getTodayString, getWeekStartString, getWeekEndString, getArgentinaDate, getMonthEndString, getYearEndString, getFarFutureString } from '@/core/utils/dateUtils';
 import { subDays, differenceInDays, parseISO } from 'date-fns';
 
@@ -774,6 +774,9 @@ export const SupabaseDataStore = {
                 .select('user_id')
                 .in('user_id', userIds);
 
+            // Fetch active vacations
+            const vacationMap = await SupabaseDataStore.getActiveVacationsForAllUsers();
+
             const userMap = (userData || []).reduce((acc, curr) => {
                 acc[curr.id] = curr.avatar_url;
                 return acc;
@@ -787,7 +790,8 @@ export const SupabaseDataStore = {
             return result.map(r => ({
                 ...r,
                 avatarUrl: userMap[r.userId],
-                strikes: strikeCounts[r.userId] || 0
+                strikes: strikeCounts[r.userId] || 0,
+                isOnVacation: vacationMap[r.userId] || false,
             }));
         }
 
@@ -853,6 +857,9 @@ export const SupabaseDataStore = {
                 return acc;
             }, {} as Record<string, number>);
 
+            // Fetch active vacations for all users
+            const vacationMap = await SupabaseDataStore.getActiveVacationsForAllUsers();
+
             // Create leaderboard entry for EVERY user
             const leaderboard = allUsers.map(user => ({
                 id: user.id,
@@ -864,6 +871,7 @@ export const SupabaseDataStore = {
                 negativeActivities: negativeCountAggregator[user.id] || 0,
                 goalsCompleted: goalsAggregator[user.id] || 0,
                 strikes: strikeCounts[user.id] || 0,
+                isOnVacation: vacationMap[user.id] || false,
                 weekStart: 'All Time',
                 weekEnd: 'All Time'
             }));
@@ -1172,5 +1180,92 @@ export const SupabaseDataStore = {
         }
 
         return `Proceso completado. Se aplicaron ${appliedCount} penalizaciones retroactivas.`;
+    },
+
+    // Vacation Periods
+    getVacationPeriods: async (): Promise<VacationPeriod[]> => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return [];
+
+        const { data, error } = await supabase
+            .from('vacation_periods')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('start_date', { ascending: false });
+
+        if (error || !data) return [];
+
+        return data.map(v => ({
+            id: v.id,
+            userId: v.user_id,
+            startDate: v.start_date,
+            endDate: v.end_date,
+            reason: v.reason,
+            createdAt: v.created_at,
+            notifiedStart: v.notified_start || false,
+            notifiedEndWarning: v.notified_end_warning || false,
+        }));
+    },
+
+    getActiveVacationsForAllUsers: async (): Promise<Record<string, boolean>> => {
+        const today = getTodayString();
+
+        const { data, error } = await supabase
+            .from('vacation_periods')
+            .select('user_id')
+            .lte('start_date', today)
+            .gte('end_date', today);
+
+        if (error || !data) return {};
+
+        const result: Record<string, boolean> = {};
+        data.forEach(v => { result[v.user_id] = true; });
+        return result;
+    },
+
+    createVacationPeriod: async (period: Omit<VacationPeriod, 'id' | 'userId' | 'createdAt' | 'notifiedStart' | 'notifiedEndWarning'>): Promise<VacationPeriod> => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('Not authenticated');
+
+        const { data, error } = await supabase
+            .from('vacation_periods')
+            .insert({
+                user_id: user.id,
+                start_date: period.startDate,
+                end_date: period.endDate,
+                reason: period.reason,
+            })
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        return {
+            id: data.id,
+            userId: data.user_id,
+            startDate: data.start_date,
+            endDate: data.end_date,
+            reason: data.reason,
+            createdAt: data.created_at,
+            notifiedStart: data.notified_start || false,
+            notifiedEndWarning: data.notified_end_warning || false,
+        };
+    },
+
+    deleteVacationPeriod: async (id: string): Promise<boolean> => {
+        const { error } = await supabase
+            .from('vacation_periods')
+            .delete()
+            .eq('id', id);
+
+        return !error;
+    },
+
+    markVacationNotified: async (id: string, type: 'start' | 'end_warning'): Promise<void> => {
+        const field = type === 'start' ? 'notified_start' : 'notified_end_warning';
+        await supabase
+            .from('vacation_periods')
+            .update({ [field]: true })
+            .eq('id', id);
     },
 };

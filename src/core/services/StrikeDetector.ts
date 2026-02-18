@@ -1,6 +1,7 @@
 // Strike detection and statistics service
-import { DailyRecord, Strike, StrikeStats } from '../types';
+import { DailyRecord, Strike, StrikeStats, VacationPeriod } from '../types';
 import { getTodayString } from '../utils/dateUtils';
+import { VacationService } from './VacationService';
 import { subDays, format, differenceInDays, parseISO, startOfWeek } from 'date-fns';
 
 export class StrikeDetector {
@@ -19,14 +20,14 @@ export class StrikeDetector {
      * Detecta todos los días perdidos (sin actividad) entre la última actividad y hoy
      * Se usa para detectar strikes múltiples si el usuario no entró varios días
      */
-    static detectMissedDays(records: DailyRecord[]): string[] {
+    static detectMissedDays(records: DailyRecord[], vacationPeriods: VacationPeriod[] = []): string[] {
         if (records.length === 0) return [];
 
         // Sort records by date descending to find the last one
         const sortedRecords = [...records].sort((a, b) => b.date.localeCompare(a.date));
         const lastActivityDate = parseISO(sortedRecords[0].date);
         const today = parseISO(getTodayString());
-        
+
         const missedDays: string[] = [];
         const diff = differenceInDays(today, lastActivityDate);
 
@@ -36,7 +37,8 @@ export class StrikeDetector {
             missedDays.push(format(subDays(today, diff - i), 'yyyy-MM-dd'));
         }
 
-        return missedDays;
+        // Filter out vacation days and grace period days
+        return VacationService.filterVacationDays(missedDays, vacationPeriods);
     }
 
     /**
