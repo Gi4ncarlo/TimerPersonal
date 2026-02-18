@@ -10,6 +10,7 @@ import Navbar from '@/ui/components/Navbar';
 import VacationManager from '@/ui/components/VacationManager';
 import ProfileModal from '@/ui/components/ProfileModal';
 import '../dashboard/dashboard.css';
+import LogoLoader from '@/ui/components/LogoLoader';
 
 export default function VacationsPage() {
     const router = useRouter();
@@ -56,7 +57,7 @@ export default function VacationsPage() {
         await loadData();
     };
 
-    if (isLoading) return <div className="loading">Cargando bitácora...</div>;
+    if (isLoading) return <LogoLoader />;
 
     return (
         <main className="dashboard">

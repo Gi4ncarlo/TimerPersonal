@@ -349,6 +349,81 @@
     color: var(--color-positive);
 }
 
+/* ─── Sarcasm Level Selector ──────────────────── */
+.sarcasm-selector {
+    display: flex;
+    gap: var(--space-sm);
+}
+
+.sarcasm-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: var(--space-md) var(--space-sm);
+    background: rgba(255, 255, 255, 0.03);
+    border: 2px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: var(--color-text-secondary);
+}
+
+.sarcasm-btn:hover:not(:disabled) {
+    border-color: rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.06);
+    transform: translateY(-1px);
+}
+
+.sarcasm-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.sarcasm-label {
+    font-size: var(--font-md);
+    font-weight: 700;
+}
+
+.sarcasm-desc {
+    font-size: 10px;
+    color: var(--color-text-muted);
+    text-align: center;
+    line-height: 1.3;
+}
+
+/* Active states per level */
+.sarcasm-btn.active.sarcasm-low {
+    background: rgba(34, 197, 94, 0.1);
+    border-color: rgba(34, 197, 94, 0.5);
+    color: #22c55e;
+}
+
+.sarcasm-btn.active.sarcasm-low .sarcasm-desc {
+    color: rgba(34, 197, 94, 0.7);
+}
+
+.sarcasm-btn.active.sarcasm-medium {
+    background: rgba(139, 92, 246, 0.1);
+    border-color: rgba(139, 92, 246, 0.5);
+    color: #8b5cf6;
+}
+
+.sarcasm-btn.active.sarcasm-medium .sarcasm-desc {
+    color: rgba(139, 92, 246, 0.7);
+}
+
+.sarcasm-btn.active.sarcasm-brutal {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.5);
+    color: #ef4444;
+}
+
+.sarcasm-btn.active.sarcasm-brutal .sarcasm-desc {
+    color: rgba(239, 68, 68, 0.7);
+}
+
 /* Responsive */
 @media (max-width: 640px) {
     .profile-modal {
@@ -376,4 +451,42 @@
     .profile-stats-row {
         gap: var(--space-sm);
     }
+}
+
+/* ─── Logout Section ─────────────────────────────── */
+.profile-logout-section {
+    margin-top: var(--space-xl);
+    padding-top: var(--space-lg);
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.profile-logout-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 12px;
+    background: rgba(239, 68, 68, 0.06);
+    border: 1px solid rgba(239, 68, 68, 0.15);
+    border-radius: var(--radius-md);
+    color: #f87171;
+    font-family: var(--font-body);
+    font-size: var(--font-sm);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.profile-logout-btn:hover {
+    background: rgba(239, 68, 68, 0.12);
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #fca5a5;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.1);
+}
+
+.profile-logout-btn svg {
+    flex-shrink: 0;
 }

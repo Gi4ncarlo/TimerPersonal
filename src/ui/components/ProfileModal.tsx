@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { SupabaseDataStore } from '@/data/supabaseData';
-import { User } from '@/core/types';
+import { User, SarcasmLevel } from '@/core/types';
 import { getLevelTitle } from '@/core/config/levelRewards';
 import './ProfileModal.css';
 
@@ -15,11 +16,21 @@ interface ProfileModalProps {
 }
 
 export default function ProfileModal({ user, isOpen, isOnVacation = false, onClose, onUpdate }: ProfileModalProps) {
+    const router = useRouter();
     const [newUsername, setNewUsername] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [isUpdating, setIsUpdating] = useState(false);
     const [message, setMessage] = useState({ text: '', type: '' });
+    const [sarcasmLevel, setSarcasmLevel] = useState<SarcasmLevel>(
+        (user.preferences?.sarcasmLevel as SarcasmLevel) || 'medium'
+    );
+    const [sarcasmSaving, setSarcasmSaving] = useState(false);
+
+    const handleLogout = async () => {
+        await SupabaseDataStore.logout();
+        router.push('/login');
+    };
 
     if (!isOpen) return null;
 
@@ -158,6 +169,36 @@ export default function ProfileModal({ user, isOpen, isOnVacation = false, onClo
                     </div>
 
                     <div className="profile-settings-section">
+                        <h3>🔔 Nivel de Sarcasmo</h3>
+                        <p className="section-description">Elegí qué tan brutales querés que sean las notificaciones</p>
+
+                        <div className="sarcasm-selector">
+                            {[
+                                { value: 'low' as SarcasmLevel, label: '🙂 Suave', desc: 'Mensajes amables y motivadores' },
+                                { value: 'medium' as SarcasmLevel, label: '😏 Medio', desc: 'Con algo de humor y presión' },
+                                { value: 'brutal' as SarcasmLevel, label: '🔥 Brutal', desc: 'Sin filtro, máximo sarcasmo' },
+                            ].map(opt => (
+                                <button
+                                    key={opt.value}
+                                    className={`sarcasm-btn ${sarcasmLevel === opt.value ? 'active' : ''} sarcasm-${opt.value}`}
+                                    disabled={sarcasmSaving}
+                                    onClick={async () => {
+                                        setSarcasmLevel(opt.value);
+                                        setSarcasmSaving(true);
+                                        await SupabaseDataStore.updateSarcasmLevel(user.id, opt.value);
+                                        setSarcasmSaving(false);
+                                        setMessage({ text: `✓ Nivel de sarcasmo: ${opt.label}`, type: 'success' });
+                                        onUpdate();
+                                    }}
+                                >
+                                    <span className="sarcasm-label">{opt.label}</span>
+                                    <span className="sarcasm-desc">{opt.desc}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="profile-settings-section">
                         <h3>Configuración de Perfil</h3>
                         <p className="section-description">Actualiza solo los campos que deseas cambiar</p>
 
@@ -213,6 +254,17 @@ export default function ProfileModal({ user, isOpen, isOnVacation = false, onClo
                             {message.text}
                         </div>
                     )}
+
+                    <div className="profile-logout-section">
+                        <button className="profile-logout-btn" onClick={handleLogout} type="button">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                                <polyline points="16 17 21 12 16 7" />
+                                <line x1="21" y1="12" x2="9" y2="12" />
+                            </svg>
+                            Cerrar Sesión
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

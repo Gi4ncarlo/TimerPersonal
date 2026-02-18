@@ -16,17 +16,23 @@ import CreateActionModal from '@/ui/components/CreateActionModal';
 import CreateShortcutModal from '@/ui/components/CreateShortcutModal';
 import DailyMissionsCard from '@/ui/components/DailyMissionsCard';
 import Navbar from '@/ui/components/Navbar';
+import LogoLoader from '@/ui/components/LogoLoader';
 import { SupabaseDataStore } from '@/data/supabaseData';
 import { BalanceCalculator } from '@/core/services/BalanceCalculator';
 import { PointsCalculator } from '@/core/services/PointsCalculator';
 import { StrikeDetector } from '@/core/services/StrikeDetector';
 import { VacationService } from '@/core/services/VacationService';
 import { DailyMissionEngine } from '@/core/services/DailyMissionEngine';
-import { Action, DailyRecord, DailyMission, Goal, Strike, User, VacationPeriod } from '@/core/types';
-import { format } from 'date-fns';
+import { NotificationEngine } from '@/core/services/NotificationEngine';
+import { Action, DailyRecord, DailyMission, Goal, Strike, User, VacationPeriod, SmartNotification, SarcasmLevel } from '@/core/types';
+import { format, differenceInCalendarDays } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { toast } from 'sonner';
 import { getTodayString, getArgentinaDate } from '@/core/utils/dateUtils';
 import './dashboard.css';
+
+// Global debounce for notification checks (prevents Strict Mode double-fire)
+let lastNotificationCheck = 0;
 
 export default function Dashboard() {
     const router = useRouter();
@@ -53,6 +59,9 @@ export default function Dashboard() {
     // Daily Missions State
     const [dailyMissions, setDailyMissions] = useState<DailyMission[]>([]);
     const [missionsLoading, setMissionsLoading] = useState(false);
+
+    // Smart Notifications State
+    const [notifications, setNotifications] = useState<SmartNotification[]>([]);
 
     useEffect(() => {
         loadData();
@@ -220,11 +229,119 @@ export default function Dashboard() {
                 setMissionsLoading(false);
             }
 
+            // ── Smart Notifications ────────────────────────────
+            try {
+                await loadNotifications(user, fetchedRecords);
+            } catch (notifErr) {
+                console.warn('Smart notifications error:', notifErr);
+            }
+
         } catch (error) {
             console.error('Error loading data:', error);
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const loadNotifications = async (user: User, allRecords: DailyRecord[]) => {
+        // Prevent double-checking (Strict Mode / rapid re-mounts)
+        const currentTimestamp = Date.now();
+        if (currentTimestamp - lastNotificationCheck < 60000) return; // 1 minute cooldown
+        lastNotificationCheck = currentTimestamp;
+
+        // 1. Get sarcasm level from preferences
+        const sarcasmLevel: SarcasmLevel = (user.preferences?.sarcasmLevel as SarcasmLevel) || 'medium';
+
+        // 2. Calculate trigger inputs from existing data
+        const today = getTodayString();
+        const todayRecs = allRecords.filter(r => r.date === today);
+
+        // Days since last activity
+        const sortedDates = [...new Set(allRecords.map(r => r.date))].sort().reverse();
+        const lastActiveDate = sortedDates.find(d => d !== today) || today;
+        const daysSinceLastActivity = differenceInCalendarDays(new Date(today), new Date(lastActiveDate));
+
+        // Basic streak: consecutive days with records
+        let currentStreak = 0;
+        const dateSet = new Set(allRecords.map(r => r.date));
+        const checkDate = new Date(today);
+        for (let i = 0; i < 365; i++) {
+            const ds = format(checkDate, 'yyyy-MM-dd');
+            if (dateSet.has(ds)) {
+                currentStreak++;
+                checkDate.setDate(checkDate.getDate() - 1);
+            } else {
+                break;
+            }
+        }
+
+        // Weekly points
+        const now = new Date();
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - now.getDay());
+        const weekStart = format(startOfWeek, 'yyyy-MM-dd');
+
+        const lastWeekStart = new Date(startOfWeek);
+        lastWeekStart.setDate(lastWeekStart.getDate() - 7);
+        const lastWeekStartStr = format(lastWeekStart, 'yyyy-MM-dd');
+
+        const thisWeekPoints = allRecords
+            .filter(r => r.date >= weekStart)
+            .reduce((s, r) => s + r.pointsCalculated, 0);
+
+        const lastWeekPoints = allRecords
+            .filter(r => r.date >= lastWeekStartStr && r.date < weekStart)
+            .reduce((s, r) => s + r.pointsCalculated, 0);
+
+        const totalWeeks = Math.max(1, Math.ceil(allRecords.length / 7));
+        const weeklyAvgPoints = allRecords.reduce((s, r) => s + r.pointsCalculated, 0) / totalWeeks;
+
+        // 3. Run the notification engine
+        const triggers = NotificationEngine.analyzeAndTrigger({
+            username: user.username,
+            todayRecordsCount: todayRecs.length,
+            daysSinceLastActivity,
+            currentStreak,
+            thisWeekPoints,
+            lastWeekPoints,
+            weeklyAvgPoints,
+            sarcasmLevel,
+        });
+
+        // 4. Anti-spam: filter out recently sent notifications
+        const recentTypes = await SupabaseDataStore.getRecentNotificationTypes();
+        const newTriggers = NotificationEngine.deduplicateTriggers(triggers, recentTypes, {
+            perTypeCooldownHours: 6,
+            globalCooldownHours: 6,
+            maxPerDay: 2
+        });
+
+        // 5. Persist new notifications and show toasts
+        for (const trigger of newTriggers) {
+            const saved = await SupabaseDataStore.createNotification({
+                userId: user.id,
+                type: trigger.type,
+                title: trigger.title,
+                message: trigger.message,
+                context: trigger.context,
+            });
+
+            if (saved) {
+                toast(trigger.title, {
+                    description: trigger.message,
+                    duration: 6000,
+                });
+            }
+        }
+
+        // 6. Load all notifications for the bell icon
+        const allNotifs = await SupabaseDataStore.getAllNotifications();
+        setNotifications(allNotifs);
+    };
+
+    const refreshNotifications = async () => {
+        const allNotifs = await SupabaseDataStore.getAllNotifications();
+        setNotifications(allNotifs);
     };
 
     const handleActionClick = (action: Action) => {
@@ -454,7 +571,7 @@ export default function Dashboard() {
         );
     };
 
-    if (isLoading) return <div className="loading">Cargando...</div>;
+    if (isLoading) return <LogoLoader />;
 
     const todayRecords = records.filter(r => r.date === getTodayString());
     const todayBalance = BalanceCalculator.getDailyBalance(todayRecords, getArgentinaDate());
@@ -470,6 +587,8 @@ export default function Dashboard() {
                     showArmoryToggle={true}
                     isArmoryOpen={isArmoryOpen}
                     onArmoryToggle={setIsArmoryOpen}
+                    notifications={notifications}
+                    onNotifRefresh={refreshNotifications}
                 />
 
                 {getQuickAdds()}

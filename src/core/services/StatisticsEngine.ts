@@ -111,26 +111,54 @@ export class StatisticsEngine {
             .sort((a, b) => b.minutes - a.minutes);
     }
 
-    // ── Stacked Bar: Daily breakdown by activity ────────────────
+    // ── Stacked Bar: Daily breakdown by activity (POINTS) ────────
+    // ── Stacked Bar: Daily breakdown by activity (HOURS) & Points Line ──
     static computeDailyBreakdown(dayStats: DayStat[]): { data: any[]; activities: string[] } {
-        // Collect all activity names
+        // Collect all activity names that have > 0 duration
         const activitySet = new Set<string>();
+
+        // We need to look at the records to find valid activities
         dayStats.forEach(d => {
-            Object.keys(d.activityBreakdown).forEach(a => activitySet.add(a));
+            d.records.forEach(r => {
+                if (r.durationMinutes > 0) {
+                    activitySet.add(r.actionName);
+                }
+            });
         });
+
         const activities = Array.from(activitySet);
 
         const data = dayStats.map(d => {
-            const entry: any = { fecha: d.dateFormatted };
+            const entry: any = {
+                fecha: d.dateFormatted,
+                totalPoints: Math.round(d.totalPoints) // For the line chart
+            };
+
+            // Add hours for each active activity
             activities.forEach(a => {
-                // Convert to hours with 1 decimal place
-                entry[a] = Number(((d.activityBreakdown[a] || 0) / 60).toFixed(1));
+                // We need to fetch the minutes.
+                // Since d.activityBreakdown was derived from records in page.tsx, 
+                // and we reverted page.tsx to sum minutes, we can use it directly.
+                const minutes = d.activityBreakdown[a] || 0;
+                entry[a] = Number((minutes / 60).toFixed(1));
             });
+
+            // Add specific markers for Tooltip only (Strikes/Bonuses)
+            d.records.forEach(r => {
+                if (r.durationMinutes === 0) {
+                    // It's a 0-duration event (Strike, Bonus, etc.)
+                    // We add it to the entry so custom tooltip can find it.
+                    entry[`__event_${r.actionName}`] = r.pointsCalculated;
+                }
+            });
+
             return entry;
         });
 
         return { data, activities };
     }
+
+
 
     // ── KPI Cards ───────────────────────────────────────────────
     static computeKPIs(dayStats: DayStat[], records: DailyRecord[]): KPIData[] {

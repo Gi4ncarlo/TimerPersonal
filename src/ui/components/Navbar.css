@@ -1,188 +1,327 @@
-/* Navbar.css: Professional "Command Center" Aesthetic */
+/* ═══════════════════════════════════════════════════════
+   NAVBAR — Premium Floating Command Bar
+   ═══════════════════════════════════════════════════════ */
+
+/* ─── Shell ────────────────────────────────────────── */
 .navbar {
-    height: 90px;
-    background: rgba(5, 7, 10, 0.95);
-    /* Deep solid backing */
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    display: flex;
-    align-items: center;
     position: sticky;
     top: 0;
     z-index: 1000;
-    backdrop-filter: blur(20px);
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.4);
-    margin-bottom: 40px;
-}
-
-.navbar-container {
-    max-width: 1600px;
-    width: 100%;
-    margin: 0 auto;
-    padding: 0 32px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    height: 100%;
-}
-
-/* LEFT GROUP: Unified Brand & Profile */
-.navbar-left-group {
-    display: flex;
-    align-items: center;
-    gap: 0;
-    /* Remove gap, use border separator */
-    height: 100%;
-}
-
-.brand-section {
-    display: flex;
-    align-items: center;
-    padding-right: 32px;
-    margin-right: 32px;
-    border-right: 1px solid rgba(255, 255, 255, 0.1);
-    height: 60%;
-    /* Separator height */
-}
-
-.brand-title {
-    font-family: var(--font-display);
-    font-weight: 900;
-    font-size: 1.4rem;
-    letter-spacing: 0.05em;
-    color: white;
-    text-transform: uppercase;
-    background: linear-gradient(to right, #ffffff, #a8a29e);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    text-shadow: 0 2px 10px rgba(255, 255, 255, 0.1);
-}
-
-/* RIGHT GROUP: Minimalist Nav Tabs */
-.navbar-right-group {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    height: 100%;
-}
-
-.nav-item {
-    position: relative;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 8px 16px;
-    color: var(--color-text-muted);
-    font-family: var(--font-body);
-    font-weight: 600;
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    border-radius: 6px;
-    transition: all 0.2s ease;
-    text-decoration: none;
+    padding: 12px 20px;
     background: transparent;
-    border: none;
+    pointer-events: none;
+    /* pass clicks through padding */
+    margin-bottom: 28px;
 }
 
-.nav-item:hover {
-    color: white;
-    background: rgba(255, 255, 255, 0.03);
+.navbar-inner {
+    pointer-events: all;
+    /* restore clicks on the bar */
+    max-width: 1400px;
+    margin: 0 auto;
+    height: 70px;
+    /* Increased from 56px */
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    /* Increased from 12px */
+    padding: 0 12px 0 24px;
+    /* Increased side padding */
+    background: rgba(10, 10, 22, 0.82);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 20px;
+    /* Slightly more rounded */
+    backdrop-filter: blur(24px) saturate(1.6);
+    -webkit-backdrop-filter: blur(24px) saturate(1.6);
+    box-shadow:
+        0 0 0 1px rgba(139, 92, 246, 0.06),
+        0 8px 32px rgba(0, 0, 0, 0.45),
+        0 2px 8px rgba(0, 0, 0, 0.2);
+    transition: box-shadow 0.4s ease, height 0.3s ease;
 }
 
-.nav-item.active {
-    color: white;
-    background: rgba(255, 255, 255, 0.06);
+.navbar-inner:hover {
+    box-shadow:
+        0 0 0 1px rgba(139, 92, 246, 0.1),
+        0 12px 40px rgba(0, 0, 0, 0.5),
+        0 2px 8px rgba(0, 0, 0, 0.25);
 }
 
-/* Active indicator line */
-.nav-item.active::after {
-    content: '';
-    position: absolute;
-    bottom: -24px;
-    /* Align with navbar bottom */
-    left: 0;
-    width: 100%;
-    height: 2px;
-    background: var(--color-primary);
-    box-shadow: 0 -2px 10px var(--color-primary);
-    opacity: 0;
-    /* Hidden because we are inside a container with padding? No, navbar height 90px. */
-}
-
-/* Re-thinking indicator: Simple glow or border is cleaner for 'tabs' look */
-.nav-item.active {
-    border-bottom: 2px solid var(--color-primary);
-    border-radius: 6px 6px 0 0;
-    padding-bottom: 6px;
-    /* Adjust for border */
-    background: linear-gradient(to top, rgba(168, 85, 247, 0.1), transparent);
-}
-
-/* Specific Items */
-.strike-link.active {
-    border-color: #ef4444;
-    background: linear-gradient(to top, rgba(239, 68, 68, 0.1), transparent);
-}
-
-.active .strike-icon {
-    color: #ef4444;
-}
-
-.armory-toggle {
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    margin-left: 12px;
-}
-
-.armory-toggle.active {
-    border-color: var(--color-secondary);
-    background: rgba(34, 211, 238, 0.1);
-    color: var(--color-secondary);
-}
-
-.navbar-logout {
-    margin-left: 24px;
-    padding: 8px;
-    color: var(--color-text-muted);
-    opacity: 0.7;
+/* ─── Zone 1 · Brand ──────────────────────────────── */
+.navbar-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+    flex-shrink: 0;
+    padding-right: 24px;
+    /* More breathing room */
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    margin-right: 8px;
     transition: opacity 0.2s;
 }
 
-.navbar-logout:hover {
-    opacity: 1;
-    color: #f43f5e;
+.navbar-brand:hover {
+    opacity: 0.8;
 }
 
-/* Responsive */
-@media (max-width: 1024px) {
+.brand-glyph {
+    font-size: 1.6rem;
+    /* Bigger bolt */
+    filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.6)) drop-shadow(0 0 2px rgba(139, 92, 246, 0.4));
+    animation: brand-pulse 3s ease-in-out infinite;
+}
+
+@keyframes brand-pulse {
+
+    0%,
+    100% {
+        filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.6));
+        transform: scale(1);
+    }
+
+    50% {
+        filter: drop-shadow(0 0 14px rgba(139, 92, 246, 0.9));
+        transform: scale(1.1);
+    }
+}
+
+.brand-text-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    line-height: 1;
+}
+
+.brand-text-main {
+    font-family: var(--font-display, 'Inter', sans-serif);
+    font-weight: 900;
+    font-size: 1.2rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #fff;
+    background: linear-gradient(135deg, #ffffff 40%, #a78bfa 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.brand-text-sub {
+    font-family: var(--font-body, 'Inter', sans-serif);
+    font-weight: 600;
+    font-size: 0.75rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: rgba(167, 139, 250, 0.9);
+    /* Soft violet */
+    margin-top: 2px;
+}
+
+/* ─── Zone 2 · Profile Chip ───────────────────────── */
+.navbar-profile-chip {
+    display: flex;
+    align-items: center;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0 16px 0 0;
+    /* More spacing on the right */
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    margin-right: 12px;
+    /* More spacing before nav */
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
+}
+
+.navbar-profile-chip:hover {
+    transform: scale(1.03);
+}
+
+/* ─── Zone 3 · Navigation Pills ───────────────────── */
+.navbar-nav {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    flex: 1;
+    min-width: 0;
+    justify-content: center;
+}
+
+.nav-pill {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.4);
+    font-family: var(--font-body, 'Inter', sans-serif);
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    text-decoration: none;
+    cursor: pointer;
+    white-space: nowrap;
+    transition:
+        color 0.2s ease,
+        background 0.2s ease,
+        border 0.2s ease,
+        transform 0.15s ease,
+        box-shadow 0.25s ease;
+}
+
+.nav-pill__icon {
+    font-size: 0.95rem;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.nav-pill__label {
+    line-height: 1;
+}
+
+/* Hover */
+.nav-pill:hover {
+    color: rgba(255, 255, 255, 0.85);
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.06);
+    transform: translateY(-1px);
+}
+
+/* Active (default violet) */
+.nav-pill.is-active {
+    color: #e0d4fc;
+    background: rgba(139, 92, 246, 0.12);
+    border-color: rgba(139, 92, 246, 0.22);
+    box-shadow: 0 0 16px rgba(139, 92, 246, 0.08), inset 0 0 8px rgba(139, 92, 246, 0.04);
+}
+
+/* Active underline glow */
+.nav-pill.is-active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 25%;
+    width: 50%;
+    height: 2px;
+    border-radius: 1px;
+    background: linear-gradient(90deg, transparent, #8b5cf6, transparent);
+    opacity: 0.7;
+}
+
+/* ── Variant: Strike (red) ── */
+.nav-pill--strike.is-active {
+    color: #fca5a5;
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.2);
+    box-shadow: 0 0 14px rgba(239, 68, 68, 0.06);
+}
+
+.nav-pill--strike.is-active::after {
+    background: linear-gradient(90deg, transparent, #ef4444, transparent);
+}
+
+/* ── Variant: Arsenal (cyan) ── */
+.nav-pill--arsenal.is-active {
+    color: #a5f3fc;
+    background: rgba(34, 211, 238, 0.1);
+    border-color: rgba(34, 211, 238, 0.2);
+    box-shadow: 0 0 14px rgba(34, 211, 238, 0.06);
+}
+
+.nav-pill--arsenal.is-active::after {
+    background: linear-gradient(90deg, transparent, #22d3ee, transparent);
+}
+
+/* ── Variant: Admin (amber) ── */
+.nav-pill--admin.is-active {
+    color: #fde68a;
+    background: rgba(234, 179, 8, 0.1);
+    border-color: rgba(234, 179, 8, 0.2);
+}
+
+.nav-pill--admin.is-active::after {
+    background: linear-gradient(90deg, transparent, #eab308, transparent);
+}
+
+/* ─── Zone 4 · Actions (bell etc.) ────────────────── */
+.navbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+    margin-left: auto;
+    padding-left: 8px;
+    border-left: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* ─── Responsive ──────────────────────────────────── */
+@media (max-width: 1100px) {
+    .nav-pill__label {
+        display: none;
+    }
+
+    .nav-pill {
+        padding: 8px 10px;
+    }
+
+    .brand-text {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
     .navbar {
-        height: auto;
-        padding: 16px 0;
+        padding: 8px 12px;
+        margin-bottom: 20px;
     }
 
-    .navbar-container {
-        flex-direction: column;
-        gap: 16px;
+    .navbar-inner {
         height: auto;
+        flex-wrap: wrap;
+        padding: 10px;
+        gap: 8px;
+        border-radius: 14px;
     }
 
-    .brand-section {
+    .navbar-brand {
+        border-right: none;
+        padding-right: 0;
+        margin-right: 0;
+    }
+
+    .navbar-profile-chip {
         border-right: none;
         margin-right: 0;
         padding-right: 0;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        padding-bottom: 16px;
+        order: -1;
+    }
+
+    .navbar-nav {
+        order: 10;
         width: 100%;
         justify-content: center;
+        flex-wrap: wrap;
+        gap: 4px;
+        padding-top: 6px;
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
     }
 
-    .navbar-left-group {
-        flex-direction: column;
-        width: 100%;
+    .nav-pill__label {
+        display: inline;
+        font-size: 0.65rem;
     }
 
-    .nav-item.active {
-        border-bottom: none;
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 6px;
+    .navbar-actions {
+        border-left: none;
+        padding-left: 0;
+        margin-left: auto;
+    }
+
+    .nav-pill.is-active::after {
+        display: none;
     }
 }

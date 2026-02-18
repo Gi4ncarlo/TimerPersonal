@@ -1,5 +1,5 @@
 ﻿import { supabase } from '@/lib/supabase/client';
-import { Action, DailyRecord, User, Goal, Strike, VacationPeriod, DailyMission } from '@/core/types';
+import { Action, DailyRecord, User, Goal, Strike, VacationPeriod, DailyMission, SmartNotification, SarcasmLevel } from '@/core/types';
 import { getTodayString, getWeekStartString, getWeekEndString, getArgentinaDate, getMonthEndString, getYearEndString, getFarFutureString } from '@/core/utils/dateUtils';
 import { subDays, differenceInDays, parseISO } from 'date-fns';
 
@@ -39,8 +39,12 @@ export const SupabaseDataStore = {
     },
 
     getCurrentUser: async (): Promise<User | null> => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return null;
+        // Use getSession() first — reads from localStorage (instant, survives tab close)
+        // Then validate with getUser() only if session exists
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) return null;
+
+        const user = session.user;
 
         const { data: profile } = await supabase
             .from('users')
@@ -1114,6 +1118,8 @@ export const SupabaseDataStore = {
         return createdStrikes;
     },
 
+
+
     /**
      * @deprecated Use processMissedStrikes
      */
@@ -1470,5 +1476,196 @@ export const SupabaseDataStore = {
             }
         }
         return streak;
+    },
+
+    // ═══════════════════════════════════════════════════
+    // SMART NOTIFICATIONS
+    // ═══════════════════════════════════════════════════
+
+    async getUnreadNotifications(): Promise<SmartNotification[]> {
+        const user = await this.getCurrentUser();
+        if (!user) return [];
+
+        const { data, error } = await supabase
+            .from('smart_notifications')
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('is_read', false)
+            .order('created_at', { ascending: false })
+            .limit(20);
+
+        if (error) {
+            console.error('Error fetching notifications:', error);
+            return [];
+        }
+
+        return (data || []).map(n => ({
+            id: n.id,
+            userId: n.user_id,
+            type: n.type,
+            title: n.title,
+            message: n.message,
+            context: n.context || {},
+            isRead: n.is_read,
+            createdAt: n.created_at,
+        }));
+    },
+
+    async getAllNotifications(limit: number = 50): Promise<SmartNotification[]> {
+        const user = await this.getCurrentUser();
+        if (!user) return [];
+
+        const { data, error } = await supabase
+            .from('smart_notifications')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(limit);
+
+        if (error) {
+            console.error('Error fetching all notifications:', error);
+            return [];
+        }
+
+        return (data || []).map(n => ({
+            id: n.id,
+            userId: n.user_id,
+            type: n.type,
+            title: n.title,
+            message: n.message,
+            context: n.context || {},
+            isRead: n.is_read,
+            createdAt: n.created_at,
+        }));
+    },
+
+    async markNotificationRead(id: string): Promise<void> {
+        const { error } = await supabase
+            .from('smart_notifications')
+            .update({ is_read: true })
+            .eq('id', id);
+
+        if (error) console.error('Error marking notification read:', error);
+    },
+
+    async markAllNotificationsRead(): Promise<void> {
+        const user = await this.getCurrentUser();
+        if (!user) return;
+
+        const { error } = await supabase
+            .from('smart_notifications')
+            .update({ is_read: true })
+            .eq('user_id', user.id)
+            .eq('is_read', false);
+
+        if (error) console.error('Error marking all notifications read:', error);
+    },
+
+    async createNotification(notification: Omit<SmartNotification, 'id' | 'createdAt' | 'isRead'>): Promise<SmartNotification | null> {
+        const { data, error } = await supabase
+            .from('smart_notifications')
+            .insert({
+                user_id: notification.userId,
+                type: notification.type,
+                title: notification.title,
+                message: notification.message,
+                context: notification.context,
+                is_read: false,
+            })
+            .select()
+            .single();
+
+        if (error) {
+            console.error('Error creating notification:', error);
+            return null;
+        }
+
+        return {
+            id: data.id,
+            userId: data.user_id,
+            type: data.type,
+            title: data.title,
+            message: data.message,
+            context: data.context || {},
+            isRead: data.is_read,
+            createdAt: data.created_at,
+        };
+    },
+
+    async getRecentNotificationTypes(): Promise<{ type: string; createdAt: string }[]> {
+        const user = await this.getCurrentUser();
+        if (!user) return [];
+
+        const { data, error } = await supabase
+            .from('smart_notifications')
+            .select('type, created_at')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(50);
+
+        if (error) {
+            console.error('Error fetching recent notification types:', error);
+            return [];
+        }
+
+        return (data || []).map(n => ({ type: n.type, createdAt: n.created_at }));
+    },
+
+    async updateSarcasmLevel(userId: string, level: SarcasmLevel): Promise<void> {
+        // Read current preferences, merge sarcasmLevel, write back
+        const { data: userData, error: readErr } = await supabase
+            .from('users')
+            .select('preferences')
+            .eq('id', userId)
+            .single();
+
+        if (readErr) {
+            console.error('Error reading user preferences:', readErr);
+            return;
+        }
+
+        const prefs = userData?.preferences || {};
+        prefs.sarcasmLevel = level;
+
+        const { error: writeErr } = await supabase
+            .from('users')
+            .update({ preferences: prefs })
+            .eq('id', userId);
+
+        if (writeErr) console.error('Error updating sarcasm level:', writeErr);
+    },
+
+    async getSarcasmLevel(userId: string): Promise<SarcasmLevel> {
+        const { data, error } = await supabase
+            .from('users')
+            .select('preferences')
+            .eq('id', userId)
+            .single();
+
+        if (error || !data?.preferences?.sarcasmLevel) {
+            return 'medium'; // Default
+        }
+        return data.preferences.sarcasmLevel as SarcasmLevel;
+    },
+
+    async deleteNotification(id: string): Promise<void> {
+        const { error } = await supabase
+            .from('smart_notifications')
+            .delete()
+            .eq('id', id);
+
+        if (error) console.error('Error deleting notification:', error);
+    },
+
+    async deleteAllNotifications(): Promise<void> {
+        const user = await this.getCurrentUser();
+        if (!user) return;
+
+        const { error } = await supabase
+            .from('smart_notifications')
+            .delete()
+            .eq('user_id', user.id);
+
+        if (error) console.error('Error deleting all notifications:', error);
     },
 };

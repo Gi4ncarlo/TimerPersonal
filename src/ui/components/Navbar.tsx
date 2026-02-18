@@ -1,8 +1,8 @@
 import Link from 'next/link';
-import { useRouter, usePathname } from 'next/navigation';
-import { SupabaseDataStore } from '@/data/supabaseData';
+import { usePathname } from 'next/navigation';
+import { SmartNotification } from '@/core/types';
 import UserLevel from './UserLevel';
-import Twemoji from './Twemoji';
+import NotificationCenter from './NotificationCenter';
 import './Navbar.css';
 
 interface NavbarProps {
@@ -13,7 +13,17 @@ interface NavbarProps {
     showArmoryToggle?: boolean;
     isArmoryOpen?: boolean;
     onArmoryToggle?: (open: boolean) => void;
+    notifications?: SmartNotification[];
+    onNotifRefresh?: () => void;
 }
+
+const NAV_LINKS = [
+    { href: '/dashboard', label: 'Inicio', icon: '🏠' },
+    { href: '/leaderboard', label: 'Ranking', icon: '🏆' },
+    { href: '/estadisticas', label: 'Stats', icon: '📊' },
+    { href: '/vacaciones', label: 'Bitácora', icon: '📒' },
+    { href: '/strikes', label: 'Strikes', icon: '⚠️', variant: 'strike' },
+];
 
 export default function Navbar({
     currentUser,
@@ -22,73 +32,84 @@ export default function Navbar({
     onProfileClick,
     showArmoryToggle = false,
     isArmoryOpen = false,
-    onArmoryToggle
+    onArmoryToggle,
+    notifications = [],
+    onNotifRefresh,
 }: NavbarProps) {
-    const router = useRouter();
     const pathname = usePathname();
-
-    const handleLogout = async () => {
-        await SupabaseDataStore.logout();
-        router.push('/login');
-    };
-
-    const isActive = (path: string) => pathname === path ? 'active' : '';
+    const isActive = (path: string) => pathname === path;
 
     return (
         <header className="navbar">
-            <div className="navbar-container">
-                {/* Left: Brand + Profile Card */}
-                <div className="navbar-left-group">
-                    <div className="brand-section">
-                        <Link href="/dashboard" style={{ textDecoration: 'none' }}>
-                            <h1 className="brand-title">Senda de Logros</h1>
-                        </Link>
+            <div className="navbar-inner">
+                {/* ── Zone 1: Brand ── */}
+                <Link href="/dashboard" className="navbar-brand">
+                    <span className="brand-glyph">⚡</span>
+                    <div className="brand-text-container">
+                        <span className="brand-text-main">SENDA</span>
+                        <span className="brand-text-sub">DE LOGROS</span>
                     </div>
+                </Link>
 
-                    {userLevel && currentUser && (
-                        <div className="profile-wrapper" onClick={onProfileClick}>
-                            <UserLevel
-                                level={userLevel.level}
-                                xp={userLevel.xp}
-                                avatarUrl={currentUser.avatarUrl}
-                                isOnVacation={isOnVacation}
-                            />
-                        </div>
-                    )}
-                </div>
+                {/* ── Zone 2: Profile Chip ── */}
+                {userLevel && currentUser && (
+                    <button className="navbar-profile-chip" onClick={onProfileClick} type="button">
+                        <UserLevel
+                            level={userLevel.level}
+                            xp={userLevel.xp}
+                            avatarUrl={currentUser.avatarUrl}
+                            isOnVacation={isOnVacation}
+                        />
+                    </button>
+                )}
 
-                {/* Right: Navigation Buttons */}
-                <div className="navbar-right-group">
-                    <Link href="/leaderboard" className={`nav-item ${isActive('/leaderboard')}`}>
-                        <Twemoji emoji="🏆" /> <span>Leaderboard</span>
-                    </Link>
-                    <Link href="/estadisticas" className={`nav-item ${isActive('/estadisticas')}`}>
-                        <Twemoji emoji="📊" /> <span>Estadísticas</span>
-                    </Link>
-                    <Link href="/strikes" className={`nav-item strike-link ${isActive('/strikes')}`}>
-                        <Twemoji emoji="⚠️" /> <span>Strikes</span>
-                    </Link>
+                {/* ── Zone 3: Navigation ── */}
+                <nav className="navbar-nav" role="navigation">
+                    {NAV_LINKS.map(link => (
+                        <Link
+                            key={link.href}
+                            href={link.href}
+                            className={[
+                                'nav-pill',
+                                isActive(link.href) ? 'is-active' : '',
+                                link.variant ? `nav-pill--${link.variant}` : '',
+                            ].join(' ')}
+                        >
+                            <span className="nav-pill__icon">{link.icon}</span>
+                            <span className="nav-pill__label">{link.label}</span>
+                        </Link>
+                    ))}
 
                     {showArmoryToggle && (
                         <button
-                            className={`nav-item armory-toggle ${isArmoryOpen ? 'active' : ''}`}
+                            className={`nav-pill nav-pill--arsenal ${isArmoryOpen ? 'is-active' : ''}`}
                             onClick={() => onArmoryToggle?.(!isArmoryOpen)}
-                            title="Arsenal"
+                            type="button"
                         >
-                            <Twemoji emoji="⚔️" /> <span>Arsenal</span>
+                            <span className="nav-pill__icon">⚔️</span>
+                            <span className="nav-pill__label">Arsenal</span>
                         </button>
                     )}
 
                     {currentUser?.role === 'admin' && (
-                        <Link href="/dashboard/admin" className={`nav-item admin-link ${isActive('/dashboard/admin')}`}>
-                            <Twemoji emoji="🛠" /> <span>Admin</span>
+                        <Link
+                            href="/dashboard/admin"
+                            className={`nav-pill nav-pill--admin ${isActive('/dashboard/admin') ? 'is-active' : ''}`}
+                        >
+                            <span className="nav-pill__icon">🛠</span>
+                            <span className="nav-pill__label">Admin</span>
                         </Link>
                     )}
+                </nav>
 
-                    <button className="navbar-logout" onClick={handleLogout} title="Salir">
-                        <Twemoji emoji="🚪" />
-                        <span style={{ marginLeft: 6, fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase' }}>Salir</span>
-                    </button>
+                {/* ── Zone 4: Actions ── */}
+                <div className="navbar-actions">
+                    {onNotifRefresh && (
+                        <NotificationCenter
+                            notifications={notifications}
+                            onRefresh={onNotifRefresh}
+                        />
+                    )}
                 </div>
             </div>
         </header>

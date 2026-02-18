@@ -1,0 +1,277 @@
+.logo-loader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #0a0a0a;
+    z-index: 9999;
+    gap: 2rem;
+}
+
+/* ── Logo Container ── */
+.logo-loader__icon-wrapper {
+    position: relative;
+    width: 100px;
+    height: 100px;
+}
+
+.logo-loader__image {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    animation: logoFloat 2.5s ease-in-out infinite;
+    filter: drop-shadow(0 0 20px rgba(139, 92, 246, 0.4));
+    position: relative;
+    z-index: 2;
+}
+
+/* ── Orbiting Rings ── */
+.logo-loader__ring {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    transform: translate(-50%, -50%);
+}
+
+.logo-loader__ring--1 {
+    width: 130px;
+    height: 130px;
+    border-top-color: rgba(139, 92, 246, 0.6);
+    border-right-color: rgba(139, 92, 246, 0.2);
+    animation: orbitSpin 1.8s linear infinite;
+}
+
+.logo-loader__ring--2 {
+    width: 160px;
+    height: 160px;
+    border-bottom-color: rgba(99, 102, 241, 0.5);
+    border-left-color: rgba(99, 102, 241, 0.15);
+    animation: orbitSpin 2.4s linear infinite reverse;
+}
+
+.logo-loader__ring--3 {
+    width: 190px;
+    height: 190px;
+    border-top-color: rgba(168, 85, 247, 0.3);
+    border-right-color: rgba(168, 85, 247, 0.1);
+    animation: orbitSpin 3.2s linear infinite;
+}
+
+/* ── Particle Dots ── */
+.logo-loader__particles {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+}
+
+.logo-loader__particle {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: rgba(139, 92, 246, 0.8);
+    box-shadow: 0 0 6px rgba(139, 92, 246, 0.6);
+}
+
+.logo-loader__particle:nth-child(1) {
+    animation: particleOrbit1 3s linear infinite;
+}
+
+.logo-loader__particle:nth-child(2) {
+    animation: particleOrbit2 3.5s linear infinite 0.5s;
+}
+
+.logo-loader__particle:nth-child(3) {
+    animation: particleOrbit3 2.8s linear infinite 1s;
+}
+
+.logo-loader__particle:nth-child(4) {
+    animation: particleOrbit4 4s linear infinite 0.3s;
+}
+
+/* ── Glow Pulse ── */
+.logo-loader__glow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(139, 92, 246, 0.25) 0%, transparent 70%);
+    transform: translate(-50%, -50%);
+    animation: glowPulse 2s ease-in-out infinite;
+    z-index: 1;
+}
+
+/* ── Progress Bar ── */
+.logo-loader__progress {
+    width: 120px;
+    height: 3px;
+    background: rgba(139, 92, 246, 0.15);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.logo-loader__progress-bar {
+    height: 100%;
+    width: 40%;
+    background: linear-gradient(90deg, transparent, #8b5cf6, transparent);
+    border-radius: 3px;
+    animation: progressSlide 1.5s ease-in-out infinite;
+}
+
+/* ═══════════ Keyframes ═══════════ */
+
+@keyframes logoFloat {
+
+    0%,
+    100% {
+        transform: translateY(0) scale(1);
+    }
+
+    50% {
+        transform: translateY(-8px) scale(1.05);
+    }
+}
+
+@keyframes orbitSpin {
+    to {
+        transform: translate(-50%, -50%) rotate(360deg);
+    }
+}
+
+@keyframes glowPulse {
+
+    0%,
+    100% {
+        opacity: 0.4;
+        transform: translate(-50%, -50%) scale(1);
+    }
+
+    50% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.4);
+    }
+}
+
+@keyframes progressSlide {
+    0% {
+        transform: translateX(-150%);
+    }
+
+    100% {
+        transform: translateX(450%);
+    }
+}
+
+@keyframes particleOrbit1 {
+    0% {
+        transform: translate(65px, 0) scale(1);
+        opacity: 1;
+    }
+
+    25% {
+        transform: translate(0, -65px) scale(0.6);
+        opacity: 0.5;
+    }
+
+    50% {
+        transform: translate(-65px, 0) scale(1);
+        opacity: 1;
+    }
+
+    75% {
+        transform: translate(0, 65px) scale(0.6);
+        opacity: 0.5;
+    }
+
+    100% {
+        transform: translate(65px, 0) scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes particleOrbit2 {
+    0% {
+        transform: translate(-80px, 0) scale(0.8);
+        opacity: 0.8;
+    }
+
+    25% {
+        transform: translate(0, 80px) scale(0.5);
+        opacity: 0.4;
+    }
+
+    50% {
+        transform: translate(80px, 0) scale(0.8);
+        opacity: 0.8;
+    }
+
+    75% {
+        transform: translate(0, -80px) scale(0.5);
+        opacity: 0.4;
+    }
+
+    100% {
+        transform: translate(-80px, 0) scale(0.8);
+        opacity: 0.8;
+    }
+}
+
+@keyframes particleOrbit3 {
+    0% {
+        transform: translate(50px, 50px) scale(1);
+        opacity: 0.7;
+    }
+
+    25% {
+        transform: translate(-50px, 50px) scale(0.4);
+        opacity: 0.3;
+    }
+
+    50% {
+        transform: translate(-50px, -50px) scale(1);
+        opacity: 0.7;
+    }
+
+    75% {
+        transform: translate(50px, -50px) scale(0.4);
+        opacity: 0.3;
+    }
+
+    100% {
+        transform: translate(50px, 50px) scale(1);
+        opacity: 0.7;
+    }
+}
+
+@keyframes particleOrbit4 {
+    0% {
+        transform: translate(-40px, -70px) scale(0.6);
+        opacity: 0.6;
+    }
+
+    33% {
+        transform: translate(70px, 20px) scale(1);
+        opacity: 1;
+    }
+
+    66% {
+        transform: translate(-20px, 70px) scale(0.6);
+        opacity: 0.6;
+    }
+
+    100% {
+        transform: translate(-40px, -70px) scale(0.6);
+        opacity: 0.6;
+    }
+}
