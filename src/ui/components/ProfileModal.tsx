@@ -9,11 +9,12 @@ import './ProfileModal.css';
 interface ProfileModalProps {
     user: User;
     isOpen: boolean;
+    isOnVacation?: boolean;
     onClose: () => void;
     onUpdate: () => void;
 }
 
-export default function ProfileModal({ user, isOpen, onClose, onUpdate }: ProfileModalProps) {
+export default function ProfileModal({ user, isOpen, isOnVacation = false, onClose, onUpdate }: ProfileModalProps) {
     const [newUsername, setNewUsername] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -135,6 +136,12 @@ export default function ProfileModal({ user, isOpen, onClose, onUpdate }: Profil
 
                     <h2 className="profile-username">{user.username}</h2>
                     <p className="profile-rank">{levelTitle}</p>
+
+                    <div className={`profile-status-badge ${isOnVacation ? 'on-vacation' : 'active'}`}>
+                        <span className="status-dot"></span>
+                        {isOnVacation ? 'DE VACACIONES' : 'SISTEMAS ACTIVOS'}
+                    </div>
+
                     <p className="profile-email">{sessionStorage.getItem('currentUserEmail') || 'Usuario Antigravity'}</p>
                 </header>
 

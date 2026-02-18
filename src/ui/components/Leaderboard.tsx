@@ -17,6 +17,7 @@ interface LeaderboardEntry {
     pointsLast24hNegative?: number;
     strikes: number;
     avatarUrl?: string;
+    isOnVacation?: boolean;
     weekStart: string;
     weekEnd: string;
 }
@@ -138,6 +139,10 @@ export default function Leaderboard({ currentEntry, entries, isLoading, onRowCli
                         <div className="user-info-stack">
                             <div className="username-row">
                                 <span className="username-text">{entry.username}</span>
+                                <div className={`status-badge-mini ${entry.isOnVacation ? 'on-vacation' : 'active'}`}>
+                                    <span className="status-dot-mini"></span>
+                                    {entry.isOnVacation ? 'VACACIONES' : 'ACTIVO'}
+                                </div>
                                 <div className="insignia-belt">
                                     {insignias.map((b, i) => (
                                         <span key={i} className="insignia-icon" title={b.label} style={{ color: b.color }}>{b.icon}</span>
@@ -227,6 +232,10 @@ export default function Leaderboard({ currentEntry, entries, isLoading, onRowCli
                                 </div>
                                 <div className="podium-info">
                                     <span className="podium-name">{entry.username}</span>
+                                    <div className={`status-badge ${entry.isOnVacation ? 'on-vacation' : 'active'}`}>
+                                        <span className="status-dot"></span>
+                                        {entry.isOnVacation ? 'DE VACACIONES' : 'ACTIVO'}
+                                    </div>
                                     <span className="podium-points" style={{ color: league.color }}>{Math.floor(entry.totalPoints).toLocaleString()} <small>PTS</small></span>
                                 </div>
                             </div>

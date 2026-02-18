@@ -13,11 +13,13 @@ import GoalTracker from '@/ui/components/GoalTracker';
 import StrikeWarning from '@/ui/components/StrikeWarning';
 import ProfileModal from '@/ui/components/ProfileModal';
 import CreateActionModal from '@/ui/components/CreateActionModal';
+import Navbar from '@/ui/components/Navbar';
 import { SupabaseDataStore } from '@/data/supabaseData';
 import { BalanceCalculator } from '@/core/services/BalanceCalculator';
 import { PointsCalculator } from '@/core/services/PointsCalculator';
 import { StrikeDetector } from '@/core/services/StrikeDetector';
-import { Action, DailyRecord, Goal, Strike, User } from '@/core/types';
+import { VacationService } from '@/core/services/VacationService';
+import { Action, DailyRecord, Goal, Strike, User, VacationPeriod } from '@/core/types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { getTodayString, getArgentinaDate } from '@/core/utils/dateUtils';
@@ -43,6 +45,7 @@ export default function Dashboard() {
     const [latestStrikes, setLatestStrikes] = useState<Strike[]>([]);
     const [showStrikeWarning, setShowStrikeWarning] = useState(false);
     const [isArmoryOpen, setIsArmoryOpen] = useState(false);
+    const [isOnVacation, setIsOnVacation] = useState(false);
 
     useEffect(() => {
         loadData();
@@ -58,10 +61,11 @@ export default function Dashboard() {
             setCurrentUser(user);
             setUserLevel({ level: user.level, xp: user.xp });
 
-            const [fetchedActions, fetchedRecords, fetchedGoals] = await Promise.all([
+            const [fetchedActions, fetchedRecords, fetchedGoals, fetchedVacations] = await Promise.all([
                 SupabaseDataStore.getActions(),
                 SupabaseDataStore.getRecords(),
                 SupabaseDataStore.getGoals(),
+                SupabaseDataStore.getVacationPeriods(),
             ]);
 
             setActions(fetchedActions);
@@ -72,8 +76,53 @@ export default function Dashboard() {
             const totalPoints = fetchedRecords.reduce((sum, r) => sum + r.pointsCalculated, 0);
             setAccumulatedPoints(totalPoints);
 
-            // Check for missed days (multi-day strikes)
-            const missedDays = StrikeDetector.detectMissedDays(fetchedRecords);
+            // Check vacation status
+            const today = getTodayString();
+            const activeVacation = VacationService.getActiveVacation(fetchedVacations, today);
+            setIsOnVacation(!!activeVacation);
+
+            // Trigger vacation notifications if needed
+            if (user.email) {
+                for (const period of fetchedVacations) {
+                    if (VacationService.needsStartNotification(period, today)) {
+                        try {
+                            await fetch('/api/vacation-notify', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    type: 'start',
+                                    userEmail: user.email,
+                                    userName: user.username || 'Usuario',
+                                    startDate: period.startDate,
+                                    endDate: period.endDate,
+                                    reason: period.reason,
+                                }),
+                            });
+                            await SupabaseDataStore.markVacationNotified(period.id, 'start');
+                        } catch (e) { console.warn('Vacation start notification failed:', e); }
+                    }
+                    if (VacationService.needsEndWarning(period, today)) {
+                        try {
+                            await fetch('/api/vacation-notify', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    type: 'end_warning',
+                                    userEmail: user.email,
+                                    userName: user.username || 'Usuario',
+                                    startDate: period.startDate,
+                                    endDate: period.endDate,
+                                    reason: period.reason,
+                                }),
+                            });
+                            await SupabaseDataStore.markVacationNotified(period.id, 'end_warning');
+                        } catch (e) { console.warn('Vacation end warning notification failed:', e); }
+                    }
+                }
+            }
+
+            // Check for missed days (multi-day strikes) - vacation-aware
+            const missedDays = StrikeDetector.detectMissedDays(fetchedRecords, fetchedVacations);
             if (missedDays.length > 0) {
                 const newStrikes = await SupabaseDataStore.processMissedStrikes(missedDays);
                 if (newStrikes.length > 0) {
@@ -242,35 +291,15 @@ export default function Dashboard() {
     return (
         <main className="dashboard">
             <div className="dashboard-container-new">
-                <header className="dashboard-header">
-                    <div className="title-area">
-                        <h1 className="main-title">Senda de Logros</h1>
-                        {/* User Level Component - Now Clickable */}
-                        <UserLevel
-                            level={userLevel.level}
-                            xp={userLevel.xp}
-                            avatarUrl={currentUser?.avatarUrl}
-                            onClick={() => setIsProfileModalOpen(true)}
-                        />
-                    </div>
-
-                    <div className="header-actions">
-                        <Link href="/leaderboard" className="nav-link">🏆 Leaderboard</Link>
-                        <Link href="/estadisticas" className="nav-link">📊 Estadísticas</Link>
-                        {currentUser?.role === 'admin' && (
-                            <Link href="/dashboard/admin" className="nav-link" style={{ borderColor: 'var(--color-accent)', color: 'var(--color-accent)' }}>🛠 Admin</Link>
-                        )}
-                        <Link href="/strikes" className="nav-link" style={{ color: '#ff4444', borderColor: '#ff4444' }}>⚠️ Strikes</Link>
-                        <button
-                            className={`nav-link armory-toggle ${isArmoryOpen ? 'active' : ''}`}
-                            onClick={() => setIsArmoryOpen(!isArmoryOpen)}
-                            title="Desplegar Arsenal de Acciones"
-                        >
-                            ⚔️ Arsenal
-                        </button>
-                        <button className="logout-btn" onClick={handleLogout}>Salir</button>
-                    </div>
-                </header>
+                <Navbar
+                    currentUser={currentUser}
+                    userLevel={userLevel}
+                    isOnVacation={isOnVacation}
+                    onProfileClick={() => setIsProfileModalOpen(true)}
+                    showArmoryToggle={true}
+                    isArmoryOpen={isArmoryOpen}
+                    onArmoryToggle={setIsArmoryOpen}
+                />
 
                 {getQuickAdds()}
 
@@ -428,6 +457,7 @@ export default function Dashboard() {
                 <ProfileModal
                     user={currentUser}
                     isOpen={isProfileModalOpen}
+                    isOnVacation={isOnVacation}
                     onClose={() => setIsProfileModalOpen(false)}
                     onUpdate={() => loadData()}
                 />

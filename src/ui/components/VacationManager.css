@@ -1,0 +1,370 @@
+.vacation-section {
+    background: var(--color-surface);
+    border: var(--border-ethereal);
+    border-radius: var(--radius-lg);
+    padding: var(--space-xl);
+    box-shadow: var(--shadow-xl), var(--shadow-inner-glow);
+    position: relative;
+    overflow: hidden;
+    margin-top: 2rem;
+}
+
+.vacation-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(to bottom, var(--color-primary), var(--color-accent));
+}
+
+.vacation-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-xl);
+    padding-bottom: var(--space-md);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.vacation-section-title {
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--color-text-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin: 0;
+}
+
+.vacation-toggle-btn {
+    padding: var(--space-sm) var(--space-lg);
+    background: rgba(168, 85, 247, 0.1);
+    border: 1px solid var(--color-primary);
+    color: var(--color-primary);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-display);
+    font-weight: 700;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.vacation-toggle-btn:hover {
+    background: var(--color-primary);
+    color: white;
+    box-shadow: 0 0 15px var(--color-primary-glow);
+}
+
+/* Stats Bar */
+.vacation-stats-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-md);
+    margin-bottom: var(--space-xl);
+}
+
+.vacation-stat-card {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: transform 0.3s ease;
+}
+
+.vacation-stat-card:hover {
+    transform: translateY(-3px);
+    background: rgba(168, 85, 247, 0.05);
+    border-color: rgba(168, 85, 247, 0.3);
+}
+
+.vacation-stat-value {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 900;
+    color: var(--color-primary);
+}
+
+.vacation-stat-label {
+    font-size: 0.7rem;
+    color: var(--color-text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-top: 4px;
+}
+
+/* Next vacation countdown */
+.vacation-next-countdown {
+    background: linear-gradient(90deg, rgba(34, 211, 238, 0.1), transparent);
+    border: 1px solid rgba(34, 211, 238, 0.2);
+    border-radius: var(--radius-md);
+    padding: var(--space-md) var(--space-lg);
+    margin-bottom: var(--space-xl);
+    display: flex;
+    align-items: center;
+    gap: var(--space-lg);
+}
+
+.vacation-next-icon {
+    font-size: 1.5rem;
+}
+
+.vacation-next-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.vacation-next-label {
+    font-size: 0.75rem;
+    color: var(--color-accent);
+    text-transform: uppercase;
+    font-weight: 700;
+}
+
+.vacation-next-date {
+    font-family: var(--font-mono);
+    color: var(--color-text-primary);
+    font-size: 0.9rem;
+}
+
+.vacation-next-countdown-value {
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    font-weight: 900;
+    color: var(--color-accent);
+}
+
+/* Create Form */
+.vacation-form {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(168, 85, 247, 0.2);
+    border-radius: var(--radius-md);
+    padding: var(--space-xl);
+    margin-bottom: var(--space-xl);
+    animation: slideDown 0.3s ease-out;
+}
+
+.vacation-form-title {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    margin-bottom: var(--space-lg);
+    color: var(--color-primary);
+}
+
+.vacation-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-lg);
+}
+
+.full-width {
+    grid-column: 1 / -1;
+}
+
+.vacation-field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+
+.vacation-field label {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+}
+
+.vacation-field input,
+.vacation-field textarea {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-sm);
+    padding: var(--space-sm) var(--space-md);
+    color: white;
+    font-family: inherit;
+    transition: border-color 0.3s;
+}
+
+.vacation-field input:focus,
+.vacation-field textarea:focus {
+    border-color: var(--color-primary);
+    outline: none;
+}
+
+.vacation-duration-info {
+    margin-top: var(--space-md);
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+}
+
+.days-count {
+    font-weight: 700;
+    color: var(--color-primary);
+}
+
+.over-limit {
+    color: var(--color-negative);
+}
+
+.vacation-form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-md);
+    margin-top: var(--space-lg);
+}
+
+.vacation-submit-btn {
+    padding: var(--space-sm) var(--space-xl);
+    background: var(--color-primary);
+    border: none;
+    border-radius: var(--radius-sm);
+    color: white;
+    font-family: var(--font-display);
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.vacation-cancel-btn {
+    padding: var(--space-sm) var(--space-xl);
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: var(--radius-sm);
+    color: var(--color-text-primary);
+    font-family: var(--font-display);
+    cursor: pointer;
+}
+
+/* Periods List */
+.vacation-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--space-md);
+}
+
+.vacation-period-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-md);
+    padding: var(--space-lg);
+    border-top: 3px solid transparent;
+    transition: all 0.3s;
+}
+
+.vacation-period-card:hover {
+    transform: translateY(-4px) scale(1.02);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.vacation-period-card.status-active {
+    border-color: #10b981;
+    background: rgba(16, 185, 129, 0.05);
+}
+
+.vacation-period-card.status-future {
+    border-color: #3b82f6;
+    background: rgba(59, 130, 246, 0.05);
+}
+
+.vacation-period-card.status-past {
+    border-color: rgba(255, 255, 255, 0.1);
+    filter: grayscale(0.5);
+    opacity: 0.7;
+}
+
+.vacation-period-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-md);
+}
+
+.vacation-status-badge {
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+.vacation-status-badge.active {
+    background: #10b981;
+    color: white;
+}
+
+.vacation-status-badge.future {
+    background: #3b82f6;
+    color: white;
+}
+
+.vacation-status-badge.past {
+    background: #6b7280;
+    color: white;
+}
+
+.vacation-delete-btn {
+    background: none;
+    border: none;
+    color: #ff4444;
+    font-size: 1.2rem;
+    cursor: pointer;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+}
+
+.vacation-delete-btn:hover {
+    opacity: 1;
+}
+
+.vacation-dates {
+    font-family: var(--font-mono);
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: var(--space-xs);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.date-arrow {
+    color: var(--color-primary);
+}
+
+.vacation-reason {
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+    font-style: italic;
+    margin-bottom: var(--space-md);
+}
+
+.vacation-days-count {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    font-weight: 700;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (max-width: 640px) {
+    .vacation-stats-bar {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .vacation-form-grid {
+        grid-template-columns: 1fr;
+    }
+}

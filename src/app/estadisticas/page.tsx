@@ -26,6 +26,10 @@ import {
     Area, AreaChart,
 } from 'recharts';
 import type { Goal } from '@/core/types';
+import Navbar from '@/ui/components/Navbar';
+import ProfileModal from '@/ui/components/ProfileModal';
+import { User, VacationPeriod } from '@/core/types';
+import { VacationService } from '@/core/services/VacationService';
 import './estadisticas.css';
 
 // ─── Time Range Options ──────────────────────────
@@ -122,6 +126,9 @@ export default function EstadisticasPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [range, setRange] = useState<TimeRange>(30);
     const [selectedDate, setSelectedDate] = useState<string | null>(null);
+    const [currentUser, setCurrentUser] = useState<User | null>(null);
+    const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+    const [isOnVacation, setIsOnVacation] = useState(false);
 
     // ── Data Loading ─────────────────────────────
     useEffect(() => {
@@ -130,6 +137,8 @@ export default function EstadisticasPage() {
 
     const loadData = async () => {
         try {
+            const user = await SupabaseDataStore.getCurrentUser();
+            setCurrentUser(user);
             const nowArg = getArgentinaDate();
             const todayStr = format(nowArg, 'yyyy-MM-dd');
 
@@ -181,6 +190,11 @@ export default function EstadisticasPage() {
 
             setAllStats(statsData);
             setGoals(goalsData);
+
+            // Vacation status for Navbar
+            const vacations = await SupabaseDataStore.getVacationPeriods();
+            const activeVacation = VacationService.getActiveVacation(vacations, todayStr);
+            setIsOnVacation(!!activeVacation);
         } catch (error) {
             console.error('Error loading stats:', error);
         } finally {
@@ -246,6 +260,12 @@ export default function EstadisticasPage() {
     return (
         <main className="estadisticas-page">
             <div className="stats-container">
+                <Navbar
+                    currentUser={currentUser}
+                    userLevel={currentUser ? { level: currentUser.level, xp: currentUser.xp } : undefined}
+                    isOnVacation={isOnVacation}
+                    onProfileClick={() => setIsProfileModalOpen(true)}
+                />
 
                 {/* ═══ HEADER + RANGE SELECTOR ═══ */}
                 <header className="stats-header">
@@ -263,7 +283,6 @@ export default function EstadisticasPage() {
                                 </button>
                             ))}
                         </div>
-                        <Link href="/dashboard" className="back-link">← Dashboard</Link>
                     </div>
                 </header>
 
@@ -564,6 +583,15 @@ export default function EstadisticasPage() {
                     </div>
                 )}
             </div>
+
+            {currentUser && (
+                <ProfileModal
+                    user={currentUser}
+                    isOpen={isProfileModalOpen}
+                    onClose={() => setIsProfileModalOpen(false)}
+                    onUpdate={() => loadData()}
+                />
+            )}
         </main>
     );
 }

@@ -8,6 +8,11 @@ import QuestCard from '@/ui/components/QuestCard';
 import { SupabaseDataStore } from '@/data/supabaseData';
 import { getWeekStartString, getWeekEndString } from '@/core/utils/dateUtils';
 import UserStatsModal from '@/ui/components/UserStatsModal';
+import Navbar from '@/ui/components/Navbar';
+import ProfileModal from '@/ui/components/ProfileModal';
+import { User, VacationPeriod } from '@/core/types';
+import { VacationService } from '@/core/services/VacationService';
+import { getTodayString } from '@/core/utils/dateUtils';
 import './leaderboard.css';
 
 interface LeaderboardEntry {
@@ -21,6 +26,8 @@ interface LeaderboardEntry {
     pointsLast24hPositive?: number;
     pointsLast24hNegative?: number;
     strikes: number;
+    avatarUrl?: string;
+    isOnVacation?: boolean;
     weekStart: string;
     weekEnd: string;
 }
@@ -32,6 +39,10 @@ export default function LeaderboardPage() {
     const [currentEntry, setCurrentEntry] = useState<LeaderboardEntry | undefined>();
     const [isLoading, setIsLoading] = useState(true);
     const [selectedUser, setSelectedUser] = useState<LeaderboardEntry | null>(null);
+
+    const [currentUser, setCurrentUser] = useState<User | null>(null);
+    const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+    const [isOnVacation, setIsOnVacation] = useState(false);
 
     useEffect(() => {
         loadLeaderboard();
@@ -46,20 +57,18 @@ export default function LeaderboardPage() {
                 return;
             }
 
-            let leaderboardData;
-
-            if (viewMode === 'general') {
-                leaderboardData = await SupabaseDataStore.getAllTimeLeaderboard();
-            } else {
-                // Match the DataStore logic: Week starts on Monday (Argentina Time)
-                const weekStart = getWeekStartString();
-                const weekEnd = getWeekEndString();
-                leaderboardData = await SupabaseDataStore.getLeaderboardStats(weekStart, weekEnd);
-            }
+            const leaderboardData = viewMode === 'general'
+                ? await SupabaseDataStore.getAllTimeLeaderboard()
+                : await SupabaseDataStore.getLeaderboardStats(getWeekStartString(), getWeekEndString());
 
             setEntries(leaderboardData);
             const userEntry = leaderboardData.find(e => e.userId === user.id);
             setCurrentEntry(userEntry);
+
+            // Vacation status for Navbar
+            const vacations = await SupabaseDataStore.getVacationPeriods();
+            const activeVacation = VacationService.getActiveVacation(vacations, getTodayString());
+            setIsOnVacation(!!activeVacation);
         } catch (error) {
             console.error('Error loading leaderboard:', error);
         } finally {
@@ -70,6 +79,13 @@ export default function LeaderboardPage() {
     return (
         <main className="leaderboard-page">
             <div className="leaderboard-container-wrapper">
+                <Navbar
+                    currentUser={currentUser}
+                    userLevel={currentUser ? { level: currentUser.level, xp: currentUser.xp } : undefined}
+                    isOnVacation={isOnVacation}
+                    onProfileClick={() => setIsProfileModalOpen(true)}
+                />
+
                 <header className="page-header">
                     <div className="title-area">
                         <h1 className="page-title">{viewMode === 'weekly' ? '📡 Clasificación Semanal' : '🪐 Clasificación General'}</h1>
@@ -79,7 +95,7 @@ export default function LeaderboardPage() {
                                 : 'Registro histórico de la Orden de Guerreros'}
                         </p>
                     </div>
-                    <div className="header-controls">
+                    <div className="header-controls" style={{ gap: 'var(--space-md)' }}>
                         <div className="view-toggle">
                             <button
                                 className={`toggle-btn ${viewMode === 'weekly' ? 'active' : ''}`}
@@ -97,9 +113,6 @@ export default function LeaderboardPage() {
                         <button onClick={loadLeaderboard} className="refresh-btn" disabled={isLoading}>
                             {isLoading ? '...' : '🔄 Sincronizar'}
                         </button>
-                        <Link href="/dashboard" className="back-link">
-                            ← Regresar al Comando
-                        </Link>
                     </div>
                 </header>
 
@@ -120,6 +133,15 @@ export default function LeaderboardPage() {
                         entry={selectedUser}
                         isOpen={!!selectedUser}
                         onClose={() => setSelectedUser(null)}
+                    />
+                )}
+
+                {currentUser && (
+                    <ProfileModal
+                        user={currentUser}
+                        isOpen={isProfileModalOpen}
+                        onClose={() => setIsProfileModalOpen(false)}
+                        onUpdate={() => loadLeaderboard()}
                     />
                 )}
             </div>
