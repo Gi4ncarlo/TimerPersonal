@@ -9,11 +9,12 @@ interface GoalTrackerProps {
     actions: Action[];
     onCreateGoal: (title: string, target: number, actionId?: string, metricType?: string, metricUnit?: string, period?: string) => void;
     onDeleteGoal: (id: string) => void;
+    onCreateAction?: () => void; // Trigger mission-specific action creation
 }
 
 type PeriodTab = 'weekly' | 'monthly' | 'milestone';
 
-export default function GoalTracker({ goals, actions, onCreateGoal, onDeleteGoal }: GoalTrackerProps) {
+export default function GoalTracker({ goals, actions, onCreateGoal, onDeleteGoal, onCreateAction }: GoalTrackerProps) {
     const [activeTab, setActiveTab] = useState<PeriodTab>('weekly');
     const [isAdding, setIsAdding] = useState(false);
 
@@ -155,26 +156,38 @@ export default function GoalTracker({ goals, actions, onCreateGoal, onDeleteGoal
 
                         <div className="form-group flex-2">
                             <label>Actividad Relacionada</label>
-                            <select
-                                value={selectedActionId}
-                                onChange={(e) => {
-                                    setSelectedActionId(e.target.value);
-                                    const action = actions.find(a => a.id === e.target.value);
-                                    if (action?.metadata?.inputType === 'pages') {
-                                        setSelectedMetricType('pages');
-                                    } else if (action?.metadata?.inputType === 'distance-time') {
-                                        setSelectedMetricType('kilometers');
-                                    } else if (action?.metadata?.inputType?.includes('time')) {
-                                        setSelectedMetricType('hours');
-                                    }
-                                }}
-                                className="goal-select-input"
-                            >
-                                <option value="">Cualquera (Global)</option>
-                                {actions.filter(a => a.type === 'positive').map(action => (
-                                    <option key={action.id} value={action.id}>{action.name}</option>
-                                ))}
-                            </select>
+                            <div className="select-with-action">
+                                <select
+                                    value={selectedActionId}
+                                    onChange={(e) => {
+                                        setSelectedActionId(e.target.value);
+                                        const action = actions.find(a => a.id === e.target.value);
+                                        if (action?.metadata?.inputType === 'pages') {
+                                            setSelectedMetricType('pages');
+                                        } else if (action?.metadata?.inputType === 'distance-time') {
+                                            setSelectedMetricType('kilometers');
+                                        } else if (action?.metadata?.inputType?.includes('time')) {
+                                            setSelectedMetricType('hours');
+                                        }
+                                    }}
+                                    className="goal-select-input"
+                                >
+                                    <option value="">Cualquera (Global)</option>
+                                    {actions.filter(a => a.type === 'positive').map(action => (
+                                        <option key={action.id} value={action.id}>{action.name}</option>
+                                    ))}
+                                </select>
+                                {onCreateAction && (
+                                    <button
+                                        type="button"
+                                        className="inline-create-btn"
+                                        onClick={onCreateAction}
+                                        title="Crear nueva actividad"
+                                    >
+                                        +
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     </div>
 

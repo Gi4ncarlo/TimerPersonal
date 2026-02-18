@@ -1,221 +1,189 @@
+/* UserLevel.css: Integrated "Widget" Style */
 .user-level-card {
-    background: var(--color-surface-elevated);
-    backdrop-filter: blur(15px);
-    border: 2px solid rgba(168, 85, 247, 0.2);
-    border-radius: var(--radius-md);
-    padding: var(--space-md) var(--space-lg);
     display: flex;
     align-items: center;
-    gap: var(--space-lg);
-    box-shadow: var(--shadow-lg), var(--shadow-inner-glow);
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    gap: 20px;
+    padding: 8px 24px;
+    background: transparent;
+    /* Seamless integration */
+    border: 1px solid transparent;
+    /* Prepare for hover border */
     position: relative;
-    overflow: hidden;
-}
-
-.user-level-card.clickable {
+    color: white;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 16px;
+    /* Smooth corners on hover */
     cursor: pointer;
 }
 
-.user-level-card.clickable:hover {
-    border-color: var(--color-primary);
-    background: rgba(168, 85, 247, 0.05);
-    transform: translateY(-4px);
-    box-shadow: 0 10px 40px rgba(168, 85, 247, 0.2), var(--shadow-inner-glow);
+/* Hover Effect: Glow & subtle lift */
+.user-level-card:hover {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.08);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
+.user-level-card:active {
+    transform: translateY(1px);
+    opacity: 0.9;
+}
+
+/* Avatar: Sleek Hexagon or rounded square with refined border */
 .avatar-preview {
-    width: 64px;
-    height: 64px;
-    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
     position: relative;
-    padding: 3px;
-    background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
-    border-radius: var(--radius-sm);
-    transform: rotate(3deg);
+    background: #000;
+    transition: transform 0.3s ease;
+}
+
+.user-level-card:hover .avatar-preview {
+    transform: scale(1.05);
+}
+
+/* Gradient border trick for Avatar */
+.avatar-preview::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: 14px;
+    padding: 2px;
+    background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0.8;
 }
 
 .preview-img {
     width: 100%;
     height: 100%;
-    border-radius: 2px;
     object-fit: cover;
-    transform: rotate(-3deg);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
 }
 
 .preview-placeholder {
     width: 100%;
     height: 100%;
-    background: var(--color-surface-sunken);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.8rem;
-    color: var(--color-primary);
-    transform: rotate(-3deg);
-    border-radius: 2px;
+    font-size: 1.5rem;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.05);
 }
 
+/* Info Section */
 .level-info {
-    flex: 1;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
-    gap: 4px;
-    min-width: 200px;
+    justify-content: center;
+    min-width: 180px;
 }
 
+/* Header: Badge + Status */
 .level-top-row {
     display: flex;
+    align-items: center;
     justify-content: space-between;
-    align-items: flex-start;
+    margin-bottom: 2px;
 }
 
 .level-badge {
     display: flex;
     align-items: baseline;
     gap: 4px;
+    font-family: var(--font-body);
 }
 
 .level-label {
-    font-family: var(--font-display);
     font-size: 0.65rem;
-    color: var(--color-primary);
-    text-transform: uppercase;
-    letter-spacing: 0.15em;
-    font-weight: 700;
-    opacity: 0.8;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    letter-spacing: 0.05em;
 }
 
 .level-number {
-    font-family: var(--font-display);
-    font-size: 1.4rem;
-    font-weight: 900;
+    font-size: 0.9rem;
+    font-weight: 800;
     color: white;
-    text-shadow: 0 0 10px var(--color-primary-glow);
 }
 
 .status-badge-compact {
+    font-size: 0.55rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
     display: flex;
     align-items: center;
-    gap: 5px;
-    padding: 2px 8px;
-    border-radius: 6px;
-    font-size: 0.55rem;
-    font-weight: 800;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    background: rgba(0, 0, 0, 0.4);
+    gap: 4px;
+    opacity: 0.8;
+    transition: opacity 0.3s;
 }
 
-.status-badge-compact.active {
-    color: #22c55e;
-    border: 1px solid rgba(34, 197, 94, 0.2);
-}
-
-.status-badge-compact.on-vacation {
-    color: #00c996;
-    border: 1px solid rgba(0, 201, 150, 0.2);
-    animation: pulse 2s ease infinite;
+.user-level-card:hover .status-badge-compact {
+    opacity: 1;
 }
 
 .status-dot {
-    width: 5px;
-    height: 5px;
+    width: 4px;
+    height: 4px;
     border-radius: 50%;
-    background: currentColor;
+    background-color: currentColor;
     box-shadow: 0 0 5px currentColor;
 }
 
-.level-middle-row {
-    margin-top: -2px;
+.status-badge-compact.active {
+    color: #4ade80;
 }
 
+.status-badge-compact.on-vacation {
+    color: #fbbf24;
+}
+
+/* Main Title */
 .level-title-main {
     font-family: var(--font-display);
-    font-size: 0.8rem;
-    font-weight: 800;
-    color: var(--color-accent);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--color-secondary);
+    text-shadow: 0 0 15px rgba(34, 211, 238, 0.2);
+    margin-bottom: 4px;
+    letter-spacing: 0.05em;
+    transition: text-shadow 0.3s;
 }
 
+.user-level-card:hover .level-title-main {
+    text-shadow: 0 0 20px rgba(34, 211, 238, 0.4);
+}
+
+/* XP Bar */
 .xp-info-row {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    margin-top: 4px;
-}
-
-.xp-label-group {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.xp-label-text {
-    font-family: var(--font-display);
-    font-size: 0.55rem;
-    color: var(--color-text-secondary);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-}
-
-.xp-value-text {
-    font-family: var(--font-mono);
-    font-size: 0.65rem;
-    color: var(--color-primary);
-    font-weight: 600;
+    width: 100%;
 }
 
 .xp-progress-container {
-    width: 100%;
-    height: 4px;
-    background: rgba(255, 255, 255, 0.05);
+    height: 3px;
+    background: rgba(255, 255, 255, 0.1);
     border-radius: 2px;
     overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    position: relative;
+    margin-bottom: 4px;
 }
 
 .xp-progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
-    box-shadow: 0 0 8px var(--color-primary-glow);
-    transition: width 1s cubic-bezier(0.19, 1, 0.22, 1);
+    background: var(--color-secondary);
+    box-shadow: 0 0 8px var(--color-secondary);
+    border-radius: 2px;
+    transition: width 0.5s ease-out;
 }
 
-@keyframes pulse {
-    0% {
-        opacity: 0.7;
-    }
-
-    50% {
-        opacity: 1;
-        transform: scale(1.05);
-    }
-
-    100% {
-        opacity: 0.7;
-    }
-}
-
-@media (max-width: 768px) {
-    .user-level-card {
-        padding: var(--space-sm) var(--space-md);
-        gap: var(--space-md);
-    }
-
-    .avatar-preview {
-        width: 48px;
-        height: 48px;
-    }
-
-    .level-number {
-        font-size: 1.2rem;
-    }
-
-    .level-info {
-        min-width: 150px;
-    }
+.xp-details {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: 0.55rem;
+    color: var(--color-text-muted);
 }

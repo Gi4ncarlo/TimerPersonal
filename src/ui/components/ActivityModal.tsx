@@ -64,9 +64,21 @@ export default function ActivityModal({ action, goals = [], isOpen, onClose, onS
                 break;
 
             case 'impact':
-                metricValue = parseFloat(formData.get('impact') as string || '0');
-                durationMinutes = 0; // Impact activities don't necessarily take time in the app context
-                notes = formData.get('notes') as string || 'Hito alcanzado';
+                // If the field is hidden/fixed, it might still submit value="1" via hidden input,
+                // or if handled via state. Here we trust the formData.
+                // If the user didn't input anything (because input was hidden and no default?), 
+                // we should fallback to 1 if it's the mission-linked type.
+                const impactInput = formData.get('impact');
+                if (impactInput) {
+                    metricValue = parseFloat(impactInput as string);
+                } else if (action.pointsPerMinute === 0 && action.type === 'positive') {
+                    metricValue = 1;
+                } else {
+                    metricValue = 0;
+                }
+
+                durationMinutes = 0;
+                notes = formData.get('notes') as string || (action.pointsPerMinute === 0 ? 'Actividad registrada' : 'Hito alcanzado');
                 break;
 
             case 'milestone':
@@ -222,6 +234,25 @@ export default function ActivityModal({ action, goals = [], isOpen, onClose, onS
                 );
 
             case 'impact':
+                // Check if it's a mission-linked activity (0 base points, positive type)
+                // In this case, we only want a comment, and default impact to 1.
+                if (action.pointsPerMinute === 0 && action.type === 'positive') {
+                    return (
+                        <div className="form-group">
+                            <label htmlFor="notes">¿Qué lograste? (Opcional)</label>
+                            <input
+                                id="notes"
+                                name="notes"
+                                type="text"
+                                placeholder="Ej: Venta #1, Capítulo 5..."
+                                autoFocus
+                            />
+                            <input type="hidden" name="impact" value="1" />
+                            <p className="impact-hint">✨ Se registrará 1 unidad. Los puntos se sumarán al completar la misión.</p>
+                        </div>
+                    );
+                }
+
                 return (
                     <>
                         <div className="form-group">
@@ -269,7 +300,42 @@ export default function ActivityModal({ action, goals = [], isOpen, onClose, onS
                 );
 
             default:
-                return null;
+                // Check if it's a count-based goal/action (like "ventas")
+                const isCountBased = action.metadata?.unit === 'actividad' ||
+                    action.metadata?.unit === 'unidad' ||
+                    (action.metadata as any)?.metricType === 'activities';
+
+                if (isCountBased) {
+                    return (
+                        <div className="form-group">
+                            <label htmlFor="metric">Cantidad (Unidades)</label>
+                            <input
+                                id="metric"
+                                name="metric"
+                                type="number"
+                                defaultValue="1"
+                                min="1"
+                                required
+                                autoFocus
+                            />
+                        </div>
+                    );
+                }
+
+                return (
+                    <div className="form-group">
+                        <label htmlFor="minutes">Duración (minutos)</label>
+                        <input
+                            id="minutes"
+                            name="minutes"
+                            type="number"
+                            min="1"
+                            placeholder="Ej: 30"
+                            required
+                            autoFocus
+                        />
+                    </div>
+                );
         }
     };
 

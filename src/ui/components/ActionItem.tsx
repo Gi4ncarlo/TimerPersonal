@@ -7,6 +7,7 @@ interface ActionItemProps {
     action: Action;
     progress?: string;
     onAdd?: () => void;
+    onDelete?: (id: string) => void;
     showAddButton?: boolean;
 }
 
@@ -14,6 +15,7 @@ export default function ActionItem({
     action,
     progress = '[0/1]',
     onAdd,
+    onDelete,
     showAddButton = true
 }: ActionItemProps) {
     const isPositive = action.type === 'positive';
@@ -37,11 +39,25 @@ export default function ActionItem({
                 <span className="action-name">{action.name}</span>
                 <span className="action-progress">{progress}</span>
             </div>
-            {showAddButton && (
-                <button className="action-add-btn" onClick={onAdd}>
-                    +
-                </button>
-            )}
+            <div className="action-item-btns">
+                {action.userId && onDelete && (
+                    <button
+                        className="action-delete-btn"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onDelete(action.id);
+                        }}
+                        title="Eliminar actividad"
+                    >
+                        ×
+                    </button>
+                )}
+                {showAddButton && (
+                    <button className="action-add-btn" onClick={onAdd}>
+                        +
+                    </button>
+                )}
+            </div>
         </div>
     );
 }
