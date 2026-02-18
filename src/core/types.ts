@@ -124,6 +124,21 @@ export interface DailyMission {
     completedAt?: string;
 }
 
+// Smart Notifications System
+export type SarcasmLevel = 'low' | 'medium' | 'brutal';
+export type NotificationType = 'inactivity' | 'ranking_drop' | 'streak_danger' | 'weekly_decline' | 'streak_milestone' | 'comeback';
+
+export interface SmartNotification {
+    id: string;
+    userId: string;
+    type: NotificationType;
+    title: string;
+    message: string;
+    context: Record<string, any>;
+    isRead: boolean;
+    createdAt: string;
+}
+
 export type LeagueTier = 'Bronce' | 'Plata' | 'Oro' | 'Platino' | 'Diamante';
 
 export interface League {

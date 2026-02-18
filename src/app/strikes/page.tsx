@@ -10,6 +10,7 @@ import ProfileModal from '@/ui/components/ProfileModal';
 import { getTodayString } from '@/core/utils/dateUtils';
 import { VacationService } from '@/core/services/VacationService';
 import '../dashboard/dashboard.css';
+import LogoLoader from '@/ui/components/LogoLoader';
 
 export default function StrikesPage() {
     const [strikes, setStrikes] = useState<Strike[]>([]);
@@ -48,7 +49,7 @@ export default function StrikesPage() {
         }
     };
 
-    if (isLoading) return <div className="loading">Cargando strikes...</div>;
+    if (isLoading) return <LogoLoader />;
 
     const hasStrikes = strikes.length > 0;
 

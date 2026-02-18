@@ -7,6 +7,7 @@ import { SupabaseDataStore } from '@/data/supabaseData';
 import { Action, User, ActionType } from '@/core/types';
 import Twemoji from '@/ui/components/Twemoji';
 import './admin.css';
+import LogoLoader from '@/ui/components/LogoLoader';
 
 export default function AdminPanel() {
     const router = useRouter();
@@ -88,7 +89,7 @@ export default function AdminPanel() {
         }
     };
 
-    if (isLoading) return <div className="loading">Cargando Panel...</div>;
+    if (isLoading) return <LogoLoader />;
 
     return (
         <main className="admin-panel">

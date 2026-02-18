@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { SupabaseDataStore } from '@/data/supabaseData';
+import LogoLoader from '@/ui/components/LogoLoader';
 import { BalanceCalculator } from '@/core/services/BalanceCalculator';
 import { StrikeDetector } from '@/core/services/StrikeDetector';
 import {
@@ -23,7 +24,7 @@ import { es } from 'date-fns/locale';
 import {
     LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
     Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell,
-    Area, AreaChart,
+    Area, AreaChart, ComposedChart, ReferenceLine,
 } from 'recharts';
 import type { Goal } from '@/core/types';
 import Navbar from '@/ui/components/Navbar';
@@ -41,26 +42,70 @@ const RANGE_OPTIONS: { label: string; value: TimeRange }[] = [
 ];
 
 // ─── Custom Tooltip ──────────────────────────────
+// ─── Custom Tooltip ──────────────────────────────
+// ─── Custom Tooltip ──────────────────────────────
 function CustomTooltip({ active, payload, label }: any) {
     if (!active || !payload?.length) return null;
+
+    // Check if it's the Balance Chart (AreaChart) by looking at the dataKey of the first item
+    const firstItem = payload[0];
+    if (firstItem.dataKey === 'Puntos') {
+        return (
+            <div className="custom-tooltip">
+                <p className="tooltip-label">{label}</p>
+                <div className="tooltip-value" style={{ color: firstItem.value >= 0 ? '#10b981' : '#ef4444', fontWeight: 'bold' }}>
+                    ⚡ Balance: {firstItem.value > 0 ? '+' : ''}{firstItem.value} pts
+                </div>
+            </div>
+        );
+    }
+
+    // Extract the full data entry for Breakdown Chart
+    const dataEntry = firstItem.payload;
+
+    // Filter keys that start with __event_ (our hidden events)
+    const eventKeys = Object.keys(dataEntry).filter(k => k.startsWith('__event_'));
+
     return (
         <div className="custom-tooltip">
             <p className="tooltip-label">{label}</p>
+            {/* Standard Bars (Hours) */}
             {payload.map((p: any, i: number) => {
-                // If it looks like hours (activities in pie/bar charts)
-                // we show decimals and "hs". We exclude known counts/points.
-                const isTimeRaw = p.name !== 'Puntos' &&
-                    p.name !== 'Consistencia' &&
-                    p.name !== 'Actividades';
-                const formattedValue = isTimeRaw ? p.value.toLocaleString(undefined, { minimumFractionDigits: 1 }) : Math.floor(p.value);
-                const unitSuffix = isTimeRaw ? ' hs' : '';
+                // Skip the Line chart "totalPoints" from this list
+                if (p.dataKey === 'totalPoints') return null;
 
                 return (
                     <p key={i} className="tooltip-value" style={{ color: p.color }}>
-                        {p.name}: {formattedValue}{unitSuffix}
+                        {p.name}: {p.value}h
                     </p>
                 );
             })}
+
+            {/* Visual Separator if we have events */}
+            {eventKeys.length > 0 && <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', margin: '4px 0', paddingTop: '4px' }} />}
+
+            {/* Hidden Events (Points) */}
+            {eventKeys.map((k) => {
+                const name = k.replace('__event_', '');
+                const value = dataEntry[k];
+                const isStrike = name.toLowerCase().includes('strike');
+                const color = isStrike ? '#ef4444' : '#fbbf24'; // Red for strike, Amber for bonus
+                const icon = isStrike ? '⛔' : '🎉';
+
+                return (
+                    <p key={k} className="tooltip-value" style={{ color: color }}>
+                        {icon} {name}: {value > 0 ? '+' : ''}{value} pts
+                    </p>
+                );
+            })}
+
+            {/* Total Points Context */}
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', margin: '4px 0', paddingTop: '4px' }}>
+                <div className="tooltip-value" style={{ color: '#fbbf24', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span>⚡ Puntos Netos:</span>
+                    <span>{dataEntry.totalPoints > 0 ? '+' : ''}{dataEntry.totalPoints} pts</span>
+                </div>
+            </div>
         </div>
     );
 }
@@ -143,13 +188,29 @@ export default function EstadisticasPage() {
             const todayStr = format(nowArg, 'yyyy-MM-dd');
 
             // Fetch ALL records (no date limit) so historical data is never lost
-            const [allRecords, goalsData] = await Promise.all([
+            const [allRecords, goalsData, strikes] = await Promise.all([
                 SupabaseDataStore.getRecords(),
                 SupabaseDataStore.getGoals(),
+                SupabaseDataStore.getStrikes(),
             ]);
 
+            // Convert strikes to "virtual" records
+            const strikeRecords = strikes.map(s => ({
+                id: `strike-${s.id}`,
+                actionId: 'strike',
+                actionName: '⛔ Strike',
+                date: s.strikeDate,
+                timestamp: s.detectedAt,
+                durationMinutes: 0,
+                metricValue: 0,
+                pointsCalculated: -(s.pointsDeducted || 0),
+                notes: s.reason,
+            }));
+
+            const combinedRecords = [...allRecords, ...strikeRecords];
+
             // Group records by date
-            const recordsByDate = allRecords.reduce((acc, record) => {
+            const recordsByDate = combinedRecords.reduce((acc, record) => {
                 if (!acc[record.date]) acc[record.date] = [];
                 acc[record.date].push(record);
                 return acc;
@@ -174,7 +235,8 @@ export default function EstadisticasPage() {
 
                 const mainActivity =
                     (Object.entries(activityBreakdown) as [string, number][])
-                        .sort((a, b) => b[1] - a[1])[0]?.[0] || 'Sin actividad';
+                        // Sort by absolute value of points to find the most impactful activity
+                        .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))[0]?.[0] || 'Sin actividad';
 
                 statsData.push({
                     date,
@@ -223,8 +285,35 @@ export default function EstadisticasPage() {
 
     // ── Line chart data ──────────────────────────
     const lineChartData = useMemo(() =>
-        stats.map(s => ({ fecha: s.dateFormatted, Puntos: Math.floor(s.totalPoints) }))
+        stats.map(s => {
+            const dateObj = parseISO(s.date);
+            const dayName = format(dateObj, 'EEE', { locale: es }).replace('.', '');
+            const dayDate = format(dateObj, 'dd/MM');
+            const fechaFormatted = `${dayName.charAt(0).toUpperCase() + dayName.slice(1)} ${dayDate}`;
+
+            return {
+                fecha: fechaFormatted,
+                Puntos: Math.floor(s.totalPoints)
+            };
+        })
         , [stats]);
+
+    // Calculate Gradient Offset for AreaChart (Split Color)
+    const gradientOffset = () => {
+        const dataMax = Math.max(...lineChartData.map((i) => i.Puntos));
+        const dataMin = Math.min(...lineChartData.map((i) => i.Puntos));
+
+        if (dataMax <= 0) {
+            return 0;
+        }
+        if (dataMin >= 0) {
+            return 1;
+        }
+
+        return dataMax / (dataMax - dataMin);
+    };
+
+    const off = gradientOffset();
 
     // ── Feedback ─────────────────────────────────
     const feedback = useMemo(() => {
@@ -249,12 +338,7 @@ export default function EstadisticasPage() {
     const selectedDayData = selectedDate ? stats.find(s => s.date === selectedDate) : null;
 
     if (isLoading) {
-        return (
-            <div className="loading-container">
-                <div className="loading-spinner" />
-                <p>Cargando estadísticas...</p>
-            </div>
-        );
+        return <LogoLoader />;
     }
 
     return (
@@ -357,7 +441,7 @@ export default function EstadisticasPage() {
                                                 <Cell key={idx} fill={entry.color} />
                                             ))}
                                         </Pie>
-                                        <Tooltip content={<CustomTooltip />} />
+                                        <Tooltip />
                                     </PieChart>
                                 </ResponsiveContainer>
                                 <div className="pie-legend">
@@ -377,22 +461,35 @@ export default function EstadisticasPage() {
 
                     {/* Stacked Bar Chart */}
                     <div className="chart-card">
-                        <h3>📊 Desglose Diario (horas)</h3>
+                        <h3>📊 Desglose Diario (Horas + Puntos)</h3>
                         {dailyBreakdown.data.length > 0 ? (
                             <ResponsiveContainer width="100%" height={300}>
-                                <BarChart data={dailyBreakdown.data}>
+                                <ComposedChart data={dailyBreakdown.data}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                                     <XAxis dataKey="fecha" stroke="#6b7280" tick={{ fontSize: 9 }}
                                         interval="preserveStartEnd" />
-                                    <YAxis stroke="#6b7280" tick={{ fontSize: 10 }} />
+
+                                    {/* Left Axis: Hours */}
+                                    <YAxis yAxisId="left" stroke="#6b7280" tick={{ fontSize: 10 }} unit="h" />
+
+                                    {/* Right Axis: Points */}
+                                    <YAxis yAxisId="right" orientation="right" stroke="#fbbf24" tick={{ fontSize: 10 }} />
+
                                     <Tooltip content={<CustomTooltip />} />
                                     <Legend wrapperStyle={{ fontSize: 11 }} />
-                                    {dailyBreakdown.activities.slice(0, 6).map((act, i) => (
-                                        <Bar key={act} dataKey={act} stackId="a"
+
+                                    {/* Bars for Activities (Hours) */}
+                                    {dailyBreakdown.activities.slice(0, 12).map((act, i) => (
+                                        <Bar key={act} dataKey={act} stackId="a" yAxisId="left"
                                             fill={CHART_COLORS[i % CHART_COLORS.length]}
-                                            radius={i === dailyBreakdown.activities.slice(0, 6).length - 1 ? [2, 2, 0, 0] : [0, 0, 0, 0]} />
+                                            radius={[2, 2, 0, 0]} />
                                     ))}
-                                </BarChart>
+
+                                    {/* Line for Points */}
+                                    <Line type="monotone" dataKey="totalPoints" yAxisId="right"
+                                        stroke="#fbbf24" strokeWidth={2} dot={{ r: 3 }} name="Puntos Netos" />
+
+                                </ComposedChart>
                             </ResponsiveContainer>
                         ) : (
                             <p className="no-data-msg">Sin datos suficientes para este período</p>
@@ -434,17 +531,19 @@ export default function EstadisticasPage() {
                         <ResponsiveContainer width="100%" height={280}>
                             <AreaChart data={lineChartData}>
                                 <defs>
-                                    <linearGradient id="gradLine" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.25} />
-                                        <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0} />
+                                    <linearGradient id="splitColor" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset={off} stopColor="#10b981" stopOpacity={0.3} />
+                                        <stop offset={off} stopColor="#ef4444" stopOpacity={0.3} />
                                     </linearGradient>
                                 </defs>
                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                                <XAxis dataKey="fecha" stroke="#6b7280" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
+                                <ReferenceLine y={0} stroke="rgba(255,255,255,0.2)" strokeDasharray="3 3" />
+                                <XAxis dataKey="fecha" stroke="#6b7280" tick={{ fontSize: 10 }} minTickGap={30} />
                                 <YAxis stroke="#6b7280" tick={{ fontSize: 10 }} />
                                 <Tooltip content={<CustomTooltip />} />
-                                <Area type="monotone" dataKey="Puntos" stroke="#8b5cf6" strokeWidth={2}
-                                    fill="url(#gradLine)" dot={false} activeDot={{ r: 5, fill: '#8b5cf6' }} />
+                                <Area type="monotone" dataKey="Puntos" strokeWidth={2}
+                                    stroke="#8b5cf6"
+                                    fill="url(#splitColor)" dot={false} activeDot={{ r: 5, fill: '#8b5cf6' }} />
                             </AreaChart>
                         </ResponsiveContainer>
                     </div>
