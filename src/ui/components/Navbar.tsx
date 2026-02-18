@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { SupabaseDataStore } from '@/data/supabaseData';
 import UserLevel from './UserLevel';
+import Twemoji from './Twemoji';
 import './Navbar.css';
 
 interface NavbarProps {
@@ -36,43 +37,59 @@ export default function Navbar({
     return (
         <header className="navbar">
             <div className="navbar-container">
-                <div className="navbar-brand">
-                    <Link href="/dashboard" className="brand-link">
-                        <h1 className="brand-title">Senda de Logros</h1>
-                    </Link>
+                {/* Left: Brand + Profile Card */}
+                <div className="navbar-left-group">
+                    <div className="brand-section">
+                        <Link href="/dashboard" style={{ textDecoration: 'none' }}>
+                            <h1 className="brand-title">Senda de Logros</h1>
+                        </Link>
+                    </div>
+
                     {userLevel && currentUser && (
-                        <UserLevel
-                            level={userLevel.level}
-                            xp={userLevel.xp}
-                            avatarUrl={currentUser.avatarUrl}
-                            isOnVacation={isOnVacation}
-                            onClick={onProfileClick}
-                        />
+                        <div className="profile-wrapper" onClick={onProfileClick}>
+                            <UserLevel
+                                level={userLevel.level}
+                                xp={userLevel.xp}
+                                avatarUrl={currentUser.avatarUrl}
+                                isOnVacation={isOnVacation}
+                            />
+                        </div>
                     )}
                 </div>
 
-                <nav className="navbar-links">
-                    <Link href="/vacaciones" className={`nav-item ${isActive('/vacaciones')}`}>🏖 Bitácora</Link>
-                    <Link href="/leaderboard" className={`nav-item ${isActive('/leaderboard')}`}>🏆 Leaderboard</Link>
-                    <Link href="/estadisticas" className={`nav-item ${isActive('/estadisticas')}`}>📊 Stats</Link>
-                    <Link href="/strikes" className={`nav-item strike-link ${isActive('/strikes')}`}>⚠️ Strikes</Link>
-
-                    {currentUser?.role === 'admin' && (
-                        <Link href="/dashboard/admin" className={`nav-item admin-link ${isActive('/dashboard/admin')}`}>🛠 Admin</Link>
-                    )}
+                {/* Right: Navigation Buttons */}
+                <div className="navbar-right-group">
+                    <Link href="/leaderboard" className={`nav-item ${isActive('/leaderboard')}`}>
+                        <Twemoji emoji="🏆" /> <span>Leaderboard</span>
+                    </Link>
+                    <Link href="/estadisticas" className={`nav-item ${isActive('/estadisticas')}`}>
+                        <Twemoji emoji="📊" /> <span>Estadísticas</span>
+                    </Link>
+                    <Link href="/strikes" className={`nav-item strike-link ${isActive('/strikes')}`}>
+                        <Twemoji emoji="⚠️" /> <span>Strikes</span>
+                    </Link>
 
                     {showArmoryToggle && (
                         <button
                             className={`nav-item armory-toggle ${isArmoryOpen ? 'active' : ''}`}
                             onClick={() => onArmoryToggle?.(!isArmoryOpen)}
-                            title="Desplegar Arsenal de Acciones"
+                            title="Arsenal"
                         >
-                            ⚔️ Arsenal
+                            <Twemoji emoji="⚔️" /> <span>Arsenal</span>
                         </button>
                     )}
 
-                    <button className="navbar-logout" onClick={handleLogout}>Salir</button>
-                </nav>
+                    {currentUser?.role === 'admin' && (
+                        <Link href="/dashboard/admin" className={`nav-item admin-link ${isActive('/dashboard/admin')}`}>
+                            <Twemoji emoji="🛠" /> <span>Admin</span>
+                        </Link>
+                    )}
+
+                    <button className="navbar-logout" onClick={handleLogout} title="Salir">
+                        <Twemoji emoji="🚪" />
+                        <span style={{ marginLeft: 6, fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase' }}>Salir</span>
+                    </button>
+                </div>
             </div>
         </header>
     );

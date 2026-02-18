@@ -10,14 +10,13 @@ interface UserLevelProps {
 }
 
 export default function UserLevel({ level, xp, avatarUrl, isOnVacation, onClick }: UserLevelProps) {
-    // Logic: Level N needs 1000 XP
     const xpForNextLevel = 1000;
     const currentLevelXp = xp % 1000;
-    const progress = (currentLevelXp / xpForNextLevel) * 100;
+    const progress = Math.min(100, (currentLevelXp / xpForNextLevel) * 100);
     const levelTitle = getLevelTitle(level);
 
     return (
-        <div className={`user-level-card ${onClick ? 'clickable' : ''}`} onClick={onClick}>
+        <div className={`user-level-card ${onClick ? 'clickable' : ''}`} onClick={onClick} title="Ver Perfil">
             <div className="avatar-preview">
                 {avatarUrl ? (
                     <img src={avatarUrl} alt="User" className="preview-img" />
@@ -25,6 +24,7 @@ export default function UserLevel({ level, xp, avatarUrl, isOnVacation, onClick 
                     <div className="preview-placeholder">👤</div>
                 )}
             </div>
+
             <div className="level-info">
                 <div className="level-top-row">
                     <div className="level-badge">
@@ -33,7 +33,7 @@ export default function UserLevel({ level, xp, avatarUrl, isOnVacation, onClick 
                     </div>
                     <div className={`status-badge-compact ${isOnVacation ? 'on-vacation' : 'active'}`}>
                         <span className="status-dot"></span>
-                        {isOnVacation ? 'DE VACACIONES' : 'ACTIVO'}
+                        {isOnVacation ? 'VACACIONES' : 'ACTIVO'}
                     </div>
                 </div>
 
@@ -42,15 +42,15 @@ export default function UserLevel({ level, xp, avatarUrl, isOnVacation, onClick 
                 </div>
 
                 <div className="xp-info-row">
-                    <div className="xp-label-group">
-                        <span className="xp-label-text">EXPERIENCIA</span>
-                        <span className="xp-value-text">{currentLevelXp} / {xpForNextLevel} XP</span>
-                    </div>
                     <div className="xp-progress-container">
                         <div
                             className="xp-progress-fill"
                             style={{ width: `${progress}%` }}
                         />
+                    </div>
+                    <div className="xp-details">
+                        <span>EXPERIENCIA</span>
+                        <span className="xp-val">{currentLevelXp} / {xpForNextLevel} XP</span>
                     </div>
                 </div>
             </div>

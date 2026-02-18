@@ -13,13 +13,16 @@ import GoalTracker from '@/ui/components/GoalTracker';
 import StrikeWarning from '@/ui/components/StrikeWarning';
 import ProfileModal from '@/ui/components/ProfileModal';
 import CreateActionModal from '@/ui/components/CreateActionModal';
+import CreateShortcutModal from '@/ui/components/CreateShortcutModal';
+import DailyMissionsCard from '@/ui/components/DailyMissionsCard';
 import Navbar from '@/ui/components/Navbar';
 import { SupabaseDataStore } from '@/data/supabaseData';
 import { BalanceCalculator } from '@/core/services/BalanceCalculator';
 import { PointsCalculator } from '@/core/services/PointsCalculator';
 import { StrikeDetector } from '@/core/services/StrikeDetector';
 import { VacationService } from '@/core/services/VacationService';
-import { Action, DailyRecord, Goal, Strike, User, VacationPeriod } from '@/core/types';
+import { DailyMissionEngine } from '@/core/services/DailyMissionEngine';
+import { Action, DailyRecord, DailyMission, Goal, Strike, User, VacationPeriod } from '@/core/types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { getTodayString, getArgentinaDate } from '@/core/utils/dateUtils';
@@ -46,6 +49,10 @@ export default function Dashboard() {
     const [showStrikeWarning, setShowStrikeWarning] = useState(false);
     const [isArmoryOpen, setIsArmoryOpen] = useState(false);
     const [isOnVacation, setIsOnVacation] = useState(false);
+
+    // Daily Missions State
+    const [dailyMissions, setDailyMissions] = useState<DailyMission[]>([]);
+    const [missionsLoading, setMissionsLoading] = useState(false);
 
     useEffect(() => {
         loadData();
@@ -130,6 +137,89 @@ export default function Dashboard() {
                     setShowStrikeWarning(true);
                 }
             }
+
+            // ── Daily Missions ──────────────────────────────────
+            try {
+                setMissionsLoading(true);
+                let missions = await SupabaseDataStore.getDailyMissions(today);
+
+                if (missions.length === 0 && fetchedActions.length > 0) {
+                    // First login of the day → generate new missions
+                    const streak = await SupabaseDataStore.getMissionStreak(user.id);
+                    const generated = DailyMissionEngine.generateDailyMissions(
+                        fetchedActions, today, user.id, streak
+                    );
+                    missions = await SupabaseDataStore.createDailyMissions(generated);
+                }
+
+                // Recalculate progress based on today's records
+                const todayRecs = fetchedRecords.filter(r => r.date === today);
+                const updates = DailyMissionEngine.checkAllMissions(missions, todayRecs);
+                for (const u of updates) {
+                    if (u.changed) {
+                        await SupabaseDataStore.updateMissionProgress(u.mission.id, u.newValue, u.newStatus);
+                        // Award bonus points + XP when a mission is newly completed
+                        if (u.newStatus === 'completed' && u.mission.status !== 'completed') {
+                            await SupabaseDataStore.updateUserProgress(user.id, Math.floor(u.mission.rewardPoints / 10));
+
+                            // Log history record
+                            await SupabaseDataStore.logSystemEvent({
+                                userId: user.id,
+                                actionName: `✨ Misión: ${u.mission.title}`,
+                                date: today,
+                                timestamp: new Date().toISOString(),
+                                points: u.mission.rewardPoints,
+                                notes: `Completada: ${u.mission.description}`
+                            });
+                        }
+                    }
+                }
+
+                // Re-fetch after updates for accurate state
+                if (updates.some(u => u.changed)) {
+                    missions = await SupabaseDataStore.getDailyMissions(today);
+                    // Refresh user level in case XP changed
+                    const refreshedUser = await SupabaseDataStore.getCurrentUser();
+                    if (refreshedUser) {
+                        setUserLevel({ level: refreshedUser.level, xp: refreshedUser.xp });
+                    }
+                }
+
+                // 2024-05-22 Fix: Ensure all completed missions have a history record
+                // (Backfill if missed due to refresh/timing)
+                for (const m of missions) {
+                    if (m.status === 'completed') {
+                        // Check if we have a record for this mission today
+                        const hasRecord = fetchedRecords.some(r =>
+                            r.date === today &&
+                            // Check title match (handling potential prefix variations)
+                            (r.actionName === `✨ Misión: ${m.title}` || r.notes?.includes(m.title))
+                        );
+
+                        if (!hasRecord) {
+                            console.log('Backfilling missing history for mission:', m.title);
+                            await SupabaseDataStore.logSystemEvent({
+                                userId: user.id,
+                                actionName: `✨ Misión: ${m.title}`,
+                                date: today,
+                                timestamp: new Date().toISOString(),
+                                points: m.rewardPoints,
+                                notes: `Completada: ${m.description} (Recuperada)`
+                            });
+                            // Force refresh records to show it immediately
+                            const newRecs = await SupabaseDataStore.getRecordsByDate(today);
+                            setRecords(newRecs);
+                        }
+                    }
+                }
+
+                setDailyMissions(missions);
+            } catch (missionErr) {
+                console.warn('Daily missions error:', missionErr);
+            } finally {
+                setMissionsLoading(false);
+            }
+
         } catch (error) {
             console.error('Error loading data:', error);
         } finally {
@@ -172,6 +262,10 @@ export default function Dashboard() {
 
             await SupabaseDataStore.createRecord(newRecord);
             await loadData(); // Reload everything (XP, Goals, etc.)
+
+            // Auto-close both modal and armory
+            setIsModalOpen(false);
+            setIsArmoryOpen(false);
         } catch (error) {
             console.error('Error creating record:', error);
             alert('Error al guardar la actividad');
@@ -217,14 +311,20 @@ export default function Dashboard() {
         router.push('/login');
     };
 
-    const handleCreateAction = async (name: string, type: 'positive' | 'negative', points: number) => {
+    const handleCreateAction = async (name: string, type: 'positive' | 'negative', points: number, metadata?: any, targetGoalId?: string) => {
         try {
-            await SupabaseDataStore.createAction({
+            const newAction = await SupabaseDataStore.createAction({
                 name,
                 type,
                 pointsPerMinute: points,
-                metadata: { inputType: 'impact' } // Personal actions are usually impact-based (fixed points)
+                metadata: metadata || { inputType: 'impact' }
             });
+
+            if (targetGoalId) {
+                // Link the new action to the target goal
+                await SupabaseDataStore.linkActionToGoal(targetGoalId, newAction.id);
+            }
+
             await loadData();
         } catch (error) {
             console.error('Error creating action:', error);
@@ -232,53 +332,124 @@ export default function Dashboard() {
         }
     };
 
-    // Quick Add Presets (Hardcoded for common use cases or based on existing actons)
-    const getQuickAdds = () => {
-        const studyAction = actions.find(a => a.name.includes('Estudiar'));
-        const workAction = actions.find(a => a.name.includes('Trabajar'));
-        const readAction = actions.find(a => a.name.includes('Leer'));
+    const handleDeleteAction = async (id: string) => {
+        if (confirm('¿Eliminar esta actividad?')) {
+            await SupabaseDataStore.deleteAction(id);
+            await loadData();
+        }
+    };
 
+    const handleGoalClick = (goal: Goal) => {
+        if (goal.actionId) {
+            const action = actions.find(a => a.id === goal.actionId);
+            if (action) {
+                // Pre-configure the modal for this specific goal
+                setSelectedAction({
+                    ...action,
+                    metadata: {
+                        ...action.metadata,
+                        targetGoalId: goal.id
+                    }
+                });
+                setIsModalOpen(true);
+            }
+        } else if (goal.isMilestone) {
+            // Milestone without specific action
+            setSelectedAction({
+                id: 'milestone-special',
+                name: goal.title,
+                type: 'positive',
+                pointsPerMinute: 0,
+                metadata: { inputType: 'milestone' }
+            } as any);
+            setIsModalOpen(true);
+        } else {
+            // Goal without actionId (e.g. Monthly mission created without linked action)
+            if (confirm(`Esta misión ("${goal.title}") no tiene una actividad vinculada. ¿Deseas crear una ahora?`)) {
+                setIsCreateActionModalOpen(true);
+            }
+        }
+    };
+
+    // Custom Shortcuts State
+    const [shortcuts, setShortcuts] = useState<{ id: string, label: string, actionId: string, duration: number, note: string }[]>([]);
+    const [isShortcutModalOpen, setIsShortcutModalOpen] = useState(false);
+
+    // Load shortcuts from localStorage on mount
+    useEffect(() => {
+        if (currentUser) {
+            const savedShortcuts = localStorage.getItem(`antigravity_shortcuts_${currentUser.id}`);
+            if (savedShortcuts) {
+                setShortcuts(JSON.parse(savedShortcuts));
+            }
+        }
+    }, [currentUser]);
+
+    const handleSaveShortcut = (label: string, actionId: string, duration: number, note: string) => {
+        if (!currentUser) return;
+        const newShortcut = {
+            id: Date.now().toString(),
+            label,
+            actionId,
+            duration,
+            note
+        };
+        const updatedShortcuts = [...shortcuts, newShortcut];
+        setShortcuts(updatedShortcuts);
+        localStorage.setItem(`antigravity_shortcuts_${currentUser.id}`, JSON.stringify(updatedShortcuts));
+    };
+
+    const handleDeleteShortcut = (id: string) => {
+        if (!currentUser) return;
+        if (confirm('¿Eliminar este atajo?')) {
+            const updatedShortcuts = shortcuts.filter(s => s.id !== id);
+            setShortcuts(updatedShortcuts);
+            localStorage.setItem(`antigravity_shortcuts_${currentUser.id}`, JSON.stringify(updatedShortcuts));
+        }
+    };
+
+    const handleExecuteShortcut = async (shortcut: { actionId: string, duration: number, note: string, label: string }) => {
+        const action = actions.find(a => a.id === shortcut.actionId);
+        if (!action) return;
+
+        setLoadingActionId(shortcut.label); // Use label as ID for loader
+        try {
+            await handleModalSubmit({ durationMinutes: shortcut.duration, metricValue: undefined, notes: shortcut.note }, action);
+        } finally {
+            setLoadingActionId(null);
+        }
+    };
+
+    // Quick Add Presets (Dynamic)
+    const getQuickAdds = () => {
         return (
             <div className="quick-add-bar">
-                {studyAction && (
+                {shortcuts.map(shortcut => (
                     <button
+                        key={shortcut.id}
                         className="quick-add-btn"
-                        onClick={() => handleQuickAdd(studyAction.id, 60, 'Sesión rápida 1h')}
-                        disabled={loadingActionId === studyAction.id}
+                        onClick={() => handleExecuteShortcut(shortcut)}
+                        onContextMenu={(e) => { e.preventDefault(); handleDeleteShortcut(shortcut.id); }}
+                        disabled={loadingActionId === shortcut.label}
+                        title={`${shortcut.note} (${shortcut.duration}m) - Click derecho para eliminar`}
                     >
-                        {loadingActionId === studyAction.id ? (
+                        {loadingActionId === shortcut.label ? (
                             <span className="btn-loader"></span>
                         ) : (
-                            <><Twemoji emoji="⚡" /> Estudiar 1h</>
+                            <>
+                                <Twemoji emoji="⚡" /> {shortcut.label}
+                            </>
                         )}
                     </button>
-                )}
-                {workAction && (
-                    <button
-                        className="quick-add-btn"
-                        onClick={() => handleQuickAdd(workAction.id, 30, 'Sprint 30min')}
-                        disabled={loadingActionId === workAction.id}
-                    >
-                        {loadingActionId === workAction.id ? (
-                            <span className="btn-loader"></span>
-                        ) : (
-                            <><Twemoji emoji="⚡" /> Trabajo 30m</>
-                        )}
-                    </button>
-                )}
-                {readAction && (
-                    <button
-                        className="quick-add-btn"
-                        onClick={() => handleQuickAdd(readAction.id, 30, '10 páginas (aprox)', 10)}
-                        disabled={loadingActionId === readAction.id}
-                    >
-                        {loadingActionId === readAction.id ? (
-                            <span className="btn-loader"></span>
-                        ) : (
-                            <><Twemoji emoji="📚" /> Leer 10 pág</>
-                        )}
-                    </button>
-                )}
+                ))}
+
+                <button
+                    className="quick-add-btn add-new"
+                    onClick={() => setIsShortcutModalOpen(true)}
+                    title="Crear nuevo atajo"
+                >
+                    <Twemoji emoji="➕" />
+                </button>
             </div>
         );
     };
@@ -302,6 +473,8 @@ export default function Dashboard() {
                 />
 
                 {getQuickAdds()}
+
+                <DailyMissionsCard missions={dailyMissions} loading={missionsLoading} />
 
                 <div className="command-hub-layout">
                     {/* ROW 1: THE HEROES (POINTS & HISTORY) */}
@@ -349,7 +522,7 @@ export default function Dashboard() {
                                             return (
                                                 <div key={record.id} className="record-item-hub glass-chronicle">
                                                     <div className="record-header">
-                                                        <span className="record-name">{record.actionName}</span>
+                                                        <span className="record-name">{record.actionName.replace(/ðŸŽ‰/g, '✨')}</span>
                                                         <div className="record-actions-hub">
                                                             <p className={`record-impact ${record.pointsCalculated >= 0 ? 'positive' : 'negative'}`}>
                                                                 {record.pointsCalculated >= 0 ? '+' : ''}{Math.floor(record.pointsCalculated)}
@@ -374,7 +547,7 @@ export default function Dashboard() {
                                                     </div>
                                                     {record.notes && (
                                                         <div className="record-notes-hub">
-                                                            {record.notes}
+                                                            {record.notes.replace(/ðŸŽ‰/g, '✨')}
                                                         </div>
                                                     )}
                                                 </div>
@@ -401,6 +574,7 @@ export default function Dashboard() {
                             actions={actions}
                             onCreateGoal={handleCreateGoal}
                             onDeleteGoal={handleDeleteGoal}
+                            onCreateAction={() => setIsCreateActionModalOpen(true)}
                         />
                     </div>
 
@@ -414,21 +588,65 @@ export default function Dashboard() {
                     <aside className={`command-console ${isArmoryOpen ? 'open' : ''}`}>
                         <div className="console-header">
                             <h2 className="console-title text-arcade">Arsenal de Mando</h2>
-                            <button className="close-console" onClick={() => setIsArmoryOpen(false)}>×</button>
+                            <div className="header-btns">
+                                <button
+                                    className="add-activity-console-btn"
+                                    onClick={() => setIsCreateActionModalOpen(true)}
+                                    title="Nueva Actividad"
+                                >
+                                    +
+                                </button>
+                                <button className="close-console" onClick={() => setIsArmoryOpen(false)}>×</button>
+                            </div>
                         </div>
 
                         <div className="console-body">
                             <h3 className="section-label-alt text-arcade">Disciplinas</h3>
                             <div className="actions-list-console">
                                 {actions.filter(a => a.type === 'positive').map(action => (
-                                    <ActionItem key={action.id} action={action} progress="" onAdd={() => handleActionClick(action)} />
+                                    <ActionItem
+                                        key={action.id}
+                                        action={action}
+                                        progress=""
+                                        onAdd={() => handleActionClick(action)}
+                                        onDelete={handleDeleteAction}
+                                    />
                                 ))}
                             </div>
+
+                            <div className="console-divider" />
+                            <h3 className="section-label-alt text-arcade">Misiones y Hitos</h3>
+                            <div className="actions-list-console">
+                                {goals.filter(g => !g.isCompleted && (g.period === 'monthly' || g.period === 'annual' || g.period === 'milestone')).map(goal => (
+                                    <div
+                                        key={goal.id}
+                                        className={`mission-item-console ${goal.period}`}
+                                        onClick={() => handleGoalClick(goal)}
+                                    >
+                                        <div className="mission-info">
+                                            <span className="mission-name">
+                                                <Twemoji emoji={goal.isMilestone ? "🏆" : "🎯"} /> {goal.title}
+                                            </span>
+                                            <span className="mission-progress">{Math.floor((goal.currentValue / goal.targetValue) * 100)}%</span>
+                                        </div>
+                                        <div className="mission-bar">
+                                            <div className="mission-bar-fill" style={{ width: `${Math.min(100, (goal.currentValue / goal.targetValue) * 100)}%` }} />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
                             <div className="console-divider" />
                             <h3 className="section-label-alt text-arcade">Debilidades</h3>
                             <div className="actions-list-console">
                                 {actions.filter(a => a.type === 'negative').map(action => (
-                                    <ActionItem key={action.id} action={action} progress="" onAdd={() => handleActionClick(action)} />
+                                    <ActionItem
+                                        key={action.id}
+                                        action={action}
+                                        progress=""
+                                        onAdd={() => handleActionClick(action)}
+                                        onDelete={handleDeleteAction}
+                                    />
                                 ))}
                             </div>
                         </div>
@@ -467,6 +685,14 @@ export default function Dashboard() {
                 isOpen={isCreateActionModalOpen}
                 onClose={() => setIsCreateActionModalOpen(false)}
                 onSubmit={handleCreateAction}
+                goals={goals}
+            />
+
+            <CreateShortcutModal
+                isOpen={isShortcutModalOpen}
+                onClose={() => setIsShortcutModalOpen(false)}
+                onSave={handleSaveShortcut}
+                actions={actions}
             />
         </main>
     );

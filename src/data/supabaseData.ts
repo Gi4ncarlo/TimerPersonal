@@ -1,5 +1,5 @@
-import { supabase } from '@/lib/supabase/client';
-import { Action, DailyRecord, User, Goal, Strike, VacationPeriod } from '@/core/types';
+﻿import { supabase } from '@/lib/supabase/client';
+import { Action, DailyRecord, User, Goal, Strike, VacationPeriod, DailyMission } from '@/core/types';
 import { getTodayString, getWeekStartString, getWeekEndString, getArgentinaDate, getMonthEndString, getYearEndString, getFarFutureString } from '@/core/utils/dateUtils';
 import { subDays, differenceInDays, parseISO } from 'date-fns';
 
@@ -88,7 +88,7 @@ export const SupabaseDataStore = {
             .maybeSingle();
 
         if (existing) {
-            return { success: false, error: 'Este nombre de usuario ya está en uso' };
+            return { success: false, error: 'Este nombre de usuario ya estÃ¡ en uso' };
         }
 
         const { error } = await supabase
@@ -105,13 +105,13 @@ export const SupabaseDataStore = {
             // Validate file type
             const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
             if (!validTypes.includes(file.type)) {
-                return { error: 'Formato no válido. Solo se aceptan JPG, PNG o WEBP' };
+                return { error: 'Formato no vÃ¡lido. Solo se aceptan JPG, PNG o WEBP' };
             }
 
             // Validate file size (max 5MB)
             const maxSize = 5 * 1024 * 1024;
             if (file.size > maxSize) {
-                return { error: 'El archivo es muy grande. Máximo 5MB' };
+                return { error: 'El archivo es muy grande. MÃ¡ximo 5MB' };
             }
 
             // Generate unique filename
@@ -190,7 +190,7 @@ export const SupabaseDataStore = {
                     const { getTodayString } = await import('@/core/utils/dateUtils');
                     await supabase.from('daily_records').insert({
                         user_id: userId,
-                        action_name: `🎉 Bonus Nivel ${level}`,
+                        action_name: `✨ Bonus Nivel ${level}`,
                         date: getTodayString(),
                         timestamp: new Date().toISOString(),
                         duration_minutes: 0,
@@ -423,6 +423,26 @@ export const SupabaseDataStore = {
         };
     },
 
+    logSystemEvent: async (record: {
+        userId: string;
+        actionName: string;
+        date: string;
+        timestamp: string;
+        points: number;
+        notes?: string;
+    }): Promise<void> => {
+        await supabase.from('daily_records').insert({
+            user_id: record.userId,
+            action_name: record.actionName,
+            date: record.date,
+            timestamp: record.timestamp,
+            duration_minutes: 0,
+            points_calculated: record.points,
+            metric_value: 0,
+            notes: record.notes,
+        });
+    },
+
     deleteRecord: async (id: string): Promise<boolean> => {
         // 1. Fetch record before deletion to know what to revert
         const { data: record, error: fetchError } = await supabase
@@ -646,7 +666,42 @@ export const SupabaseDataStore = {
 
                     // Bonus XP for completing goal
                     if (isCompleted && !goal.is_completed) {
-                        await SupabaseDataStore.updateUserProgress(userId, 200); // +200 XP Bonus
+                        // Standardized Reward Points
+                        let rewardPoints = 0;
+                        switch (goal.period) {
+                            case 'weekly': rewardPoints = 1000; break;
+                            case 'monthly': rewardPoints = 3000; break;
+                            case 'annual': rewardPoints = 10000; break;
+                            case 'milestone': rewardPoints = 20000; break;
+                            default: rewardPoints = 500; // Fallback
+                        }
+
+                        // Create a Reward Record for traceability and balance
+                        const rewardRecord = {
+                            actionId: 'goal-reward',
+                            actionName: `RECOMPENSA: ${goal.title}`,
+                            date: getTodayString(),
+                            timestamp: getArgentinaDate().toISOString(),
+                            durationMinutes: 0,
+                            pointsCalculated: rewardPoints,
+                            notes: `MisiÃ³n completada: ${goal.period === 'milestone' ? 'Hito' : goal.period}`,
+                            metricValue: 0
+                        };
+
+                        await supabase.from('daily_records').insert({
+                            user_id: userId,
+                            action_id: rewardRecord.actionId,
+                            action_name: rewardRecord.actionName,
+                            date: rewardRecord.date,
+                            timestamp: rewardRecord.timestamp,
+                            duration_minutes: rewardRecord.durationMinutes,
+                            points_calculated: rewardRecord.pointsCalculated,
+                            metric_value: rewardRecord.metricValue,
+                            notes: rewardRecord.notes
+                        });
+
+                        // Bonus XP
+                        await SupabaseDataStore.updateUserProgress(userId, 200);
                     }
                 }
             }
@@ -1119,7 +1174,7 @@ export const SupabaseDataStore = {
                 timestamp: new Date().toISOString(),
                 duration_minutes: 0,
                 points_calculated: -penalty,
-                notes: `Strike detectado el ${strikeDate}. Penalización del ${(penaltyPercent * 100).toFixed(0)}% sobre ${currentTotal} puntos globales.`
+                notes: `Strike detectado el ${strikeDate}. PenalizaciÃ³n del ${(penaltyPercent * 100).toFixed(0)}% sobre ${currentTotal} puntos globales.`
             });
 
             // Update leaderboard cache
@@ -1267,5 +1322,153 @@ export const SupabaseDataStore = {
             .from('vacation_periods')
             .update({ [field]: true })
             .eq('id', id);
+    },
+
+    linkActionToGoal: async (goalId: string, actionId: string): Promise<boolean> => {
+        const { error } = await supabase
+            .from('goals')
+            .update({ action_id: actionId })
+            .eq('id', goalId);
+
+        return !error;
+    },
+
+    // ═══════════════════════════════════════════════════════
+    // DAILY MISSIONS
+    // ═══════════════════════════════════════════════════════
+
+    async getDailyMissions(date: string): Promise<DailyMission[]> {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return [];
+
+        const { data, error } = await supabase
+            .from('daily_missions')
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('date', date)
+            .order('created_at', { ascending: true });
+
+        if (error || !data) return [];
+
+        return data.map((m: any) => ({
+            id: m.id,
+            userId: m.user_id,
+            date: m.date,
+            missionType: m.mission_type,
+            difficulty: m.difficulty,
+            title: m.title,
+            description: m.description,
+            targetValue: Number(m.target_value),
+            currentValue: Number(m.current_value),
+            actionId: m.action_id,
+            status: m.status,
+            rewardPoints: m.reward_points,
+            completedAt: m.completed_at,
+        }));
+    },
+
+    async createDailyMissions(missions: Omit<DailyMission, 'id'>[]): Promise<DailyMission[]> {
+        if (missions.length === 0) return [];
+
+        const rows = missions.map(m => ({
+            user_id: m.userId,
+            date: m.date,
+            mission_type: m.missionType,
+            difficulty: m.difficulty,
+            title: m.title,
+            description: m.description,
+            target_value: m.targetValue,
+            current_value: m.currentValue,
+            action_id: m.actionId || null,
+            status: m.status,
+            reward_points: m.rewardPoints,
+        }));
+
+        const { data, error } = await supabase
+            .from('daily_missions')
+            .insert(rows)
+            .select();
+
+        if (error || !data) {
+            console.error('Failed to create daily missions:', error);
+            return [];
+        }
+
+        return data.map((m: any) => ({
+            id: m.id,
+            userId: m.user_id,
+            date: m.date,
+            missionType: m.mission_type,
+            difficulty: m.difficulty,
+            title: m.title,
+            description: m.description,
+            targetValue: Number(m.target_value),
+            currentValue: Number(m.current_value),
+            actionId: m.action_id,
+            status: m.status,
+            rewardPoints: m.reward_points,
+            completedAt: m.completed_at,
+        }));
+    },
+
+    async updateMissionProgress(
+        missionId: string,
+        currentValue: number,
+        status: DailyMission['status'],
+    ): Promise<void> {
+        const updatePayload: any = {
+            current_value: currentValue,
+            status,
+        };
+        if (status === 'completed') {
+            updatePayload.completed_at = new Date().toISOString();
+        }
+
+        await supabase
+            .from('daily_missions')
+            .update(updatePayload)
+            .eq('id', missionId);
+    },
+
+    /**
+     * Get the number of consecutive days (before today) where ALL missions were completed.
+     */
+    async getMissionStreak(userId: string): Promise<number> {
+        // Fetch last 30 days of missions grouped by date
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const startDate = thirtyDaysAgo.toISOString().split('T')[0];
+        const today = getTodayString();
+
+        const { data, error } = await supabase
+            .from('daily_missions')
+            .select('date, status')
+            .eq('user_id', userId)
+            .gte('date', startDate)
+            .lt('date', today)
+            .order('date', { ascending: false });
+
+        if (error || !data || data.length === 0) return 0;
+
+        // Group by date
+        const byDate: Record<string, string[]> = {};
+        for (const row of data) {
+            if (!byDate[row.date]) byDate[row.date] = [];
+            byDate[row.date].push(row.status);
+        }
+
+        // Count consecutive days where all missions are completed
+        let streak = 0;
+        const sortedDates = Object.keys(byDate).sort().reverse(); // newest first
+        for (const d of sortedDates) {
+            const statuses = byDate[d];
+            const allCompleted = statuses.length > 0 && statuses.every(s => s === 'completed');
+            if (allCompleted) {
+                streak++;
+            } else {
+                break;
+            }
+        }
+        return streak;
     },
 };

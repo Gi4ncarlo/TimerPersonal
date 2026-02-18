@@ -1,122 +1,152 @@
+/* ActionItem.css - Professional Arcade Overhaul */
+
 .action-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: var(--space-md);
-    margin-bottom: var(--space-sm);
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(168, 85, 247, 0.1);
+    margin-bottom: var(--space-xs);
+    background: rgba(13, 17, 28, 0.6);
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(168, 85, 247, 0.15);
     border-radius: var(--radius-md);
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1);
     position: relative;
     overflow: hidden;
+    cursor: default;
 }
 
 .action-item::before {
     content: '';
     position: absolute;
     left: 0;
-    top: 0;
-    bottom: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 60%;
     width: 3px;
-    background: var(--color-positive);
-    border-radius: var(--radius-sm) 0 0 var(--radius-sm);
-    opacity: 0.7;
+    background: var(--color-primary);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    box-shadow: 0 0 10px var(--color-primary-glow);
+    transition: height 0.3s ease;
 }
 
-.action-item.negative::before {
-    background: var(--color-negative);
-}
-
-.action-item::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(168, 85, 247, 0.1) 0%, transparent 70%);
-    opacity: 0;
-    transition: opacity 0.3s;
-    pointer-events: none;
+.action-item:hover::before {
+    height: 100%;
 }
 
 .action-item:hover {
-    background: rgba(168, 85, 247, 0.05);
+    background: rgba(168, 85, 247, 0.08);
     border-color: var(--color-primary);
     transform: translateX(8px);
-    box-shadow: -4px 0 15px var(--color-primary-glow);
-}
-
-.action-item:hover::after {
-    opacity: 1;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4), 0 0 10px var(--color-primary-glow);
 }
 
 .action-info {
     display: flex;
-    justify-content: space-between;
     align-items: center;
     flex: 1;
     gap: var(--space-md);
     z-index: 1;
 }
 
-@media (max-width: 480px) {
-    .action-info {
-        gap: var(--space-sm);
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .action-item {
-        padding: var(--space-sm);
-    }
+.action-emoji {
+    font-size: 1.5rem;
+    filter: drop-shadow(0 0 5px var(--color-primary-glow));
+    transition: transform 0.3s ease;
 }
 
-.action-emoji {
-    margin-right: 8px;
-    font-size: 1.4rem;
-    display: flex;
-    align-items: center;
-    filter: drop-shadow(0 0 5px var(--color-primary-glow));
+.action-item:hover .action-emoji {
+    transform: scale(1.2) rotate(5deg);
 }
 
 .action-name {
     font-family: var(--font-body);
-    font-size: 1rem;
-    color: var(--color-text-primary) !important;
-    font-weight: 600;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .action-progress {
-    font-family: var(--font-display);
+    font-family: var(--font-mono);
     font-size: 0.7rem;
     color: var(--color-accent);
-    letter-spacing: 0.15em;
-    opacity: 0.8;
+    letter-spacing: 0.05em;
+    opacity: 0.6;
+    margin-left: auto;
+    padding-right: var(--space-lg);
+}
+
+.action-item-btns {
+    display: flex;
+    gap: var(--space-xs);
+    z-index: 1;
 }
 
 .action-add-btn {
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
     background: var(--color-primary);
-    color: var(--color-background);
+    color: #000;
     border: none;
     border-radius: var(--radius-sm);
     font-size: 1.5rem;
-    font-weight: bold;
+    font-weight: 900;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: var(--transition-fast);
-    box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 0 15px var(--color-primary-glow);
 }
 
 .action-add-btn:hover {
     background: var(--color-accent);
-    box-shadow: 0 0 20px rgba(0, 212, 255, 0.6);
-    transform: scale(1.1);
+    box-shadow: 0 0 25px var(--color-accent-glow);
+    transform: scale(1.1) translateY(-2px);
 }
 
-.action-add-btn:active {
-    transform: scale(0.95);
+.action-delete-btn {
+    width: 36px;
+    height: 36px;
+    background: rgba(255, 68, 68, 0.1);
+    color: #ff4444;
+    border: 1px solid rgba(255, 68, 68, 0.2);
+    border-radius: var(--radius-sm);
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    opacity: 0;
+    transform: scale(0.8);
+}
+
+.action-item:hover .action-delete-btn {
+    opacity: 0.6;
+    transform: scale(1);
+}
+
+.action-delete-btn:hover {
+    opacity: 1 !important;
+    background: #ff4444;
+    color: white;
+    box-shadow: 0 0 15px rgba(255, 68, 68, 0.5);
+    transform: scale(1.1) translateY(-2px);
+}
+
+.action-add-btn:active,
+.action-delete-btn:active {
+    transform: scale(0.9);
+}
+
+@media (max-width: 480px) {
+    .action-info {
+        gap: var(--space-sm);
+    }
+
+    .action-item {
+        padding: var(--space-sm) var(--space-md);
+    }
 }

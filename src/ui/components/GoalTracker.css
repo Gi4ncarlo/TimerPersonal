@@ -145,6 +145,34 @@
     color: #fff;
 }
 
+.select-with-action {
+    display: flex;
+    gap: var(--space-xs);
+    align-items: center;
+}
+
+.inline-create-btn {
+    background: rgba(168, 85, 247, 0.1);
+    border: 1px solid var(--color-primary);
+    color: var(--color-primary);
+    width: 38px;
+    height: 38px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.inline-create-btn:hover {
+    background: var(--color-primary);
+    color: white;
+    box-shadow: 0 0 15px var(--color-primary-glow);
+}
+
 .goal-input-row {
     display: flex;
     gap: var(--space-md);

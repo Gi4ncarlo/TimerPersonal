@@ -1,0 +1,75 @@
+/* Navbar Compact Profile Logic */
+.navbar-right .user-level-card {
+    padding: 0.5rem 1rem;
+    gap: 0.75rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    min-width: auto;
+}
+
+.navbar-right .user-level-card .avatar-preview {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    /* Circle avatar */
+    transform: none;
+    padding: 0;
+    border: 2px solid var(--color-primary);
+}
+
+.navbar-right .user-level-card .preview-img {
+    border-radius: 50%;
+    transform: none;
+    border: none;
+}
+
+.navbar-right .user-level-card .preview-placeholder {
+    border-radius: 50%;
+    transform: none;
+    font-size: 1.2rem;
+}
+
+.navbar-right .user-level-card .level-info {
+    min-width: auto;
+    flex-direction: row;
+    align-items: center;
+    gap: 1rem;
+}
+
+.navbar-right .user-level-card .level-top-row {
+    flex-direction: row-reverse;
+    gap: 0.5rem;
+}
+
+.navbar-right .user-level-card .level-badge {
+    background: var(--color-primary);
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.navbar-right .user-level-card .level-label {
+    color: white;
+    font-size: 0.5rem;
+}
+
+.navbar-right .user-level-card .level-number {
+    font-size: 0.9rem;
+}
+
+/* Hide extra details in navbar to keep it clean */
+.navbar-right .user-level-card .status-badge-compact,
+.navbar-right .user-level-card .level-middle-row,
+.navbar-right .user-level-card .xp-info-row {
+    display: none;
+}
+
+/* Show simple XP bar below or maybe just hide it? Let's hide it for "Clean" look 
+   and rely on the tooltip or click-to-view mechanism if user wants details.
+   Or we can make a mini-bar. Let's try mini-bar if needed, but for now CLEAN.
+*/
+
+/* Hover effect */
+.navbar-right .user-level-card:hover {
+    background: rgba(168, 85, 247, 0.1);
+    transform: translateY(0);
+}

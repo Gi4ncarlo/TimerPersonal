@@ -103,6 +103,27 @@ export interface VacationPeriod {
     notifiedEndWarning: boolean;
 }
 
+// Daily Missions System
+export type MissionType = 'threshold_positive' | 'limit_negative' | 'consistency';
+export type MissionDifficulty = 'easy' | 'medium' | 'hard';
+export type MissionStatus = 'in_progress' | 'completed' | 'failed';
+
+export interface DailyMission {
+    id: string;
+    userId: string;
+    date: string;
+    missionType: MissionType;
+    difficulty: MissionDifficulty;
+    title: string;
+    description: string;
+    targetValue: number;
+    currentValue: number;
+    actionId?: string;
+    status: MissionStatus;
+    rewardPoints: number;
+    completedAt?: string;
+}
+
 export type LeagueTier = 'Bronce' | 'Plata' | 'Oro' | 'Platino' | 'Diamante';
 
 export interface League {
