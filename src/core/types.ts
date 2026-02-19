@@ -139,6 +139,48 @@ export interface SmartNotification {
     createdAt: string;
 }
 
+// Gacha Roulette System
+export type PrizeRarity = 'common' | 'rare' | 'epic' | 'troll' | 'legendary';
+
+export interface GachaState {
+    id: string;
+    userId: string;
+    spinsToday: number;
+    lastSpinDate: string | null; // YYYY-MM-DD
+    freeSpinAvailable: boolean;
+    freeSpinUsedAt: string | null; // ISO datetime
+}
+
+export interface ActiveBuff {
+    id: string;
+    userId: string;
+    buffType: 'global' | 'activity';
+    actionId: string | null;
+    multiplier: number;
+    expiresAt: string; // ISO datetime
+    source: string;
+    createdAt: string;
+}
+
+export interface GachaPrize {
+    rarity: PrizeRarity;
+    key: string;
+    label: string;
+    type: 'points' | 'multiplier';
+    pointsAwarded: number;
+    multiplierValue?: number;
+    multiplierTarget?: 'global' | 'activity';
+    actionName?: string; // For display when activity-specific
+}
+
+export interface GachaSpinResult {
+    prize: GachaPrize;
+    pointsSpent: number;
+    wasFreeSpin: boolean;
+    newBalance: number;
+    buffCreated?: ActiveBuff;
+}
+
 export type LeagueTier = 'Bronce' | 'Plata' | 'Oro' | 'Platino' | 'Diamante';
 
 export interface League {

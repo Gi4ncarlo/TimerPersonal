@@ -236,6 +236,32 @@
     background: linear-gradient(90deg, transparent, #22d3ee, transparent);
 }
 
+.nav-pill__dot {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    width: 6px;
+    height: 6px;
+    background: #22d3ee;
+    border-radius: 50%;
+    box-shadow: 0 0 10px #22d3ee;
+    animation: arsenalPulse 2s infinite;
+}
+
+@keyframes arsenalPulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(34, 211, 238, 0.7);
+    }
+
+    70% {
+        box-shadow: 0 0 0 6px rgba(34, 211, 238, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(34, 211, 238, 0);
+    }
+}
+
 /* ── Variant: Admin (amber) ── */
 .nav-pill--admin.is-active {
     color: #fde68a;

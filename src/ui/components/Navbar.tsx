@@ -88,6 +88,7 @@ export default function Navbar({
                         >
                             <span className="nav-pill__icon">⚔️</span>
                             <span className="nav-pill__label">Arsenal</span>
+                            {!isArmoryOpen && <span className="nav-pill__dot" />}
                         </button>
                     )}
 

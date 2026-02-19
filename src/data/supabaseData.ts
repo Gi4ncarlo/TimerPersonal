@@ -1,5 +1,5 @@
 ﻿import { supabase } from '@/lib/supabase/client';
-import { Action, DailyRecord, User, Goal, Strike, VacationPeriod, DailyMission, SmartNotification, SarcasmLevel } from '@/core/types';
+import { Action, DailyRecord, User, Goal, Strike, VacationPeriod, DailyMission, SmartNotification, SarcasmLevel, GachaState, ActiveBuff } from '@/core/types';
 import { getTodayString, getWeekStartString, getWeekEndString, getArgentinaDate, getMonthEndString, getYearEndString, getFarFutureString } from '@/core/utils/dateUtils';
 import { subDays, differenceInDays, parseISO } from 'date-fns';
 
@@ -1376,6 +1376,16 @@ export const SupabaseDataStore = {
     async createDailyMissions(missions: Omit<DailyMission, 'id'>[]): Promise<DailyMission[]> {
         if (missions.length === 0) return [];
 
+        const userId = missions[0].userId;
+        const date = missions[0].date;
+
+        // Check if missions already exist for this date to prevent duplicates
+        const existing = await this.getDailyMissions(date);
+        if (existing.length > 0) {
+            console.log('Daily missions already exist for date:', date);
+            return existing;
+        }
+
         const rows = missions.map(m => ({
             user_id: m.userId,
             date: m.date,
@@ -1667,5 +1677,171 @@ export const SupabaseDataStore = {
             .eq('user_id', user.id);
 
         if (error) console.error('Error deleting all notifications:', error);
+    },
+
+    // ═══════════════════════════════════════════════════════
+    // GACHA ROULETTE SYSTEM
+    // ═══════════════════════════════════════════════════════
+
+    async getGachaState(): Promise<GachaState | null> {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return null;
+
+        const { data, error } = await supabase
+            .from('gacha_state')
+            .select('*')
+            .eq('user_id', user.id)
+            .maybeSingle();
+
+        if (error) {
+            console.error('Error fetching gacha state:', error);
+            return null;
+        }
+
+        // Auto-create if not exists
+        if (!data) {
+            const { data: created, error: createErr } = await supabase
+                .from('gacha_state')
+                .insert({ user_id: user.id })
+                .select()
+                .single();
+
+            if (createErr || !created) return null;
+
+            return {
+                id: created.id,
+                userId: created.user_id,
+                spinsToday: created.spins_today,
+                lastSpinDate: created.last_spin_date,
+                freeSpinAvailable: created.free_spin_available,
+                freeSpinUsedAt: created.free_spin_used_at,
+            };
+        }
+
+        return {
+            id: data.id,
+            userId: data.user_id,
+            spinsToday: data.spins_today,
+            lastSpinDate: data.last_spin_date,
+            freeSpinAvailable: data.free_spin_available,
+            freeSpinUsedAt: data.free_spin_used_at,
+        };
+    },
+
+    async updateGachaState(stateId: string, updates: {
+        spinsToday?: number;
+        lastSpinDate?: string;
+        freeSpinAvailable?: boolean;
+        freeSpinUsedAt?: string;
+    }): Promise<void> {
+        const payload: any = { updated_at: new Date().toISOString() };
+        if (updates.spinsToday !== undefined) payload.spins_today = updates.spinsToday;
+        if (updates.lastSpinDate !== undefined) payload.last_spin_date = updates.lastSpinDate;
+        if (updates.freeSpinAvailable !== undefined) payload.free_spin_available = updates.freeSpinAvailable;
+        if (updates.freeSpinUsedAt !== undefined) payload.free_spin_used_at = updates.freeSpinUsedAt;
+
+        const { error } = await supabase
+            .from('gacha_state')
+            .update(payload)
+            .eq('id', stateId);
+
+        if (error) console.error('Error updating gacha state:', error);
+    },
+
+    async getActiveBuffs(): Promise<ActiveBuff[]> {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return [];
+
+        const { data, error } = await supabase
+            .from('active_buffs')
+            .select('*')
+            .eq('user_id', user.id)
+            .gt('expires_at', new Date().toISOString())
+            .order('created_at', { ascending: false });
+
+        if (error || !data) return [];
+
+        return data.map((b: any) => ({
+            id: b.id,
+            userId: b.user_id,
+            buffType: b.buff_type,
+            actionId: b.action_id,
+            multiplier: Number(b.multiplier),
+            expiresAt: b.expires_at,
+            source: b.source,
+            createdAt: b.created_at,
+        }));
+    },
+
+    async createBuff(buff: {
+        userId: string;
+        buffType: 'global' | 'activity';
+        actionId?: string;
+        multiplier: number;
+        expiresAt: string;
+        source?: string;
+    }): Promise<ActiveBuff | null> {
+        const { data, error } = await supabase
+            .from('active_buffs')
+            .insert({
+                user_id: buff.userId,
+                buff_type: buff.buffType,
+                action_id: buff.actionId || null,
+                multiplier: buff.multiplier,
+                expires_at: buff.expiresAt,
+                source: buff.source || 'gacha',
+            })
+            .select()
+            .single();
+
+        if (error || !data) {
+            console.error('Error creating buff:', error);
+            return null;
+        }
+
+        return {
+            id: data.id,
+            userId: data.user_id,
+            buffType: data.buff_type,
+            actionId: data.action_id,
+            multiplier: Number(data.multiplier),
+            expiresAt: data.expires_at,
+            source: data.source,
+            createdAt: data.created_at,
+        };
+    },
+
+    async logGachaSpin(entry: {
+        userId: string;
+        rarity: string;
+        prizeKey: string;
+        prizeLabel: string;
+        pointsSpent: number;
+        pointsAwarded: number;
+        wasFreeSpin: boolean;
+    }): Promise<void> {
+        const { error } = await supabase
+            .from('gacha_history')
+            .insert({
+                user_id: entry.userId,
+                rarity: entry.rarity,
+                prize_key: entry.prizeKey,
+                prize_label: entry.prizeLabel,
+                points_spent: entry.pointsSpent,
+                points_awarded: entry.pointsAwarded,
+                was_free_spin: entry.wasFreeSpin,
+            });
+
+        if (error) console.error('Error logging gacha spin:', error);
+    },
+
+    async getUserBalance(userId: string): Promise<number> {
+        const { data, error } = await supabase
+            .from('daily_records')
+            .select('points_calculated')
+            .eq('user_id', userId);
+
+        if (error || !data) return 0;
+        return data.reduce((sum, r) => sum + Number(r.points_calculated), 0);
     },
 };
