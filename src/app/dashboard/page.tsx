@@ -15,6 +15,9 @@ import ProfileModal from '@/ui/components/ProfileModal';
 import CreateActionModal from '@/ui/components/CreateActionModal';
 import CreateShortcutModal from '@/ui/components/CreateShortcutModal';
 import DailyMissionsCard from '@/ui/components/DailyMissionsCard';
+import GachaRoulette from '@/ui/components/GachaRoulette';
+import ActiveBuffsDisplay from '@/ui/components/ActiveBuffsDisplay';
+import ConfirmModal from '@/ui/components/ConfirmModal';
 import Navbar from '@/ui/components/Navbar';
 import LogoLoader from '@/ui/components/LogoLoader';
 import { SupabaseDataStore } from '@/data/supabaseData';
@@ -24,7 +27,7 @@ import { StrikeDetector } from '@/core/services/StrikeDetector';
 import { VacationService } from '@/core/services/VacationService';
 import { DailyMissionEngine } from '@/core/services/DailyMissionEngine';
 import { NotificationEngine } from '@/core/services/NotificationEngine';
-import { Action, DailyRecord, DailyMission, Goal, Strike, User, VacationPeriod, SmartNotification, SarcasmLevel } from '@/core/types';
+import { Action, DailyRecord, DailyMission, Goal, Strike, User, VacationPeriod, SmartNotification, SarcasmLevel, ActiveBuff } from '@/core/types';
 import { format, differenceInCalendarDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -63,6 +66,14 @@ export default function Dashboard() {
     // Smart Notifications State
     const [notifications, setNotifications] = useState<SmartNotification[]>([]);
 
+    // Gacha Roulette State
+    const [isGachaOpen, setIsGachaOpen] = useState(false);
+    const [activeBuffs, setActiveBuffs] = useState<ActiveBuff[]>([]);
+
+    // Confirmation Modal State (Delete Record)
+    const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+    const [recordToDelete, setRecordToDelete] = useState<string | null>(null);
+
     useEffect(() => {
         loadData();
     }, []);
@@ -77,16 +88,18 @@ export default function Dashboard() {
             setCurrentUser(user);
             setUserLevel({ level: user.level, xp: user.xp });
 
-            const [fetchedActions, fetchedRecords, fetchedGoals, fetchedVacations] = await Promise.all([
+            const [fetchedActions, fetchedRecords, fetchedGoals, fetchedVacations, fetchedBuffs] = await Promise.all([
                 SupabaseDataStore.getActions(),
                 SupabaseDataStore.getRecords(),
                 SupabaseDataStore.getGoals(),
                 SupabaseDataStore.getVacationPeriods(),
+                SupabaseDataStore.getActiveBuffs(),
             ]);
 
             setActions(fetchedActions);
             setRecords(fetchedRecords);
             setGoals(fetchedGoals);
+            setActiveBuffs(fetchedBuffs);
 
             // Calculate total points (already in points, no conversion needed)
             const totalPoints = fetchedRecords.reduce((sum, r) => sum + r.pointsCalculated, 0);
@@ -368,9 +381,11 @@ export default function Dashboard() {
         try {
             // PointsCalculator.createRecord now defaults to getTodayString() for date
             // and generates timestamp automatically in Argentina timezone
+            // v2: Pass activeBuffs to apply multipliers
             const newRecord = PointsCalculator.createRecord(
                 actionToUse,
                 data.durationMinutes,
+                activeBuffs, // Pass current buffs
                 undefined, // Let it default to getTodayString()
                 data.notes,
                 data.metricValue,
@@ -416,10 +431,17 @@ export default function Dashboard() {
     };
 
     // ... (delete record, logout handlers same as before)
-    const handleDeleteRecord = async (recordId: string) => {
-        if (confirm('¿Eliminar esta actividad?')) {
-            await SupabaseDataStore.deleteRecord(recordId);
+    // ... (delete record, logout handlers same as before)
+    const handleDeleteRecordRequest = (recordId: string) => {
+        setRecordToDelete(recordId);
+        setIsConfirmOpen(true);
+    };
+
+    const confirmDeleteRecord = async () => {
+        if (recordToDelete) {
+            await SupabaseDataStore.deleteRecord(recordToDelete);
             await loadData();
+            setRecordToDelete(null);
         }
     };
 
@@ -576,6 +598,14 @@ export default function Dashboard() {
     const todayRecords = records.filter(r => r.date === getTodayString());
     const todayBalance = BalanceCalculator.getDailyBalance(todayRecords, getArgentinaDate());
 
+    // Calculate active global multiplier for display
+    const activeGlobalMultiplier = activeBuffs
+        .filter(b => b.buffType === 'global' && new Date(b.expiresAt) > new Date())
+        .reduce((acc, b) => acc + (b.multiplier - 1), 1);
+
+    const hasActivityMultipliers = activeBuffs
+        .some(b => b.buffType === 'activity' && new Date(b.expiresAt) > new Date());
+
     return (
         <main className="dashboard">
             <div className="dashboard-container-new">
@@ -602,8 +632,29 @@ export default function Dashboard() {
                             <div className={`accumulated-time-card ${accumulatedPoints >= 0 ? 'positive' : 'negative'} ethereal-border`}>
                                 <p className="accumulated-label text-arcade">
                                     {accumulatedPoints >= 0 ? '✓ PUNTOS GANADOS' : '⚠ PUNTOS EN DEUDA'}
+                                    {activeGlobalMultiplier > 1 && (
+                                        <span className="global-mult-badge">
+                                            <span style={{ color: '#fff', WebkitTextFillColor: '#fff' }}>x{activeGlobalMultiplier.toFixed(1)}</span>
+                                            {' '}
+                                            <span style={{ color: 'initial', WebkitTextFillColor: 'initial', textShadow: 'none', filter: 'none' }}>⚡</span>
+                                        </span>
+                                    )}
                                 </p>
                                 <StaticTimeDisplay totalPoints={accumulatedPoints} />
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '12px' }}>
+                                    <button className="gacha-trigger-btn" onClick={() => setIsGachaOpen(true)}>
+                                        🎰 Ruleta
+                                        {/* Free spin indicator */}
+                                    </button>
+                                </div>
+                                <ActiveBuffsDisplay buffs={activeBuffs} />
+
+                                {(activeGlobalMultiplier > 1 || hasActivityMultipliers) && (
+                                    <div className="mult-promo-message">
+                                        🔥 ¡Multiplicadores activos! ¿Vas a desaprovechar esta oportunidad?
+                                    </div>
+                                )}
+
                                 <div className="hero-decoration"></div>
                             </div>
                         </section>
@@ -650,11 +701,13 @@ export default function Dashboard() {
                                                                 className="record-delete-hub"
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
-                                                                    handleDeleteRecord(record.id);
+                                                                    handleDeleteRecordRequest(record.id);
                                                                 }}
                                                                 title="Eliminar registro"
                                                             >
-                                                                ×
+                                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                                    <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                                                                </svg>
                                                             </button>
                                                         </div>
                                                     </div>
@@ -812,6 +865,24 @@ export default function Dashboard() {
                 onClose={() => setIsShortcutModalOpen(false)}
                 onSave={handleSaveShortcut}
                 actions={actions}
+            />
+
+            <GachaRoulette
+                isOpen={isGachaOpen}
+                onClose={() => setIsGachaOpen(false)}
+                currentBalance={accumulatedPoints}
+                onSpinComplete={() => loadData()}
+            />
+
+            <ConfirmModal
+                isOpen={isConfirmOpen}
+                onClose={() => setIsConfirmOpen(false)}
+                onConfirm={confirmDeleteRecord}
+                title="¿Eliminar actividad?"
+                message="Esta acción eliminará los puntos obtenidos y no se puede deshacer."
+                confirmText="Sí, eliminar"
+                cancelText="Cancelar"
+                isDestructive={true}
             />
         </main>
     );

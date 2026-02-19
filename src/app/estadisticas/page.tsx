@@ -33,6 +33,25 @@ import { User, VacationPeriod } from '@/core/types';
 import { VacationService } from '@/core/services/VacationService';
 import './estadisticas.css';
 
+// ─── Format Helpers ──────────────────────────────
+const formatTime = (isoString?: string) => {
+    if (!isoString) return '--:--';
+    try {
+        return format(parseISO(isoString), 'HH:mm');
+    } catch {
+        return '--:--';
+    }
+};
+
+const formatDuration = (mins: number) => {
+    if (mins >= 60) {
+        const h = Math.floor(mins / 60);
+        const m = mins % 60;
+        return `${h}h${m > 0 ? ` ${m}m` : ''}`;
+    }
+    return `${mins} min`;
+};
+
 // ─── Time Range Options ──────────────────────────
 type TimeRange = 7 | 30 | 0; // 0 = all history
 const RANGE_OPTIONS: { label: string; value: TimeRange }[] = [
@@ -668,7 +687,12 @@ export default function EstadisticasPage() {
                                 {selectedDayData.records.map((record: any) => (
                                     <div key={record.id} className="detail-record">
                                         <div className="detail-record-header">
-                                            <strong>{record.actionName}</strong>
+                                            <div className="record-main-info">
+                                                <strong>{record.actionName}</strong>
+                                                <div className="record-meta-stat">
+                                                    {formatTime(record.timestamp)} • {formatDuration(record.durationMinutes)}
+                                                </div>
+                                            </div>
                                             <span className={record.pointsCalculated >= 0 ? 'positive' : 'negative'}>
                                                 {record.pointsCalculated >= 0 ? '+' : ''}
                                                 {Math.floor(record.pointsCalculated)} pts
