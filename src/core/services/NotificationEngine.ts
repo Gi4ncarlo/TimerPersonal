@@ -141,6 +141,27 @@ const MESSAGE_POOL: Record<NotificationType, MessageTemplate> = {
             ],
         },
     },
+    achievement: {
+        title: '🏆 Logro Desbloqueado',
+        icon: '🏆',
+        messages: {
+            low: [
+                '¡Misión cumplida! "{mission}" completada.',
+                '¡Bien hecho! Completaste "{mission}" y ganaste {points} pts.',
+                'Objetivo alcanzado: "{mission}". ¡Seguí así!',
+            ],
+            medium: [
+                '¡Boom! "{mission}" liquidada. {points} pts a la bolsa. 💰',
+                'Tachaste "{mission}" de la lista. Nada mal. 😎',
+                'Una menos: "{mission}". A por la siguiente.',
+            ],
+            brutal: [
+                'Milagro: completaste "{mission}". Ya era hora. 🙄',
+                '"{mission}" lista. ¿Ves que no era tan difícil? 💅',
+                'Por fin hiciste "{mission}". {points} pts para que no llores. 🍼',
+            ],
+        },
+    },
 };
 
 // ═══════════════════════════════════════════════════
