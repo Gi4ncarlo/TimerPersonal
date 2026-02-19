@@ -17,12 +17,11 @@ interface NavbarProps {
     onNotifRefresh?: () => void;
 }
 
-const NAV_LINKS = [
+const NAV_LINKS: { href: string; label: string; icon: string; variant?: string }[] = [
     { href: '/dashboard', label: 'Inicio', icon: '🏠' },
     { href: '/leaderboard', label: 'Ranking', icon: '🏆' },
     { href: '/estadisticas', label: 'Stats', icon: '📊' },
-    { href: '/vacaciones', label: 'Bitácora', icon: '📒' },
-    { href: '/strikes', label: 'Strikes', icon: '⚠️', variant: 'strike' },
+    { href: '/tienda', label: 'Tienda', icon: '🏪' },
 ];
 
 export default function Navbar({

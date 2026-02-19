@@ -1,0 +1,584 @@
+/* ═══════════════════════════════════════════════════════
+   TIENDA — Premium Cyber-Gothic Arcade Shop
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Page Header ── */
+.shop-header {
+    text-align: center;
+    margin-bottom: var(--space-2xl);
+    position: relative;
+}
+
+.shop-header::after {
+    content: '';
+    display: block;
+    width: 120px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--color-primary), transparent);
+    margin: var(--space-lg) auto 0;
+}
+
+.shop-title {
+    font-family: var(--font-display);
+    font-size: 2.2rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    background: linear-gradient(135deg, #fff 30%, var(--color-primary) 70%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: var(--space-xs);
+}
+
+.shop-subtitle {
+    color: var(--color-text-secondary);
+    font-family: var(--font-body);
+    font-size: 1rem;
+    letter-spacing: 0.05em;
+}
+
+/* ── Balance Banner ── */
+.shop-balance-banner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-lg);
+    background: linear-gradient(135deg, rgba(13, 17, 28, 0.8), rgba(26, 31, 46, 0.6));
+    border: 1px solid rgba(168, 85, 247, 0.15);
+    border-radius: var(--radius-xl);
+    padding: var(--space-lg) var(--space-2xl);
+    margin-bottom: var(--space-2xl);
+    backdrop-filter: blur(12px);
+    position: relative;
+    overflow: hidden;
+}
+
+.shop-balance-banner::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--color-primary), transparent);
+}
+
+.balance-icon {
+    font-size: 2rem;
+    filter: drop-shadow(0 0 8px rgba(168, 85, 247, 0.4));
+}
+
+.balance-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.balance-label {
+    font-family: var(--font-display);
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+}
+
+.balance-amount {
+    font-family: var(--font-display);
+    font-size: 1.8rem;
+    font-weight: 900;
+    background: linear-gradient(135deg, #ffd700, #ffaa00);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* ── Shop Grid ── */
+.shop-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: var(--space-xl);
+    margin-bottom: var(--space-2xl);
+}
+
+/* ── Shop Card ── */
+.shop-card {
+    position: relative;
+    background: linear-gradient(165deg, rgba(13, 17, 28, 0.9), rgba(20, 24, 38, 0.7));
+    border: 1px solid rgba(168, 85, 247, 0.12);
+    border-radius: var(--radius-xl);
+    padding: 0;
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.shop-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(168, 85, 247, 0.35);
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.4),
+        0 0 48px rgba(168, 85, 247, 0.08);
+}
+
+.shop-card.card--utility {
+    --card-accent: #a855f7;
+    --card-accent-glow: rgba(168, 85, 247, 0.15);
+}
+
+.shop-card.card--attack {
+    --card-accent: #f43f5e;
+    --card-accent-glow: rgba(244, 63, 94, 0.15);
+}
+
+.shop-card.card--defense {
+    --card-accent: #22d3ee;
+    --card-accent-glow: rgba(34, 211, 238, 0.15);
+}
+
+.shop-card.card--disabled {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Card Top Glow Bar */
+.shop-card__glow-bar {
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--card-accent), transparent);
+}
+
+/* Card Body */
+.shop-card__body {
+    padding: var(--space-xl);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+}
+
+/* Card Icon */
+.shop-card__icon-wrap {
+    width: 72px;
+    height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5rem;
+    background: radial-gradient(circle, var(--card-accent-glow), transparent 70%);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 50%;
+    margin: 0 auto;
+    position: relative;
+    animation: shop-card-pulse 3s ease-in-out infinite;
+}
+
+@keyframes shop-card-pulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 20px var(--card-accent-glow);
+    }
+
+    50% {
+        box-shadow: 0 0 40px var(--card-accent-glow), 0 0 60px var(--card-accent-glow);
+    }
+}
+
+/* Card Content */
+.shop-card__name {
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    font-weight: 700;
+    text-align: center;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-text-primary);
+}
+
+.shop-card__desc {
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    color: var(--color-text-secondary);
+    text-align: center;
+    line-height: 1.5;
+    min-height: 44px;
+}
+
+/* Card Price Tag */
+.shop-card__price-tag {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-lg);
+    border-radius: var(--radius-lg);
+    background: rgba(255, 215, 0, 0.06);
+    border: 1px solid rgba(255, 215, 0, 0.15);
+}
+
+.shop-card__price-icon {
+    font-size: 1.2rem;
+}
+
+.shop-card__price-value {
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    font-weight: 900;
+    color: #ffd700;
+    letter-spacing: 0.05em;
+}
+
+.shop-card__price-label {
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+/* Card Cooldown */
+.shop-card__cooldown {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-md);
+    background: rgba(251, 191, 36, 0.08);
+    border: 1px solid rgba(251, 191, 36, 0.2);
+    border-radius: var(--radius-md);
+    font-family: var(--font-body);
+    font-size: 0.8rem;
+    color: var(--color-warning);
+    text-align: center;
+}
+
+.shop-card__cooldown--active {
+    background: rgba(244, 63, 94, 0.08);
+    border-color: rgba(244, 63, 94, 0.2);
+    color: var(--color-negative);
+}
+
+/* Card Buy Button */
+.shop-card__buy-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+    padding: var(--space-md) var(--space-lg);
+    font-family: var(--font-display);
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #fff;
+    background: linear-gradient(135deg, var(--card-accent), color-mix(in srgb, var(--card-accent) 70%, #000));
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.shop-card__buy-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+    transition: left 0.5s;
+}
+
+.shop-card__buy-btn:hover::before {
+    left: 100%;
+}
+
+.shop-card__buy-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow:
+        0 4px 16px color-mix(in srgb, var(--card-accent) 40%, transparent),
+        0 0 24px color-mix(in srgb, var(--card-accent) 20%, transparent);
+}
+
+.shop-card__buy-btn:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.shop-card__buy-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    background: rgba(100, 100, 120, 0.3);
+}
+
+/* ── Purchase History Section ── */
+.shop-history-section {
+    margin-top: var(--space-2xl);
+}
+
+.shop-history-title {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-text-secondary);
+    margin-bottom: var(--space-lg);
+    padding-bottom: var(--space-sm);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.shop-history-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    max-height: 300px;
+    overflow-y: auto;
+    padding-right: var(--space-xs);
+}
+
+.shop-history-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-md) var(--space-lg);
+    background: rgba(13, 17, 28, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.03);
+    border-radius: var(--radius-md);
+    transition: border-color 0.2s;
+}
+
+.shop-history-item:hover {
+    border-color: rgba(168, 85, 247, 0.15);
+}
+
+.shop-history-item__icon {
+    font-size: 1.4rem;
+    flex-shrink: 0;
+}
+
+.shop-history-item__details {
+    flex: 1;
+    min-width: 0;
+}
+
+.shop-history-item__name {
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
+.shop-history-item__date {
+    font-family: var(--font-body);
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+}
+
+.shop-history-item__cost {
+    font-family: var(--font-display);
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--color-negative);
+    white-space: nowrap;
+}
+
+.shop-empty-state {
+    text-align: center;
+    padding: var(--space-xl);
+    color: var(--color-text-muted);
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+}
+
+.shop-empty-state__icon {
+    font-size: 3rem;
+    display: block;
+    margin-bottom: var(--space-md);
+    opacity: 0.5;
+}
+
+/* ── Confirm Modal Overrides ── */
+.shop-confirm-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-modal);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(6px);
+    animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.shop-confirm-card {
+    width: 90%;
+    max-width: 420px;
+    background: linear-gradient(165deg, rgba(20, 24, 38, 0.98), rgba(13, 17, 28, 0.98));
+    border: 1px solid rgba(168, 85, 247, 0.25);
+    border-radius: var(--radius-xl);
+    padding: var(--space-2xl);
+    text-align: center;
+    box-shadow:
+        0 16px 48px rgba(0, 0, 0, 0.5),
+        0 0 48px rgba(168, 85, 247, 0.08);
+    animation: scaleIn 0.25s ease-out;
+}
+
+@keyframes scaleIn {
+    from {
+        transform: scale(0.95);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.shop-confirm-icon {
+    font-size: 3.5rem;
+    display: block;
+    margin-bottom: var(--space-lg);
+    filter: drop-shadow(0 0 12px rgba(168, 85, 247, 0.3));
+}
+
+.shop-confirm-title {
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    letter-spacing: 0.1em;
+    color: var(--color-text-primary);
+    margin-bottom: var(--space-md);
+}
+
+.shop-confirm-desc {
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    color: var(--color-text-secondary);
+    line-height: 1.6;
+    margin-bottom: var(--space-xl);
+}
+
+.shop-confirm-cost {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 900;
+    color: #ffd700;
+    margin-bottom: var(--space-xl);
+}
+
+.shop-confirm-actions {
+    display: flex;
+    gap: var(--space-md);
+}
+
+.shop-confirm-actions button {
+    flex: 1;
+    padding: var(--space-md);
+    font-family: var(--font-display);
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-confirm-cancel {
+    background: rgba(100, 100, 120, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: var(--color-text-secondary);
+}
+
+.btn-confirm-cancel:hover {
+    background: rgba(100, 100, 120, 0.35);
+}
+
+.btn-confirm-buy {
+    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+    color: #fff;
+}
+
+.btn-confirm-buy:hover {
+    box-shadow: 0 4px 16px rgba(168, 85, 247, 0.3);
+    transform: translateY(-1px);
+}
+
+.btn-confirm-buy:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+    .shop-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .shop-title {
+        font-size: 1.6rem;
+    }
+
+    .shop-balance-banner {
+        padding: var(--space-md) var(--space-lg);
+    }
+
+    .balance-amount {
+        font-size: 1.4rem;
+    }
+}
+
+/* ── Card "COMING SOON" variant ── */
+.shop-card.card--coming-soon {
+    opacity: 0.45;
+    pointer-events: none;
+    position: relative;
+}
+
+.shop-card__coming-soon-badge {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-12deg);
+    font-family: var(--font-display);
+    font-size: 0.85rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--color-warning);
+    background: rgba(251, 191, 36, 0.1);
+    border: 1px solid rgba(251, 191, 36, 0.3);
+    padding: var(--space-xs) var(--space-lg);
+    border-radius: var(--radius-md);
+    z-index: 10;
+    white-space: nowrap;
+}
+
+/* Scrollbar styling for history */
+.shop-history-list::-webkit-scrollbar {
+    width: 4px;
+}
+
+.shop-history-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.shop-history-list::-webkit-scrollbar-thumb {
+    background: rgba(168, 85, 247, 0.2);
+    border-radius: 4px;
+}
+
+.shop-history-list::-webkit-scrollbar-thumb:hover {
+    background: rgba(168, 85, 247, 0.4);
+}

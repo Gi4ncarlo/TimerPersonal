@@ -170,10 +170,7 @@ export class DailyMissionEngine {
         mission: DailyMission,
         todayRecords: DailyRecord[],
     ): { currentValue: number; status: DailyMission['status'] } {
-        // Already completed — don't regress
-        if (mission.status === 'completed') {
-            return { currentValue: mission.currentValue, status: 'completed' };
-        }
+
 
         let currentValue = 0;
 

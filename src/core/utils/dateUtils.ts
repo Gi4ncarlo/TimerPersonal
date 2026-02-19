@@ -3,10 +3,10 @@ import { toZonedTime, format } from 'date-fns-tz';
 const TIMEZONE = 'America/Argentina/Buenos_Aires';
 
 /**
- * Returns the current date in Argentina timezone.
+ * Returns the current date (or provided date) in Argentina timezone.
  */
-export const getArgentinaDate = (): Date => {
-    return toZonedTime(new Date(), TIMEZONE);
+export const getArgentinaDate = (date: Date = new Date()): Date => {
+    return toZonedTime(date, TIMEZONE);
 };
 
 /**

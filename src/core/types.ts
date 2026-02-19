@@ -126,7 +126,7 @@ export interface DailyMission {
 
 // Smart Notifications System
 export type SarcasmLevel = 'low' | 'medium' | 'brutal';
-export type NotificationType = 'inactivity' | 'ranking_drop' | 'streak_danger' | 'weekly_decline' | 'streak_milestone' | 'comeback';
+export type NotificationType = 'inactivity' | 'ranking_drop' | 'streak_danger' | 'weekly_decline' | 'streak_milestone' | 'comeback' | 'achievement';
 
 export interface SmartNotification {
     id: string;
@@ -188,6 +188,42 @@ export interface League {
     minPoints: number;
     color: string;
     icon: string;
+}
+
+// Shop System
+export type ShopItemType = 'utility' | 'attack' | 'defense';
+
+export interface ShopItem {
+    id: string;
+    name: string;
+    description: string;
+    cost: number;
+    type: ShopItemType;
+    icon: string;
+    isActive: boolean;
+    maxPurchasesPerDay?: number;
+    cooldownDays?: number;
+}
+
+export interface UserPurchase {
+    id: string;
+    userId: string;
+    itemId: string;
+    costPaid: number;
+    metadata: Record<string, any>;
+    purchasedAt: string;
+}
+
+export interface PurchaseResult {
+    success: boolean;
+    error?: string;
+    costPaid?: number;
+    strikeRemoved?: string;
+    nextCost?: number;
+    newBalance?: number;
+    nextAvailable?: string;
+    balance?: number;
+    cost?: number;
 }
 
 export const LEAGUE_THRESHOLDS: League[] = [

@@ -1,5 +1,5 @@
 ﻿import { supabase } from '@/lib/supabase/client';
-import { Action, DailyRecord, User, Goal, Strike, VacationPeriod, DailyMission, SmartNotification, SarcasmLevel, GachaState, ActiveBuff } from '@/core/types';
+import { Action, DailyRecord, User, Goal, Strike, VacationPeriod, DailyMission, SmartNotification, SarcasmLevel, GachaState, ActiveBuff, ShopItem, UserPurchase, PurchaseResult } from '@/core/types';
 import { getTodayString, getWeekStartString, getWeekEndString, getArgentinaDate, getMonthEndString, getYearEndString, getFarFutureString } from '@/core/utils/dateUtils';
 import { subDays, differenceInDays, parseISO } from 'date-fns';
 
@@ -995,10 +995,6 @@ export const SupabaseDataStore = {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return [];
 
-        // Exclude demo from strike view if desired, or just return empty
-        const currentUser = await SupabaseDataStore.getCurrentUser();
-        if (currentUser?.username === 'demo') return [];
-
         const { data, error } = await supabase
             .from('strikes')
             .select('*')
@@ -1843,5 +1839,115 @@ export const SupabaseDataStore = {
 
         if (error || !data) return 0;
         return data.reduce((sum, r) => sum + Number(r.points_calculated), 0);
+    },
+
+    // ══════════════════════════════════════════════════
+    // Shop System
+    // ══════════════════════════════════════════════════
+
+    getShopItems: async (): Promise<ShopItem[]> => {
+        const { data, error } = await supabase
+            .from('shop_items')
+            .select('*')
+            .eq('is_active', true)
+            .order('created_at', { ascending: true });
+
+        if (error || !data) return [];
+
+        return data.map((item: any) => ({
+            id: item.id,
+            name: item.name,
+            description: item.description,
+            cost: item.cost,
+            type: item.type,
+            icon: item.icon,
+            isActive: item.is_active,
+            maxPurchasesPerDay: item.max_purchases_per_day,
+            cooldownDays: item.cooldown_days,
+        }));
+    },
+
+    getUserPurchases: async (): Promise<UserPurchase[]> => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return [];
+
+        const { data, error } = await supabase
+            .from('user_purchases')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('purchased_at', { ascending: false });
+
+        if (error || !data) return [];
+
+        return data.map((p: any) => ({
+            id: p.id,
+            userId: p.user_id,
+            itemId: p.item_id,
+            costPaid: p.cost_paid,
+            metadata: p.metadata || {},
+            purchasedAt: p.purchased_at,
+        }));
+    },
+
+    purchaseAmnistia: async (): Promise<PurchaseResult> => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return { success: false, error: 'NOT_AUTHENTICATED' };
+
+        const { data, error } = await supabase.rpc('purchase_amnistia', {
+            p_user_id: user.id,
+        });
+
+        if (error) {
+            console.error('purchaseAmnistia RPC error:', error);
+            return { success: false, error: error.message };
+        }
+
+        return {
+            success: data.success,
+            error: data.error,
+            costPaid: data.cost_paid,
+            strikeRemoved: data.strike_removed,
+            nextCost: data.next_cost,
+            newBalance: data.new_balance,
+            nextAvailable: data.next_available,
+            balance: data.balance,
+            cost: data.cost,
+        };
+    },
+
+    getAmnistiaInfo: async (): Promise<{ currentCost: number; cooldownEnds: string | null; purchaseCount: number }> => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return { currentCost: 25000, cooldownEnds: null, purchaseCount: 0 };
+
+        // Get amnistia item
+        const { data: item } = await supabase
+            .from('shop_items')
+            .select('id, cost, cooldown_days')
+            .eq('name', 'Amnistía')
+            .single();
+
+        if (!item) return { currentCost: 25000, cooldownEnds: null, purchaseCount: 0 };
+
+        // Get purchase history for this item
+        const { data: purchases } = await supabase
+            .from('user_purchases')
+            .select('purchased_at')
+            .eq('user_id', user.id)
+            .eq('item_id', item.id)
+            .order('purchased_at', { ascending: false });
+
+        const count = purchases?.length || 0;
+        const currentCost = Math.round(item.cost * Math.pow(1.5, count));
+
+        let cooldownEnds: string | null = null;
+        if (purchases && purchases.length > 0) {
+            const lastPurchase = new Date(purchases[0].purchased_at);
+            const cooldownEnd = new Date(lastPurchase.getTime() + (item.cooldown_days || 10) * 24 * 60 * 60 * 1000);
+            if (cooldownEnd > new Date()) {
+                cooldownEnds = cooldownEnd.toISOString();
+            }
+        }
+
+        return { currentCost, cooldownEnds, purchaseCount: count };
     },
 };

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import QuestCard from '@/ui/components/QuestCard';
@@ -27,7 +27,7 @@ import { StrikeDetector } from '@/core/services/StrikeDetector';
 import { VacationService } from '@/core/services/VacationService';
 import { DailyMissionEngine } from '@/core/services/DailyMissionEngine';
 import { NotificationEngine } from '@/core/services/NotificationEngine';
-import { Action, DailyRecord, DailyMission, Goal, Strike, User, VacationPeriod, SmartNotification, SarcasmLevel, ActiveBuff } from '@/core/types';
+import { Action, DailyRecord, DailyMission, Goal, Strike, User, VacationPeriod, SmartNotification, SarcasmLevel, ActiveBuff, NotificationType } from '@/core/types';
 import { format, differenceInCalendarDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -48,6 +48,10 @@ export default function Dashboard() {
     const [selectedAction, setSelectedAction] = useState<Action | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+
+    // Guards to prevent double-execution in React Strict Mode
+    const retroactiveProcessedRef = useRef(false);
+    const missionsGeneratedRef = useRef(false);
     const [isCreateActionModalOpen, setIsCreateActionModalOpen] = useState(false);
     const [accumulatedPoints, setAccumulatedPoints] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
@@ -70,13 +74,22 @@ export default function Dashboard() {
     const [isGachaOpen, setIsGachaOpen] = useState(false);
     const [activeBuffs, setActiveBuffs] = useState<ActiveBuff[]>([]);
 
-    // Confirmation Modal State (Delete Record)
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [recordToDelete, setRecordToDelete] = useState<string | null>(null);
+
+    // Ref for History Auto-Scroll
+    const historyListRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         loadData();
     }, []);
+
+    // Auto-scroll history to bottom when records update
+    useEffect(() => {
+        if (historyListRef.current) {
+            historyListRef.current.scrollTop = historyListRef.current.scrollHeight;
+        }
+    }, [records]);
 
     const loadData = async () => {
         try {
@@ -163,10 +176,89 @@ export default function Dashboard() {
             // ── Daily Missions ──────────────────────────────────
             try {
                 setMissionsLoading(true);
+
+                // ── 0. Init Local State for this run ──
+                const localAddedRecords: string[] = [];
+                let recordsSnapshot = fetchedRecords;
+
+                // Define limitMissions in a wider scope so it can be used later
+                let limitMissions: any[] = [];
+
+                // ── 1. Process YESTERDAY'S Limit Missions (Retroactive Completion) ──
+                // Guard: Only run retroactive check once per mount (prevents strict mode double-fire)
+                if (!retroactiveProcessedRef.current) {
+                    retroactiveProcessedRef.current = true;
+
+                    // If a "limit" mission ended yesterday and is still "in_progress", it means they succeeded.
+                    const yesterday = new Date();
+                    yesterday.setDate(yesterday.getDate() - 1);
+                    const yesterdayStr = getArgentinaDate(yesterday).toISOString().split('T')[0];
+
+                    const yesterdayMissions = await SupabaseDataStore.getDailyMissions(yesterdayStr);
+                    limitMissions = yesterdayMissions.filter(m => m.missionType === 'limit_negative' && m.status === 'in_progress');
+
+                    if (limitMissions.length > 0) {
+                        const yesterdayRecs = await SupabaseDataStore.getRecordsByDate(yesterdayStr);
+
+                        for (const m of limitMissions) {
+                            const { currentValue, status } = DailyMissionEngine.checkMissionProgress(m, yesterdayRecs);
+                            // For limit types, engine returns 'failed' if over, 'in_progress' if under.
+                            if (status !== 'failed') {
+                                const successTitle = `✨ Control Logrado (Ayer)`;
+
+                                // ─── CRITICAL CHECK: prevent double award ───
+                                // Check if we already logged this SPECIFIC result today
+                                const alreadyLogged = recordsSnapshot.some(r =>
+                                    r.date === today &&
+                                    r.actionName === successTitle &&
+                                    r.notes?.includes(m.title)
+                                );
+
+                                if (alreadyLogged) {
+                                    continue;
+                                }
+
+                                // SUCCESS! They survived the day.
+                                await SupabaseDataStore.updateMissionProgress(m.id, currentValue, 'completed');
+                                await SupabaseDataStore.updateUserProgress(user.id, Math.floor(m.rewardPoints * 1.2)); // 20% bonus for discipline
+
+                                // Log it for TODAY so they see the points
+                                await SupabaseDataStore.logSystemEvent({
+                                    userId: user.id,
+                                    actionName: successTitle,
+                                    date: today,
+                                    timestamp: new Date().toISOString(),
+                                    points: m.rewardPoints,
+                                    notes: `Misión de límite completada exitosamente: ${m.title}`
+                                });
+
+                                // NEW: Persist Notification
+                                const notifMsg = NotificationEngine.getSmartMessage('achievement', {
+                                    mission: m.title,
+                                    points: m.rewardPoints
+                                }, (user.preferences?.sarcasmLevel as SarcasmLevel) || 'medium');
+
+                                await SupabaseDataStore.createNotification({
+                                    userId: user.id,
+                                    type: 'achievement',
+                                    title: notifMsg.title,
+                                    message: notifMsg.message,
+                                    context: { missionId: m.id, points: m.rewardPoints }
+                                });
+
+                                toast.success(`¡Misión de ayer completada!`, { description: `${m.title}: +${m.rewardPoints} pts` });
+                                localAddedRecords.push(successTitle);
+                            }
+                        }
+                    }
+                }
+
+                // ── 2. Process TODAY'S Missions ──
                 let missions = await SupabaseDataStore.getDailyMissions(today);
 
-                if (missions.length === 0 && fetchedActions.length > 0) {
+                if (missions.length === 0 && fetchedActions.length > 0 && !missionsGeneratedRef.current) {
                     // First login of the day → generate new missions
+                    missionsGeneratedRef.current = true;
                     const streak = await SupabaseDataStore.getMissionStreak(user.id);
                     const generated = DailyMissionEngine.generateDailyMissions(
                         fetchedActions, today, user.id, streak
@@ -175,65 +267,94 @@ export default function Dashboard() {
                 }
 
                 // Recalculate progress based on today's records
-                const todayRecs = fetchedRecords.filter(r => r.date === today);
+                const todayRecs = recordsSnapshot.filter(r => r.date === today);
                 const updates = DailyMissionEngine.checkAllMissions(missions, todayRecs);
+                let anyChanges = false;
+
                 for (const u of updates) {
                     if (u.changed) {
                         await SupabaseDataStore.updateMissionProgress(u.mission.id, u.newValue, u.newStatus);
                         // Award bonus points + XP when a mission is newly completed
                         if (u.newStatus === 'completed' && u.mission.status !== 'completed') {
+                            const missionTitle = `✨ Misión: ${u.mission.title}`;
+
+                            // ─── CRITICAL CHECK: prevent double award on re-mount ───
+                            const alreadyLogged = recordsSnapshot.some(r =>
+                                r.date === today &&
+                                r.actionName === missionTitle
+                            );
+                            if (alreadyLogged) {
+                                continue;
+                            }
+
                             await SupabaseDataStore.updateUserProgress(user.id, Math.floor(u.mission.rewardPoints / 10));
 
                             // Log history record
                             await SupabaseDataStore.logSystemEvent({
                                 userId: user.id,
-                                actionName: `✨ Misión: ${u.mission.title}`,
+                                actionName: missionTitle,
                                 date: today,
                                 timestamp: new Date().toISOString(),
                                 points: u.mission.rewardPoints,
                                 notes: `Completada: ${u.mission.description}`
                             });
+
+                            // Persist Notification
+                            const notifMsg = NotificationEngine.getSmartMessage('achievement', {
+                                mission: u.mission.title,
+                                points: u.mission.rewardPoints
+                            }, (user.preferences?.sarcasmLevel as SarcasmLevel) || 'medium');
+
+                            await SupabaseDataStore.createNotification({
+                                userId: user.id,
+                                type: 'achievement',
+                                title: notifMsg.title,
+                                message: notifMsg.message,
+                                context: { missionId: u.mission.id, points: u.mission.rewardPoints }
+                            });
+
+                            toast.success(`¡Misión completada!`, { description: `${u.mission.title}: +${u.mission.rewardPoints} pts` });
+
+                            localAddedRecords.push(missionTitle);
+                            anyChanges = true;
+                        } else if (u.mission.status === 'completed' && u.newStatus !== 'completed') {
+                            // Mission was completed, but now it's not (e.g. record deleted)
+                            // 1. Revert XP bonus (10% of points)
+                            await SupabaseDataStore.updateUserProgress(user.id, -Math.floor(u.mission.rewardPoints / 10));
+
+                            // 2. Find and delete the "Mission Completed" history record
+                            const missionTitle = `✨ Misión: ${u.mission.title}`;
+                            const historyRecord = recordsSnapshot.find(r =>
+                                r.date === today &&
+                                r.actionName === missionTitle
+                            );
+
+                            if (historyRecord) {
+                                await SupabaseDataStore.deleteRecord(historyRecord.id);
+                                toast.info(`Progreso de misión revertido`, { description: `${u.mission.title}` });
+                            }
+                            anyChanges = true;
                         }
                     }
                 }
 
                 // Re-fetch after updates for accurate state
-                if (updates.some(u => u.changed)) {
+                if (anyChanges || limitMissions.length > 0) {
                     missions = await SupabaseDataStore.getDailyMissions(today);
-                    // Refresh user level in case XP changed
                     const refreshedUser = await SupabaseDataStore.getCurrentUser();
                     if (refreshedUser) {
                         setUserLevel({ level: refreshedUser.level, xp: refreshedUser.xp });
                     }
+                    // Refresh records to show new system events
+                    const newRecs = await SupabaseDataStore.getRecordsByDate(today);
+                    // Update state carefully without losing other days from fetchedRecords snapshot if it was used elsewhere (it's local so fine)
+                    recordsSnapshot = [...fetchedRecords.filter(r => r.date !== today), ...newRecs];
+                    setRecords(recordsSnapshot);
                 }
 
-                // 2024-05-22 Fix: Ensure all completed missions have a history record
-                // (Backfill if missed due to refresh/timing)
-                for (const m of missions) {
-                    if (m.status === 'completed') {
-                        // Check if we have a record for this mission today
-                        const hasRecord = fetchedRecords.some(r =>
-                            r.date === today &&
-                            // Check title match (handling potential prefix variations)
-                            (r.actionName === `✨ Misión: ${m.title}` || r.notes?.includes(m.title))
-                        );
-
-                        if (!hasRecord) {
-                            console.log('Backfilling missing history for mission:', m.title);
-                            await SupabaseDataStore.logSystemEvent({
-                                userId: user.id,
-                                actionName: `✨ Misión: ${m.title}`,
-                                date: today,
-                                timestamp: new Date().toISOString(),
-                                points: m.rewardPoints,
-                                notes: `Completada: ${m.description} (Recuperada)`
-                            });
-                            // Force refresh records to show it immediately
-                            const newRecs = await SupabaseDataStore.getRecordsByDate(today);
-                            setRecords(newRecs);
-                        }
-                    }
-                }
+                // Refresh notifications so the bell icon shows achievement notifications
+                const allNotifs = await SupabaseDataStore.getAllNotifications();
+                setNotifications(allNotifs);
 
                 setDailyMissions(missions);
             } catch (missionErr) {
@@ -465,6 +586,8 @@ export default function Dashboard() {
             }
 
             await loadData();
+            setIsCreateActionModalOpen(false);
+            toast.success('¡Actividad creada exitosamente!');
         } catch (error) {
             console.error('Error creating action:', error);
             alert('Error al crear la actividad');
@@ -664,7 +787,7 @@ export default function Dashboard() {
                                 {todayRecords.length === 0 ? (
                                     <p className="no-records">El pergamino está en blanco...</p>
                                 ) : (
-                                    <div className="records-list-hub">
+                                    <div className="records-list-hub" ref={historyListRef}>
                                         {todayRecords.map(record => {
                                             let timeStr = '';
                                             if (record.timestamp) {
