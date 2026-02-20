@@ -54,6 +54,7 @@ export default function Navbar({
                 {userLevel && currentUser && (
                     <button className="navbar-profile-chip" onClick={onProfileClick} type="button">
                         <UserLevel
+                            userId={currentUser.id}
                             level={userLevel.level}
                             xp={userLevel.xp}
                             avatarUrl={currentUser.avatarUrl}

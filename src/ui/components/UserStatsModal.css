@@ -196,6 +196,9 @@
     font-size: 1.05rem;
     font-weight: 800;
     color: var(--color-text-primary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .usm-stat--pos {

@@ -168,7 +168,7 @@ export default function GachaRoulette({ isOpen, onClose, currentBalance, onSpinC
 
         // Client-side balance check (server validates too)
         if (!isFree && currentBalance < spinCost) {
-            setError(`Necesitás ${spinCost.toLocaleString()} puntos. Tenés ${Math.floor(currentBalance).toLocaleString()}.`);
+            setError(`Necesitás ${spinCost.toLocaleString()} sendas. Tenés ${Math.floor(currentBalance).toLocaleString()}.`);
             return;
         }
 
@@ -256,7 +256,7 @@ export default function GachaRoulette({ isOpen, onClose, currentBalance, onSpinC
                 {/* Header */}
                 <div className="gacha-header">
                     <h2 className="gacha-title">🎰 Ruleta</h2>
-                    <p className="gacha-subtitle">Gasta tus puntos por premios y multiplicadores</p>
+                    <p className="gacha-subtitle">Gasta tus sendas por premios y multiplicadores</p>
                     <button className="gacha-close" onClick={handleClose}>×</button>
                 </div>
 
@@ -264,7 +264,8 @@ export default function GachaRoulette({ isOpen, onClose, currentBalance, onSpinC
                 <div className="gacha-balance-bar">
                     <span className="gacha-balance-label">Tu Saldo</span>
                     <span className={`gacha-balance-value ${currentBalance < 0 ? 'negative' : ''}`}>
-                        {Math.floor(result?.newBalance ?? currentBalance).toLocaleString()} pts
+                        <img src="/images/senda-coin-large-sinbg.png" alt="Sendas" className="senda-floating-icon senda-floating-icon--sm" />
+                        {Math.floor(result?.newBalance ?? currentBalance).toLocaleString()}
                     </span>
                 </div>
 
@@ -285,12 +286,15 @@ export default function GachaRoulette({ isOpen, onClose, currentBalance, onSpinC
                                 {isFree ? (
                                     <span className="free-badge">¡GRATIS!</span>
                                 ) : (
-                                    <>{spinCost.toLocaleString()} pts</>
+                                    <>
+                                        <img src="/images/senda-coin-large-sinbg.png" alt="Sendas" className="senda-floating-icon" />
+                                        {spinCost.toLocaleString()}
+                                    </>
                                 )}
                             </p>
                             {!isFree && (
                                 <p className="gacha-cost-note">
-                                    Siguiente tirada: {GachaEngine.calculateSpinCost((gachaState?.spinsToday ?? 0) + 1).toLocaleString()} pts (+25%)
+                                    Siguiente tirada: {GachaEngine.calculateSpinCost((gachaState?.spinsToday ?? 0) + 1).toLocaleString()} sendas (+25%)
                                 </p>
                             )}
                         </div>
@@ -336,7 +340,7 @@ export default function GachaRoulette({ isOpen, onClose, currentBalance, onSpinC
                             onClick={handleSpin}
                             disabled={phase === 'spinning' || !canAfford}
                         >
-                            {phase === 'spinning' ? '⏳ Girando...' : isFree ? '🎁 TIRAR GRATIS' : `🎰 TIRAR (${spinCost.toLocaleString()} pts)`}
+                            {phase === 'spinning' ? '⏳ Girando...' : isFree ? '🎁 TIRAR GRATIS' : `🎰 TIRAR (${spinCost.toLocaleString()} sendas)`}
                         </button>
                     </div>
                 ) : result && (
@@ -370,7 +374,7 @@ export default function GachaRoulette({ isOpen, onClose, currentBalance, onSpinC
                         </span>
                         <p className="gacha-result-label">{result.prize.label}</p>
                         <p className="gacha-result-detail">
-                            {result.wasFreeSpin ? 'Tirada gratis' : `Costo: ${result.pointsSpent.toLocaleString()} pts`}
+                            {result.wasFreeSpin ? 'Tirada gratis' : `Costo: ${result.pointsSpent.toLocaleString()} sendas`}
                             {result.buffCreated && ` • Expira en ${GachaEngine.getBuffDurationHours()}h`}
                         </p>
 

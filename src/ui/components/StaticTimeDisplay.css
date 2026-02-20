@@ -56,11 +56,18 @@
     font-weight: 900;
     display: flex;
     justify-content: center;
-    align-items: baseline;
+    align-items: center;
     gap: var(--space-md);
     margin: var(--space-md) 0;
     transition: all 0.3s ease;
     filter: drop-shadow(0 0 30px var(--color-primary-glow));
+}
+
+.static-senda-icon {
+    width: 8rem;
+    height: 8rem;
+    object-fit: contain;
+    filter: drop-shadow(0 0 30px rgba(138, 43, 226, 0.6));
 }
 
 /* Positive points - bright cyan/blue glow */

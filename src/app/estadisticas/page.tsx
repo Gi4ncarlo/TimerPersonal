@@ -73,7 +73,7 @@ function CustomTooltip({ active, payload, label }: any) {
             <div className="custom-tooltip">
                 <p className="tooltip-label">{label}</p>
                 <div className="tooltip-value" style={{ color: firstItem.value >= 0 ? '#10b981' : '#ef4444', fontWeight: 'bold' }}>
-                    ⚡ Balance: {firstItem.value > 0 ? '+' : ''}{firstItem.value} pts
+                    ⚡ Balance: {firstItem.value > 0 ? '+' : ''}{firstItem.value} sendas
                 </div>
             </div>
         );
@@ -113,7 +113,7 @@ function CustomTooltip({ active, payload, label }: any) {
 
                 return (
                     <p key={k} className="tooltip-value" style={{ color: color }}>
-                        {icon} {name}: {value > 0 ? '+' : ''}{value} pts
+                        {icon} {name}: {value > 0 ? '+' : ''}{value} sendas
                     </p>
                 );
             })}
@@ -122,7 +122,7 @@ function CustomTooltip({ active, payload, label }: any) {
             <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', margin: '4px 0', paddingTop: '4px' }}>
                 <div className="tooltip-value" style={{ color: '#fbbf24', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
                     <span>⚡ Puntos Netos:</span>
-                    <span>{dataEntry.totalPoints > 0 ? '+' : ''}{dataEntry.totalPoints} pts</span>
+                    <span>{dataEntry.totalPoints > 0 ? '+' : ''}{dataEntry.totalPoints} sendas</span>
                 </div>
             </div>
         </div>
@@ -343,7 +343,7 @@ export default function EstadisticasPage() {
             };
             return {
                 icon: '📈', class: 'good',
-                text: `Vas por buen camino. ${Math.floor(comparison.difference)} puntos más que la semana pasada.`,
+                text: `Vas por buen camino. ${Math.floor(comparison.difference)} sendas más que la semana pasada.`,
             };
         }
         if (comparison.difference < 0) return {
@@ -534,7 +534,7 @@ export default function EstadisticasPage() {
                         {heatmapData.cells.map((cell, i) => (
                             <div key={i}
                                 className={`hm-cell level-${cell.level < 0 ? 'neg' : cell.level} ${selectedDate === cell.date ? 'selected' : ''}`}
-                                title={`${cell.formatted}: ${cell.points} pts (${cell.activities} act.)`}
+                                title={`${cell.formatted}: ${cell.points} sendas (${cell.activities} act.)`}
                                 onClick={() => setSelectedDate(cell.date === selectedDate ? null : cell.date)}>
                                 <span className="hm-date">{cell.formatted}</span>
                             </div>
@@ -603,7 +603,7 @@ export default function EstadisticasPage() {
                                     </div>
                                     <div className="top-activity-meta">
                                         <span className="meta-count">{act.count}×</span>
-                                        <span className="meta-pts">{Math.floor(act.totalPoints)} pts</span>
+                                        <span className="meta-pts">{Math.floor(act.totalPoints)} sendas</span>
                                     </div>
                                 </div>
                             )) : (
@@ -676,7 +676,7 @@ export default function EstadisticasPage() {
                         <div className="detail-summary">
                             <span className={`detail-balance ${selectedDayData.isPositive ? 'positive' : 'negative'}`}>
                                 Balance: {selectedDayData.isPositive ? '+' : ''}
-                                {Math.floor(selectedDayData.totalPoints)} pts
+                                {Math.floor(selectedDayData.totalPoints)} sendas
                             </span>
                             <span className="detail-count">{selectedDayData.records.length} actividades</span>
                         </div>
@@ -695,7 +695,7 @@ export default function EstadisticasPage() {
                                             </div>
                                             <span className={record.pointsCalculated >= 0 ? 'positive' : 'negative'}>
                                                 {record.pointsCalculated >= 0 ? '+' : ''}
-                                                {Math.floor(record.pointsCalculated)} pts
+                                                {Math.floor(record.pointsCalculated)} sendas
                                             </span>
                                         </div>
                                         {record.notes && <p className="detail-record-notes">{record.notes}</p>}

@@ -34,7 +34,7 @@ export default function AnalisisIAPage() {
                 const totalPoints = day.records.reduce((sum, r) => sum + r.pointsCalculated, 0);
                 const activities = day.records.map(r => `${r.actionName} (${r.notes})`).join(', ');
 
-                return `${format(new Date(day.date), 'EEEE dd/MM', { locale: es })}: ${day.records.length} actividades - Balance: ${totalPoints} puntos - Actividades: ${activities || 'Ninguna'}`;
+                return `${format(new Date(day.date), 'EEEE dd/MM', { locale: es })}: ${day.records.length} actividades - Balance: ${totalPoints} sendas - Actividades: ${activities || 'Ninguna'}`;
             }).join('\n');
 
             // Call API route for insights
@@ -159,7 +159,7 @@ export default function AnalisisIAPage() {
                     <h3>¿Qué datos analiza la IA?</h3>
                     <ul>
                         <li>Últimos 7 días de actividades registradas</li>
-                        <li>Balance de puntos por día</li>
+                        <li>Balance de sendas por día</li>
                         <li>Tipos de actividades realizadas</li>
                         <li>Duración y frecuencia de cada actividad</li>
                         <li>Tu balance global acumulado</li>

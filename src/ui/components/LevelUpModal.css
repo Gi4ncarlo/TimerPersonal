@@ -1,0 +1,165 @@
+.levelup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(10, 10, 20, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    z-index: 9999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.levelup-overlay.open {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.levelup-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    position: relative;
+    padding: 3rem;
+    max-width: 500px;
+}
+
+.levelup-glow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 300px;
+    height: 300px;
+    z-index: -1;
+    opacity: 0;
+    filter: blur(40px);
+    animation: pulse-glow 3s infinite alternate;
+}
+
+.levelup-overlay.open .levelup-glow {
+    opacity: 0.6;
+}
+
+.levelup-title {
+    font-size: 1.5rem;
+    letter-spacing: 2px;
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: 2rem;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+    text-transform: uppercase;
+    font-weight: 700;
+}
+
+.levelup-badge {
+    width: 200px;
+    height: 200px;
+    object-fit: contain;
+    margin-bottom: 1.5rem;
+    transform: scale(0);
+    opacity: 0;
+}
+
+.levelup-badge.animate-pop {
+    animation: pop-bounce 1s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    animation-delay: 0.1s;
+}
+
+.levelup-tier-name {
+    font-size: 3.5rem;
+    font-family: var(--font-display, sans-serif);
+    font-weight: 900;
+    margin: 0;
+    line-height: 1;
+    text-shadow: 0 2px 15px currentColor;
+    opacity: 0;
+    transform: translateY(20px);
+}
+
+.levelup-overlay.open .levelup-tier-name {
+    animation: slide-up-fade 0.5s ease forwards;
+    animation-delay: 0.6s;
+}
+
+.levelup-subtitle {
+    font-size: 1.1rem;
+    color: rgba(255, 255, 255, 0.7);
+    max-width: 80%;
+    margin: 1.5rem 0 2.5rem;
+    line-height: 1.5;
+    opacity: 0;
+}
+
+.levelup-overlay.open .levelup-subtitle {
+    animation: fade-in 0.5s ease forwards;
+    animation-delay: 0.8s;
+}
+
+.levelup-btn {
+    background: transparent;
+    color: #fff;
+    font-family: var(--font-display, sans-serif);
+    font-weight: 700;
+    letter-spacing: 2px;
+    padding: 12px 32px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    opacity: 0;
+    transform: translateY(10px);
+}
+
+.levelup-overlay.open .levelup-btn {
+    animation: slide-up-fade 0.5s ease forwards;
+    animation-delay: 1.2s;
+}
+
+.levelup-btn:hover {
+    transform: translateY(-2px) scale(1.05);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Animations */
+@keyframes pop-bounce {
+    0% {
+        transform: scale(0);
+        opacity: 0;
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes pulse-glow {
+    0% {
+        transform: translate(-50%, -50%) scale(0.9);
+        opacity: 0.4;
+    }
+
+    100% {
+        transform: translate(-50%, -50%) scale(1.1);
+        opacity: 0.8;
+    }
+}
+
+@keyframes slide-up-fade {
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fade-in {
+    to {
+        opacity: 1;
+    }
+}

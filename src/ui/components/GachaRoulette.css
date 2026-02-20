@@ -58,7 +58,6 @@
     border: 1px solid #ffd700;
     color: #fff;
     -webkit-text-fill-color: #fff;
-    text-fill-color: #fff;
     background-clip: border-box;
     -webkit-background-clip: border-box;
     text-shadow: 0 2px 0 rgba(0, 0, 0, 0.8), 0 0 10px rgba(0, 0, 0, 0.5);
@@ -243,6 +242,9 @@
     font-weight: 700;
     color: #4dff88;
     font-variant-numeric: tabular-nums;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .gacha-balance-value.negative {
@@ -273,6 +275,10 @@
     font-weight: 800;
     color: #fff;
     margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
 }
 
 .gacha-cost-amount .free-badge {

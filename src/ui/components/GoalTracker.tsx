@@ -44,7 +44,7 @@ export default function GoalTracker({ goals, actions, onCreateGoal, onDeleteGoal
                     metricUnit = 'horas';
                 }
             } else {
-                metricUnit = selectedMetricType === 'activities' ? (activeTab === 'milestone' ? 'completado' : 'veces') : 'puntos';
+                metricUnit = selectedMetricType === 'activities' ? (activeTab === 'milestone' ? 'completado' : 'veces') : (selectedMetricType === 'points' ? 'sendas' : selectedMetricType);
             }
 
             onCreateGoal(newTitle, newTarget, selectedActionId || undefined, selectedMetricType, metricUnit, selectedPeriod);
@@ -58,7 +58,9 @@ export default function GoalTracker({ goals, actions, onCreateGoal, onDeleteGoal
         }
     };
     const getProgressDisplay = (goal: Goal) => {
-        const unit = goal.metricUnit || '';
+        let unit = goal.metricUnit || '';
+        if (unit === 'puntos' || unit === 'pts') unit = 'sendas';
+
         const displayValue = goal.type === 'duration' || goal.metricType === 'hours'
             ? Number(goal.currentValue).toFixed(1).replace('.0', '')
             : goal.currentValue;
@@ -203,7 +205,7 @@ export default function GoalTracker({ goals, actions, onCreateGoal, onDeleteGoal
                                 <option value="pages">Páginas</option>
                                 <option value="hours">Horas</option>
                                 <option value="kilometers">Kilómetros</option>
-                                <option value="points">Puntos</option>
+                                <option value="points">Sendas</option>
                             </select>
                             {selectedMetricType === 'activities' && (
                                 <p className="field-hint">Ideal para ventas, tareas, etc.</p>

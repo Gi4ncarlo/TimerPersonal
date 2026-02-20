@@ -7,6 +7,7 @@ import './DailyMissionsCard.css';
 interface DailyMissionsCardProps {
     missions: DailyMission[];
     loading?: boolean;
+    streakDays?: number;
 }
 
 const TYPE_CONFIG: Record<DailyMission['missionType'], { icon: string; label: string }> = {
@@ -51,7 +52,7 @@ const XIcon = () => (
     </svg>
 );
 
-export default function DailyMissionsCard({ missions, loading }: DailyMissionsCardProps) {
+export default function DailyMissionsCard({ missions, loading, streakDays = 0 }: DailyMissionsCardProps) {
     if (loading) {
         return (
             <div className="dm-card">
@@ -75,6 +76,18 @@ export default function DailyMissionsCard({ missions, loading }: DailyMissionsCa
     const diffConfig = DIFFICULTY_CONFIG[difficulty];
     const overallProgress = Math.round((completedCount / missions.length) * 100);
 
+    // Calculate next level progress
+    let nextLevelText = '';
+    if (difficulty === 'easy') {
+        const remaining = 3 - streakDays;
+        nextLevelText = remaining > 0 ? `Faltan ${remaining} días para nivel Medio` : 'Sube a Medio mañana';
+    } else if (difficulty === 'medium') {
+        const remaining = 6 - streakDays;
+        nextLevelText = remaining > 0 ? `Faltan ${remaining} días para nivel Difícil` : 'Sube a Difícil mañana';
+    } else {
+        nextLevelText = `¡Nivel Máximo! (Racha: ${streakDays})`;
+    }
+
     return (
         <div className={`dm-card ${allCompleted ? 'dm-card--complete' : ''}`}>
             {/* Header */}
@@ -84,7 +97,12 @@ export default function DailyMissionsCard({ missions, loading }: DailyMissionsCa
                         <Twemoji emoji="⚔️" />
                     </div>
                     <div className="dm-header-text">
-                        <h3 className="dm-title">Misiones Diarias</h3>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <h3 className="dm-title">Misiones Diarias</h3>
+                            <span className="dm-streak-badge" title={nextLevelText}>
+                                🔥 {streakDays}
+                            </span>
+                        </div>
                         <span className="dm-subtitle">
                             {allCompleted ? '¡Todas completadas!' : `${completedCount} de ${missions.length} completadas`}
                         </span>
@@ -144,7 +162,8 @@ export default function DailyMissionsCard({ missions, loading }: DailyMissionsCa
                                     <div className="dm-item-right">
                                         <span className="dm-progress-label">{getProgressLabel(mission)}</span>
                                         <span className={`dm-reward ${isCompleted ? 'dm-reward--claimed' : ''}`}>
-                                            +{mission.rewardPoints}
+                                            <img src="/images/senda-coin-large-sinbg.png" alt="Senda" className="senda-floating-icon senda-floating-icon--sm" />
+                                            {mission.rewardPoints}
                                         </span>
                                     </div>
                                 </div>
@@ -167,7 +186,7 @@ export default function DailyMissionsCard({ missions, loading }: DailyMissionsCa
                 <div className="dm-footer">
                     <div className="dm-footer-reward">
                         <span className="dm-footer-icon">✦</span>
-                        <span>Bonus ganado: <strong>+{totalReward} pts</strong></span>
+                        <span>Bonus ganado: <strong style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', verticalAlign: 'middle' }}><img src="/images/senda-coin-large-sinbg.png" alt="Senda" className="senda-floating-icon senda-floating-icon--sm" />{totalReward}</strong></span>
                     </div>
                 </div>
             )}

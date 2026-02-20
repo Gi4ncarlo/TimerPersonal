@@ -153,3 +153,93 @@ textarea:focus {
 ::-webkit-scrollbar-thumb:hover {
     background: var(--color-accent);
 }
+
+/* ═══════════════════════════════════════════════════════
+   ANTIGRAVITY CURRENCY EFFECTS ("SENDAS")
+   ═══════════════════════════════════════════════════════ */
+
+@keyframes sendaFloat {
+    0% {
+        transform: translateY(0px) scale(1);
+        filter: drop-shadow(0 0 5px rgba(138, 43, 226, 0.4));
+    }
+
+    50% {
+        transform: translateY(-3px) scale(1.02);
+        filter: drop-shadow(0 8px 12px rgba(138, 43, 226, 0.6));
+    }
+
+    100% {
+        transform: translateY(0px) scale(1);
+        filter: drop-shadow(0 0 5px rgba(138, 43, 226, 0.4));
+    }
+}
+
+.senda-floating-icon {
+    width: 42px;
+    height: 42px;
+    object-fit: contain;
+    animation: sendaFloat 3s ease-in-out infinite;
+    flex-shrink: 0;
+}
+
+.senda-floating-icon--lg {
+    width: 84px;
+    height: 84px;
+}
+
+.senda-floating-icon--sm {
+    width: 28px;
+    height: 28px;
+}
+
+/* Glassmorphism balance cards */
+.balance-card {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    box-shadow: 0 10px 30px -5px rgba(138, 43, 226, 0.25);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: var(--space-md) var(--space-lg);
+    transition: all 0.3s ease;
+}
+
+.balance-card:hover {
+    box-shadow: 0 15px 40px -5px rgba(138, 43, 226, 0.4);
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.balance-amount {
+    font-family: var(--font-display);
+    font-weight: 800;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* ═══════════════════════════════════════════════════════
+   PREMIUM 3D BADGES (RANKS)
+   ═══════════════════════════════════════════════════════ */
+@keyframes float-badge {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-8px);
+    }
+}
+
+.badge-premium {
+    animation: float-badge 4s ease-in-out infinite;
+    object-fit: contain;
+    /* Specific drop-shadow will be set via inline styles per tier */
+}

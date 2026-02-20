@@ -15,14 +15,14 @@ export default function StaticTimeDisplay({ totalPoints, label }: StaticTimeDisp
     };
 
     return (
-        <div className={`static-time-container ${isPositive ? 'points-positive' : 'points-negative'}`}>
+        <div className={`static-time-container ${isPositive ? 'points-positive' : 'points-negative'} accumulated-value`}>
             {label && <p className="static-time-label">{label}</p>}
             <div className="static-points-display">
+                <img src="/images/senda-coin-large-sinbg.png" alt="Sendas" className="senda-floating-icon senda-floating-icon--lg static-senda-icon" />
                 <span className="points-value">{formatPoints(absPoints)}</span>
-                <span className="points-unit">pts</span>
             </div>
             <p className="points-suffix">
-                {isPositive ? 'puntos ganados' : 'puntos en deuda'}
+                {isPositive ? 'sendas obtenidas' : 'sendas en deuda'}
             </p>
         </div>
     );

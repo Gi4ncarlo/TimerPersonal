@@ -185,13 +185,13 @@ export interface GachaSpinResult {
     buffCreated?: ActiveBuff;
 }
 
-export type LeagueTier = 'Bronce' | 'Plata' | 'Oro' | 'Platino' | 'Diamante';
+export type LeagueTier = 'Bronce' | 'Plata' | 'Oro' | 'Platino' | 'Diamante' | 'Élite';
 
 export interface League {
     tier: LeagueTier;
     minPoints: number;
     color: string;
-    icon: string;
+    imgUrl: string;
 }
 
 // Shop System
@@ -231,9 +231,10 @@ export interface PurchaseResult {
 }
 
 export const LEAGUE_THRESHOLDS: League[] = [
-    { tier: 'Bronce', minPoints: 0, color: '#cd7f32', icon: '🥉' },
-    { tier: 'Plata', minPoints: 5000, color: '#c0c0c0', icon: '🥈' },
-    { tier: 'Oro', minPoints: 15000, color: '#ffd700', icon: '🥇' },
-    { tier: 'Platino', minPoints: 30000, color: '#e5e4e2', icon: '💎' },
-    { tier: 'Diamante', minPoints: 100000, color: '#b9f2ff', icon: '💠' },
+    { tier: 'Bronce', minPoints: 0, color: '#cd7f32', imgUrl: '/images/bronce-sinfondo.webp' },
+    { tier: 'Plata', minPoints: 35000, color: '#c0c0c0', imgUrl: '/images/plata-sinfondo.webp' },
+    { tier: 'Oro', minPoints: 150000, color: '#ffd700', imgUrl: '/images/oro-sinfondo.webp' },
+    { tier: 'Platino', minPoints: 450000, color: '#e5e4e2', imgUrl: '/images/platino-sinfondo.webp' },
+    { tier: 'Diamante', minPoints: 1000000, color: '#b9f2ff', imgUrl: '/images/diamante-sinfondo.webp' },
+    { tier: 'Élite', minPoints: 2500000, color: '#8a2be2', imgUrl: '/images/elite-sinfondo.webp' },
 ];

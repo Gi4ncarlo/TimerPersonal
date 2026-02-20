@@ -185,9 +185,11 @@
 
 /* Hover */
 .nav-pill:hover {
-    color: rgba(255, 255, 255, 0.85);
-    background: rgba(255, 255, 255, 0.04);
-    border-color: rgba(255, 255, 255, 0.06);
+    color: var(--neon-cyan);
+    background: rgba(0, 245, 255, 0.08);
+    /* neon-cyan transparent */
+    border-color: rgba(0, 245, 255, 0.2);
+    box-shadow: 0 0 10px rgba(0, 245, 255, 0.4);
     transform: translateY(-1px);
 }
 

@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { SupabaseDataStore } from '@/data/supabaseData';
-import { User, SarcasmLevel } from '@/core/types';
+import { User, SarcasmLevel, LEAGUE_THRESHOLDS } from '@/core/types';
 import { getLevelTitle } from '@/core/config/levelRewards';
 import Avatar from './Avatar';
 import { useToast } from '@/core/contexts/ToastContext';
@@ -31,6 +31,20 @@ export default function ProfileModal({ user, isOpen, isOnVacation = false, onClo
         (user.preferences?.sarcasmLevel as SarcasmLevel) || 'medium'
     );
     const [sarcasmSaving, setSarcasmSaving] = useState(false);
+
+    // Liga Premium
+    const [league, setLeague] = useState(LEAGUE_THRESHOLDS[0]);
+
+    useEffect(() => {
+        if (isOpen && user?.id) {
+            SupabaseDataStore.getUserBalance(user.id).then(pts => {
+                const currentLeague = LEAGUE_THRESHOLDS.reduce((prev, curr) => {
+                    return pts >= curr.minPoints ? curr : prev;
+                });
+                setLeague(currentLeague);
+            });
+        }
+    }, [isOpen, user?.id]);
 
     const handleLogout = async () => {
         await SupabaseDataStore.logout();
@@ -146,7 +160,9 @@ export default function ProfileModal({ user, isOpen, isOnVacation = false, onClo
                             </div>
                             <div className="sidebar-user-info">
                                 <span className="sidebar-username">{user.username}</span>
-                                <span className="sidebar-level">{levelTitle}</span>
+                                <span className="sidebar-level" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <img src={league.imgUrl} alt={league.tier} style={{ width: '20px', height: '20px', objectFit: 'contain' }} /> {league.tier}
+                                </span>
                             </div>
                         </div>
 

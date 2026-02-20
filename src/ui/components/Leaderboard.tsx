@@ -39,17 +39,7 @@ const SearchIcon = () => (
     </svg>
 );
 
-const CrownIcon = () => (
-    <svg className="crown-icon" width="24" height="24" viewBox="0 0 24 24" fill="none">
-        <path d="M2 17L4 7L8 11L12 3L16 11L20 7L22 17H2Z" fill="url(#crownGrad)" stroke="#ffd700" strokeWidth="1.5" strokeLinejoin="round" />
-        <defs>
-            <linearGradient id="crownGrad" x1="12" y1="3" x2="12" y2="17">
-                <stop offset="0%" stopColor="#ffd700" />
-                <stop offset="100%" stopColor="#f59e0b" />
-            </linearGradient>
-        </defs>
-    </svg>
-);
+
 
 export default function Leaderboard({ currentEntry, entries, isLoading, onRowClick, viewMode = 'weekly' }: LeaderboardProps) {
     const [searchTerm, setSearchTerm] = useState('');
@@ -140,8 +130,8 @@ export default function Leaderboard({ currentEntry, entries, isLoading, onRowCli
                                 <span className="lb-badge lb-badge--vacation">🏖 Vacaciones</span>
                             )}
                         </div>
-                        <span className="lb-league" style={{ color: league.color }}>
-                            {league.icon} {league.tier}
+                        <span className="lb-league" style={{ color: league.color, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <img src={league.imgUrl} alt={league.tier} style={{ width: '20px', height: '20px', objectFit: 'contain' }} /> {league.tier}
                         </span>
                     </div>
                 </div>
@@ -153,10 +143,10 @@ export default function Leaderboard({ currentEntry, entries, isLoading, onRowCli
                 </div>
 
                 <div className="lb-cell lb-cell--points">
+                    <img src="/images/senda-coin-large-sinbg.png" alt="Senda" className="senda-floating-icon senda-floating-icon--sm" />
                     <span className={`lb-points ${entry.totalPoints >= 0 ? 'lb-points--pos' : 'lb-points--neg'}`}>
                         {Math.floor(entry.totalPoints).toLocaleString()}
                     </span>
-                    <span className="lb-points-label">pts</span>
                 </div>
 
                 <div className="lb-cell lb-cell--delta">
@@ -205,8 +195,7 @@ export default function Leaderboard({ currentEntry, entries, isLoading, onRowCli
                                 className={`lb-podium-card lb-podium-card--${rankLabel}`}
                                 onClick={() => onRowClick?.(entry)}
                             >
-                                {rankLabel === 1 && <CrownIcon />}
-                                <div className="lb-podium-avatar-wrap">
+                                <div className="lb-podium-avatar-wrap" style={{ position: 'relative' }}>
                                     <div className="lb-podium-glow" style={{ background: `radial-gradient(circle, ${league.color}40 0%, transparent 70%)` }} />
                                     <Avatar
                                         src={entry.avatarUrl}
@@ -216,16 +205,19 @@ export default function Leaderboard({ currentEntry, entries, isLoading, onRowCli
                                         className={`lb-podium-avatar lb-podium-avatar--${rankLabel}`}
                                         showBorder={false}
                                     />
-                                    <div className={`lb-podium-rank lb-podium-rank--${rankLabel}`}>
-                                        {getMedalEmoji(rankLabel)} #{rankLabel}
-                                    </div>
+                                    <img
+                                        src={league.imgUrl}
+                                        alt={league.tier}
+                                        className={`badge-premium lb-podium-badge lb-podium-badge--${rankLabel}`}
+                                        style={{ filter: `drop-shadow(0px 6px 10px ${league.color}90)` }}
+                                    />
                                 </div>
                                 <span className="lb-podium-name">{entry.username}</span>
                                 {entry.isOnVacation && (
                                     <span className="lb-badge lb-badge--vacation lb-badge--sm">🏖</span>
                                 )}
                                 <span className="lb-podium-points" style={{ color: league.color }}>
-                                    {Math.floor(entry.totalPoints).toLocaleString()} <small>pts</small>
+                                    <img src="/images/senda-coin-large-sinbg.png" alt="Senda" className="senda-floating-icon senda-floating-icon--sm" /> {Math.floor(entry.totalPoints).toLocaleString()}
                                 </span>
                             </div>
                         );
@@ -239,7 +231,7 @@ export default function Leaderboard({ currentEntry, entries, isLoading, onRowCli
                     <div className="lb-th lb-th--rank">#</div>
                     <div className="lb-th lb-th--user">Usuario</div>
                     <div className="lb-th lb-th--trend">Tendencia</div>
-                    <div className="lb-th lb-th--points">Puntos</div>
+                    <div className="lb-th lb-th--points">Sendas</div>
                     <div className="lb-th lb-th--delta">{viewMode === 'weekly' ? '24h' : 'Últ. Sem.'}</div>
                 </div>
 

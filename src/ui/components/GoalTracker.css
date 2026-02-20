@@ -1,7 +1,8 @@
 .goal-tracker-card {
-    background: var(--color-surface-elevated);
-    backdrop-filter: blur(15px);
-    border: var(--border-ethereal);
+    background: var(--card-bg-glass);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(138, 43, 226, 0.15);
     border-radius: var(--radius-md);
     padding: var(--space-xl);
     margin-bottom: var(--space-2xl);
@@ -48,9 +49,10 @@
 }
 
 .tab-btn.active {
-    background: var(--color-primary);
+    background: linear-gradient(to bottom, var(--neon-purple), #6a1b9a);
     color: white;
     box-shadow: 0 0 15px var(--color-primary-glow);
+    border-color: rgba(138, 43, 226, 0.5);
 }
 
 .goal-section-title {

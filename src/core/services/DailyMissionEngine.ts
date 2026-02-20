@@ -16,9 +16,8 @@ interface MissionTemplate {
     actionFilter?: 'positive' | 'negative';
 }
 
-// ─── Static Mission Pool ────────────────────────────────────────────
 const MISSION_TEMPLATES: MissionTemplate[] = [
-    // THRESHOLD POSITIVE: "Log at least X minutes of {action}"
+    // ── THRESHOLD POSITIVE ──
     {
         missionType: 'threshold_positive',
         titleTemplate: '{action} - {value} min',
@@ -37,8 +36,26 @@ const MISSION_TEMPLATES: MissionTemplate[] = [
         requiresAction: true,
         actionFilter: 'positive',
     },
+    {
+        missionType: 'threshold_positive',
+        titleTemplate: 'Pionero de {action}',
+        descriptionTemplate: 'Avanza {value} minutos en {action} como primer paso al éxito',
+        targets: { easy: 20, medium: 45, hard: 90 },
+        rewards: { easy: 180, medium: 450, hard: 950 },
+        requiresAction: true,
+        actionFilter: 'positive',
+    },
+    {
+        missionType: 'threshold_positive',
+        titleTemplate: 'Foco en {action}',
+        descriptionTemplate: 'Concéntrate {value} minutos en {action} sin interrupciones',
+        targets: { easy: 40, medium: 80, hard: 150 },
+        rewards: { easy: 220, medium: 520, hard: 1050 },
+        requiresAction: true,
+        actionFilter: 'positive',
+    },
 
-    // LIMIT NEGATIVE: "Don't exceed X minutes on {action}"
+    // ── LIMIT NEGATIVE ──
     {
         missionType: 'limit_negative',
         titleTemplate: 'Control de {action}',
@@ -57,8 +74,24 @@ const MISSION_TEMPLATES: MissionTemplate[] = [
         requiresAction: true,
         actionFilter: 'negative',
     },
+    {
+        missionType: 'limit_negative',
+        titleTemplate: 'Día Impecable',
+        descriptionTemplate: 'No superar {value} minutos en TOTAL de actividades negativas',
+        targets: { easy: 180, medium: 120, hard: 60 },
+        rewards: { easy: 300, medium: 600, hard: 1200 },
+        requiresAction: false,
+    },
+    {
+        missionType: 'limit_negative',
+        titleTemplate: 'Fuerza de Voluntad',
+        descriptionTemplate: 'Mantener el total de actividades negativas debajo de {value}m',
+        targets: { easy: 150, medium: 90, hard: 45 },
+        rewards: { easy: 350, medium: 650, hard: 1300 },
+        requiresAction: false,
+    },
 
-    // CONSISTENCY: "Log N different activities"
+    // ── CONSISTENCY ──
     {
         missionType: 'consistency',
         titleTemplate: 'Variedad Productiva',
@@ -73,6 +106,14 @@ const MISSION_TEMPLATES: MissionTemplate[] = [
         descriptionTemplate: 'Completar al menos {value} actividades diferentes',
         targets: { easy: 2, medium: 4, hard: 6 },
         rewards: { easy: 250, medium: 450, hard: 900 },
+        requiresAction: false,
+    },
+    {
+        missionType: 'consistency',
+        titleTemplate: 'Maestro de Hábitos',
+        descriptionTemplate: 'Toca {value} áreas o actividades distintas para crecer',
+        targets: { easy: 3, medium: 5, hard: 7 },
+        rewards: { easy: 300, medium: 600, hard: 1100 },
         requiresAction: false,
     },
 ];
@@ -106,9 +147,22 @@ export class DailyMissionEngine {
         streakDays: number = 0,
     ): Omit<DailyMission, 'id'>[] {
         const difficulty = this.getDifficultyForStreak(streakDays);
-        // Shuffle types to ensure variety, then pick up to 2
-        const allTypes: MissionType[] = ['threshold_positive', 'limit_negative', 'consistency'];
-        const missionTypes = allTypes.sort(() => 0.5 - Math.random());
+        // Weight randomization: limit_negative appears slightly less often (~20% chance if 2 missions are picked instead of 33%)
+        const typePool: MissionType[] = [
+            'threshold_positive', 'threshold_positive',
+            'consistency', 'consistency',
+            'limit_negative'
+        ];
+        
+        // Shuffle and pick 2 unique types
+        const missionTypes: MissionType[] = [];
+        while (missionTypes.length < 2 && typePool.length > 0) {
+            const idx = Math.floor(Math.random() * typePool.length);
+            const pickedType = typePool.splice(idx, 1)[0];
+            if (!missionTypes.includes(pickedType)) {
+                missionTypes.push(pickedType);
+            }
+        }
 
         const positiveActions = actions.filter(a => a.type === 'positive');
         const negativeActions = actions.filter(a => a.type === 'negative');
@@ -186,10 +240,22 @@ export class DailyMissionEngine {
             }
 
             case 'limit_negative': {
-                // Sum minutes for the specific negative action today
-                currentValue = todayRecords
-                    .filter(r => r.actionId === mission.actionId)
-                    .reduce((sum, r) => sum + r.durationMinutes, 0);
+                if (mission.actionId) {
+                    // Sum minutes for the specific negative action today
+                    currentValue = todayRecords
+                        .filter(r => r.actionId === mission.actionId)
+                        .reduce((sum, r) => sum + r.durationMinutes, 0);
+                } else {
+                    // Sum ALL negative activities today (Global limit_negative)
+                    currentValue = todayRecords
+                        // This assumes the Action details aren't strictly joined in DailyRecord 
+                        // but if pointsCalculated < 0 (or some other proxy if we don't have type).
+                        // However, DailyRecord alone doesn't have action.type. 
+                        // To accurately get "all negative minutes" we need to know if an action is negative.
+                        // Usually negative actions yield negative points.
+                        .filter(r => r.pointsCalculated < 0)
+                        .reduce((sum, r) => sum + r.durationMinutes, 0);
+                }
 
                 // Failed if exceeded threshold
                 if (currentValue > mission.targetValue) {

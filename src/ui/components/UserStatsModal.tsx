@@ -110,8 +110,8 @@ export default function UserStatsModal({ entry, isOpen, onClose, viewMode = 'gen
                 <div className="usm-header" style={{ '--accent': league.color } as React.CSSProperties}>
                     <div className="usm-header-info">
                         <h2 className="usm-name">{entry.username}</h2>
-                        <span className="usm-league" style={{ color: league.color }}>
-                            {league.icon} Liga {league.tier}
+                        <span className="usm-league" style={{ color: league.color, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <img src={league.imgUrl} alt={league.tier} style={{ width: '24px', height: '24px', objectFit: 'contain' }} className="badge-premium" /> Liga {league.tier}
                         </span>
                         <span className="usm-view-label">
                             {isWeekly ? 'Resumen Semanal' : 'Estadísticas Generales'}
@@ -188,8 +188,9 @@ export default function UserStatsModal({ entry, isOpen, onClose, viewMode = 'gen
                         <>
                             <div className="usm-stats-grid usm-stats-grid--4">
                                 <div className="usm-stat-card">
-                                    <span className="usm-stat-label">Puntos</span>
+                                    <span className="usm-stat-label">Sendas</span>
                                     <span className={`usm-stat-value ${entry.totalPoints >= 0 ? 'usm-stat--pos' : 'usm-stat--neg'}`}>
+                                        <img src="/images/senda-coin-large-sinbg.png" alt="Senda" className="senda-floating-icon senda-floating-icon--sm" />
                                         {Math.floor(entry.totalPoints).toLocaleString()}
                                     </span>
                                 </div>
@@ -243,8 +244,9 @@ export default function UserStatsModal({ entry, isOpen, onClose, viewMode = 'gen
                         <>
                             <div className="usm-stats-grid usm-stats-grid--3">
                                 <div className="usm-stat-card">
-                                    <span className="usm-stat-label">Puntos totales</span>
+                                    <span className="usm-stat-label">Sendas totales</span>
                                     <span className={`usm-stat-value ${entry.totalPoints >= 0 ? 'usm-stat--pos' : 'usm-stat--neg'}`}>
+                                        <img src="/images/senda-coin-large-sinbg.png" alt="Senda" className="senda-floating-icon senda-floating-icon--sm" />
                                         {Math.floor(entry.totalPoints).toLocaleString()}
                                     </span>
                                 </div>
