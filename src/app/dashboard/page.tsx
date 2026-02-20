@@ -245,6 +245,7 @@ export default function Dashboard() {
                                     message: notifMsg.message,
                                     context: { missionId: m.id, points: m.rewardPoints }
                                 });
+                                console.log('DEBUG: Retroactive notification creation result:', { mission: m.title, result: 'created' });
 
                                 toast.success(`¡Misión de ayer completada!`, { description: `${m.title}: +${m.rewardPoints} pts` });
                                 localAddedRecords.push(successTitle);
@@ -430,7 +431,7 @@ export default function Dashboard() {
         const totalWeeks = Math.max(1, Math.ceil(allRecords.length / 7));
         const weeklyAvgPoints = allRecords.reduce((s, r) => s + r.pointsCalculated, 0) / totalWeeks;
 
-        // 3. Run the notification engine
+        // 3. Run the core notification engine
         const triggers = NotificationEngine.analyzeAndTrigger({
             username: user.username,
             todayRecordsCount: todayRecs.length,
@@ -442,12 +443,116 @@ export default function Dashboard() {
             sarcasmLevel,
         });
 
+        // 3b. Run ADVANCED triggers (stats, competitive, personal records)
+        try {
+            // Today's points total
+            const todayPoints = todayRecs.reduce((s, r) => s + r.pointsCalculated, 0);
+
+            // Previous best day
+            const datePointsMap: Record<string, number> = {};
+            allRecords.forEach(r => {
+                datePointsMap[r.date] = (datePointsMap[r.date] || 0) + r.pointsCalculated;
+            });
+            const previousDayTotals = Object.entries(datePointsMap)
+                .filter(([d]) => d !== today)
+                .map(([, pts]) => pts);
+            const previousBestDayPoints = previousDayTotals.length > 0
+                ? Math.max(...previousDayTotals) : 0;
+
+            // Goals
+            const allGoals = await SupabaseDataStore.getGoals();
+            const goalData = allGoals.map(g => ({
+                title: g.title,
+                currentValue: g.currentValue,
+                targetValue: g.targetValue,
+                isCompleted: g.isCompleted,
+            }));
+
+            // Competitive — closest rival above via all-time leaderboard
+            let closestRivalAbove: { username: string; gap: number } | null = null;
+            try {
+                const leaderboard = await SupabaseDataStore.getAllTimeLeaderboard();
+                const myIdx = leaderboard.findIndex((e: any) => e.userId === user.id);
+                if (myIdx > 0) {
+                    const above = leaderboard[myIdx - 1];
+                    const myPoints = leaderboard[myIdx].totalPoints || 0;
+                    closestRivalAbove = {
+                        username: above.username,
+                        gap: (above.totalPoints || 0) - myPoints,
+                    };
+                }
+            } catch { /* leaderboard unavailable */ }
+
+            // Consistency — active days this week
+            const thisWeekDates = new Set(
+                allRecords.filter(r => r.date >= weekStart).map(r => r.date)
+            );
+            const activeDaysThisWeek = thisWeekDates.size;
+
+            // Hourly peak — most active hour from all records
+            const hourCounts: Record<number, number> = {};
+            allRecords.forEach(r => {
+                if (r.timestamp) {
+                    try {
+                        const h = new Date(r.timestamp).getHours();
+                        hourCounts[h] = (hourCounts[h] || 0) + 1;
+                    } catch { /* skip */ }
+                }
+            });
+            let peakHour: number | undefined;
+            let peakCount = 0;
+            for (const [h, c] of Object.entries(hourCounts)) {
+                if (c > peakCount) {
+                    peakCount = c;
+                    peakHour = Number(h);
+                }
+            }
+            const currentHour = new Date().getHours();
+
+            // Best day of week
+            const DAY_NAMES_ES = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+            const dayOfWeekPoints: number[] = [0, 0, 0, 0, 0, 0, 0];
+            const dayOfWeekCounts: number[] = [0, 0, 0, 0, 0, 0, 0];
+            Object.entries(datePointsMap).forEach(([d, pts]) => {
+                try {
+                    const dow = new Date(d + 'T12:00:00').getDay();
+                    dayOfWeekPoints[dow] += pts;
+                    dayOfWeekCounts[dow]++;
+                } catch { /* skip */ }
+            });
+            const avgByDay = dayOfWeekPoints.map((p, i) =>
+                dayOfWeekCounts[i] > 0 ? p / dayOfWeekCounts[i] : 0
+            );
+            const bestDowIdx = avgByDay.indexOf(Math.max(...avgByDay));
+            const bestDayOfWeek = Math.max(...avgByDay) > 0 ? DAY_NAMES_ES[bestDowIdx] : undefined;
+            const todayDayName = DAY_NAMES_ES[new Date().getDay()];
+
+            const advancedTriggers = NotificationEngine.analyzeAdvancedTriggers({
+                username: user.username,
+                sarcasmLevel,
+                todayRecordsCount: todayRecs.length,
+                todayPoints,
+                previousBestDayPoints,
+                goals: goalData,
+                closestRivalAbove,
+                activeDaysThisWeek,
+                peakHour,
+                currentHour,
+                bestDayOfWeek,
+                todayDayName,
+            });
+
+            triggers.push(...advancedTriggers);
+        } catch (advErr) {
+            console.warn('Advanced triggers error:', advErr);
+        }
+
         // 4. Anti-spam: filter out recently sent notifications
         const recentTypes = await SupabaseDataStore.getRecentNotificationTypes();
         const newTriggers = NotificationEngine.deduplicateTriggers(triggers, recentTypes, {
-            perTypeCooldownHours: 6,
-            globalCooldownHours: 6,
-            maxPerDay: 2
+            perTypeCooldownHours: 12,
+            globalCooldownHours: 4,
+            maxPerDay: 4
         });
 
         // 5. Persist new notifications and show toasts
@@ -459,6 +564,7 @@ export default function Dashboard() {
                 message: trigger.message,
                 context: trigger.context,
             });
+            console.log('DEBUG: Smart notification saved:', { type: trigger.type, saved });
 
             if (saved) {
                 toast(trigger.title, {

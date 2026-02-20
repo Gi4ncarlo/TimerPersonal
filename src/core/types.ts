@@ -126,7 +126,11 @@ export interface DailyMission {
 
 // Smart Notifications System
 export type SarcasmLevel = 'low' | 'medium' | 'brutal';
-export type NotificationType = 'inactivity' | 'ranking_drop' | 'streak_danger' | 'weekly_decline' | 'streak_milestone' | 'comeback' | 'achievement';
+export type NotificationType =
+    | 'inactivity' | 'ranking_drop' | 'streak_danger' | 'weekly_decline'
+    | 'streak_milestone' | 'comeback' | 'achievement'
+    | 'personal_record' | 'goal_progress' | 'competitive_taunt'
+    | 'consistency_praise' | 'hourly_nudge' | 'best_day_reminder';
 
 export interface SmartNotification {
     id: string;

@@ -2,15 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import Leaderboard from '@/ui/components/Leaderboard';
-import QuestCard from '@/ui/components/QuestCard';
 import { SupabaseDataStore } from '@/data/supabaseData';
 import { getWeekStartString, getWeekEndString } from '@/core/utils/dateUtils';
 import UserStatsModal from '@/ui/components/UserStatsModal';
 import Navbar from '@/ui/components/Navbar';
 import ProfileModal from '@/ui/components/ProfileModal';
-import { User, VacationPeriod } from '@/core/types';
+import { User } from '@/core/types';
 import { VacationService } from '@/core/services/VacationService';
 import { getTodayString } from '@/core/utils/dateUtils';
 import './leaderboard.css';
@@ -88,15 +86,16 @@ export default function LeaderboardPage() {
 
                 <header className="page-header">
                     <div className="title-area">
-                        <h1 className="page-title">{viewMode === 'weekly' ? '📡 Clasificación Semanal' : '🪐 Clasificación General'}</h1>
+                        <h1 className="page-title">{viewMode === 'weekly' ? 'Ranking Semanal' : 'Ranking General'}</h1>
                         <p className="page-subtitle">
                             {viewMode === 'weekly'
-                                ? 'Monitoreando el rendimiento del ciclo actual'
-                                : 'Registro histórico de la Orden de Guerreros'}
+                                ? 'Rendimiento del ciclo actual'
+                                : 'Ranking acumulado de todos los tiempos'}
                         </p>
                     </div>
-                    <div className="header-controls" style={{ gap: 'var(--space-md)' }}>
+                    <div className="header-controls">
                         <div className="view-toggle">
+                            <div className="toggle-slider" style={{ transform: viewMode === 'general' ? 'translateX(100%)' : 'translateX(0)' }} />
                             <button
                                 className={`toggle-btn ${viewMode === 'weekly' ? 'active' : ''}`}
                                 onClick={() => setViewMode('weekly')}
@@ -111,28 +110,25 @@ export default function LeaderboardPage() {
                             </button>
                         </div>
                         <button onClick={loadLeaderboard} className="refresh-btn" disabled={isLoading}>
-                            {isLoading ? '...' : '🔄 Sincronizar'}
+                            {isLoading ? '⏳' : '↻'}
                         </button>
                     </div>
                 </header>
 
-                <QuestCard
-                    title={viewMode === 'weekly' ? 'REPORTE SEMANAL' : 'ARCHIVOS GENERALES'}
-                    subtitle={viewMode === 'weekly' ? 'DATOS EN TIEMPO REAL' : 'TOTAL ACUMULADO'}
-                >
-                    <Leaderboard
-                        entries={entries}
-                        currentEntry={currentEntry}
-                        isLoading={isLoading}
-                        onRowClick={(entry) => setSelectedUser(entry)}
-                    />
-                </QuestCard>
+                <Leaderboard
+                    entries={entries}
+                    currentEntry={currentEntry}
+                    isLoading={isLoading}
+                    viewMode={viewMode}
+                    onRowClick={(entry) => setSelectedUser(entry)}
+                />
 
                 {selectedUser && (
                     <UserStatsModal
                         entry={selectedUser}
                         isOpen={!!selectedUser}
                         onClose={() => setSelectedUser(null)}
+                        viewMode={viewMode}
                     />
                 )}
 

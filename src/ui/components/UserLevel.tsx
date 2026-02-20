@@ -1,5 +1,6 @@
 import './UserLevel.css';
 import { getLevelTitle } from '@/core/config/levelRewards';
+import Avatar from './Avatar';
 
 interface UserLevelProps {
     level: number;
@@ -18,11 +19,14 @@ export default function UserLevel({ level, xp, avatarUrl, isOnVacation, onClick 
     return (
         <div className={`user-level-card ${onClick ? 'clickable' : ''}`} onClick={onClick} title="Ver Perfil">
             <div className="avatar-preview">
-                {avatarUrl ? (
-                    <img src={avatarUrl} alt="User" className="preview-img" />
-                ) : (
-                    <div className="preview-placeholder">👤</div>
-                )}
+                <Avatar
+                    src={avatarUrl}
+                    alt="User"
+                    fallback="ME"
+                    size="md"
+                    className="preview-img"
+                    showBorder={false}
+                />
             </div>
 
             <div className="level-info">

@@ -112,10 +112,10 @@ export const SupabaseDataStore = {
                 return { error: 'Formato no vÃ¡lido. Solo se aceptan JPG, PNG o WEBP' };
             }
 
-            // Validate file size (max 5MB)
-            const maxSize = 5 * 1024 * 1024;
+            // Validate file size (max 15MB)
+            const maxSize = 15 * 1024 * 1024;
             if (file.size > maxSize) {
-                return { error: 'El archivo es muy grande. MÃ¡ximo 5MB' };
+                return { error: 'El archivo es muy grande. Máximo 15MB' };
             }
 
             // Generate unique filename
@@ -123,21 +123,7 @@ export const SupabaseDataStore = {
             const fileName = `${userId}-${Date.now()}.${fileExt}`;
             const filePath = `avatars/${fileName}`;
 
-            // Delete old avatar if exists
-            const { data: userData } = await supabase
-                .from('users')
-                .select('avatar_url')
-                .eq('id', userId)
-                .single();
-
-            if (userData?.avatar_url) {
-                const oldPath = userData.avatar_url.split('/').pop();
-                if (oldPath) {
-                    await supabase.storage.from('avatars').remove([`avatars/${oldPath}`]);
-                }
-            }
-
-            // Upload new avatar
+            // 1. Upload new avatar
             const { error: uploadError } = await supabase.storage
                 .from('avatars')
                 .upload(filePath, file, {
@@ -149,10 +135,27 @@ export const SupabaseDataStore = {
                 return { error: uploadError.message };
             }
 
-            // Get public URL
+            // 2. Get public URL
             const { data: { publicUrl } } = supabase.storage
                 .from('avatars')
                 .getPublicUrl(filePath);
+
+            // 3. Delete old avatar if exists AND it's a supabase storage URL
+            const { data: userData } = await supabase
+                .from('users')
+                .select('avatar_url')
+                .eq('id', userId)
+                .single();
+
+            if (userData?.avatar_url) {
+                // Only delete if it matches our storage pattern
+                if (userData.avatar_url.includes('avatars')) {
+                    const oldPath = userData.avatar_url.split('/').pop();
+                    if (oldPath) {
+                        await supabase.storage.from('avatars').remove([`avatars/${oldPath}`]);
+                    }
+                }
+            }
 
             return { url: publicUrl };
         } catch (error) {
@@ -874,14 +877,24 @@ export const SupabaseDataStore = {
                 return [];
             }
 
-            // Fetch all daily records
+            // Fetch all daily records (include date for weekly calc)
             const { data: records } = await supabase
                 .from('daily_records')
-                .select('user_id, points_calculated');
+                .select('user_id, points_calculated, date');
 
             const pointsAggregator: Record<string, number> = {};
             const positiveCountAggregator: Record<string, number> = {};
             const negativeCountAggregator: Record<string, number> = {};
+            const weeklyNetAggregator: Record<string, number> = {};
+
+            // Compute current week start (Monday)
+            const now = new Date();
+            const dayOfWeek = now.getDay();
+            const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+            const weekStartDate = new Date(now);
+            weekStartDate.setDate(now.getDate() + mondayOffset);
+            weekStartDate.setHours(0, 0, 0, 0);
+            const weekStartStr = weekStartDate.toISOString().split('T')[0];
 
             if (records) {
                 records.forEach(r => {
@@ -892,6 +905,11 @@ export const SupabaseDataStore = {
                         positiveCountAggregator[r.user_id] = (positiveCountAggregator[r.user_id] || 0) + 1;
                     } else {
                         negativeCountAggregator[r.user_id] = (negativeCountAggregator[r.user_id] || 0) + 1;
+                    }
+
+                    // Accumulate current week net
+                    if (r.date && r.date >= weekStartStr) {
+                        weeklyNetAggregator[r.user_id] = (weeklyNetAggregator[r.user_id] || 0) + points;
                     }
                 });
             }
@@ -930,6 +948,8 @@ export const SupabaseDataStore = {
                 negativeActivities: negativeCountAggregator[user.id] || 0,
                 goalsCompleted: goalsAggregator[user.id] || 0,
                 strikes: strikeCounts[user.id] || 0,
+                pointsLast24hPositive: weeklyNetAggregator[user.id] || 0,
+                pointsLast24hNegative: 0,
                 isOnVacation: vacationMap[user.id] || false,
                 weekStart: 'All Time',
                 weekEnd: 'All Time'

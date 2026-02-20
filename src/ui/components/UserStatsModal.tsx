@@ -13,6 +13,7 @@ interface LeaderboardEntry {
     pointsLast24hPositive?: number;
     pointsLast24hNegative?: number;
     strikes: number;
+    avatarUrl?: string;
     weekStart: string;
     weekEnd: string;
 }
@@ -21,9 +22,10 @@ interface UserStatsModalProps {
     entry: LeaderboardEntry;
     isOpen: boolean;
     onClose: () => void;
+    viewMode?: 'weekly' | 'general';
 }
 
-export default function UserStatsModal({ entry, isOpen, onClose }: UserStatsModalProps) {
+export default function UserStatsModal({ entry, isOpen, onClose, viewMode = 'general' }: UserStatsModalProps) {
     const modalRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -50,74 +52,99 @@ export default function UserStatsModal({ entry, isOpen, onClose }: UserStatsModa
 
     const league = getLeague(entry.totalPoints);
 
-    // RADAR CHART DATA (Refined SVG Radar)
-    const metrics = [
-        {
-            label: 'Producción',
-            value: Math.min(100, (entry.positiveActivities / 50) * 100),
-            desc: 'Basado en el volumen de actividades positivas realizadas.'
-        },
-        {
-            label: 'Disciplina',
-            value: Math.max(0, 100 - (entry.strikes * 20)),
-            desc: 'Resistencia a las faltas. Baja con cada Strike recibido.'
-        },
-        {
-            label: 'Enfoque',
-            value: Math.min(100, (entry.goalsCompleted / 10) * 100),
-            desc: 'Tasa de cumplimiento de objetivos semanales.'
-        },
-        {
-            label: 'Poder',
-            value: Math.min(100, (Math.abs(entry.totalPoints) / 50000) * 100),
-            desc: 'Balance total acumulado en el tiempo.'
-        },
-    ];
+    // Context-aware metrics based on viewMode
+    const isWeekly = viewMode === 'weekly';
 
-    const generateRadarPoints = () => {
-        const center = 100;
-        const radius = 80;
-        return metrics.map((m, i) => {
-            const angle = (i * 2 * Math.PI) / metrics.length - Math.PI / 2;
-            const x = center + (radius * (m.value / 100)) * Math.cos(angle);
-            const y = center + (radius * (m.value / 100)) * Math.sin(angle);
-            return `${x},${y}`;
-        }).join(' ');
-    };
+    const metrics = isWeekly
+        ? [
+            {
+                label: 'Productividad',
+                value: Math.min(100, (entry.positiveActivities / 30) * 100),
+                desc: 'Actividades positivas esta semana'
+            },
+            {
+                label: 'Disciplina',
+                value: Math.max(0, 100 - (entry.strikes * 25)),
+                desc: 'Penalización por strikes esta semana'
+            },
+            {
+                label: 'Objetivos',
+                value: Math.min(100, (entry.goalsCompleted / 5) * 100),
+                desc: 'Metas completadas esta semana'
+            },
+            {
+                label: 'Balance',
+                value: Math.min(100, Math.max(0, ((entry.totalPoints + 5000) / 10000) * 100)),
+                desc: 'Balance neto semanal'
+            },
+        ]
+        : [
+            {
+                label: 'Producción',
+                value: Math.min(100, (entry.positiveActivities / 50) * 100),
+                desc: 'Volumen total de actividades positivas'
+            },
+            {
+                label: 'Disciplina',
+                value: Math.max(0, 100 - (entry.strikes * 20)),
+                desc: 'Resistencia a las faltas acumuladas'
+            },
+            {
+                label: 'Enfoque',
+                value: Math.min(100, (entry.goalsCompleted / 10) * 100),
+                desc: 'Tasa de cumplimiento de objetivos'
+            },
+            {
+                label: 'Poder',
+                value: Math.min(100, (Math.abs(entry.totalPoints) / 50000) * 100),
+                desc: 'Balance total acumulado'
+            },
+        ];
+
+    const net24h = (entry.pointsLast24hPositive || 0) + (entry.pointsLast24hNegative || 0);
 
     return (
-        <div className="stats-modal-overlay">
-            <div className="stats-modal-content" ref={modalRef}>
-                <div className="stats-modal-header" style={{ borderBottomColor: league.color }}>
-                    <div className="header-user-info">
-                        <h2 className="stats-modal-title">{entry.username}</h2>
-                        <span className="modal-league-tag" style={{ color: league.color }}>
+        <div className="usm-overlay">
+            <div className="usm-content" ref={modalRef}>
+                {/* Header */}
+                <div className="usm-header" style={{ '--accent': league.color } as React.CSSProperties}>
+                    <div className="usm-header-info">
+                        <h2 className="usm-name">{entry.username}</h2>
+                        <span className="usm-league" style={{ color: league.color }}>
                             {league.icon} Liga {league.tier}
                         </span>
+                        <span className="usm-view-label">
+                            {isWeekly ? 'Resumen Semanal' : 'Estadísticas Generales'}
+                        </span>
                     </div>
-                    <button className="stats-modal-close" onClick={onClose}>×</button>
+                    <button className="usm-close" onClick={onClose}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                            <line x1="18" y1="6" x2="6" y2="18" />
+                            <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                    </button>
                 </div>
 
-                <div className="stats-modal-body">
-                    <div className="radar-container">
-                        <svg width="280" height="280" viewBox="0 0 240 240" className="radar-svg">
+                <div className="usm-body">
+                    {/* Radar Chart */}
+                    <div className="usm-radar-wrap">
+                        <svg width="260" height="260" viewBox="0 0 240 240" className="usm-radar-svg">
                             <defs>
-                                <radialGradient id="radarGlow" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
-                                    <stop offset="0%" stopColor={league.color} stopOpacity="0.4" />
-                                    <stop offset="100%" stopColor={league.color} stopOpacity="0" />
+                                <radialGradient id="radarFill" cx="50%" cy="50%" r="50%">
+                                    <stop offset="0%" stopColor={league.color} stopOpacity="0.35" />
+                                    <stop offset="100%" stopColor={league.color} stopOpacity="0.05" />
                                 </radialGradient>
                             </defs>
 
-                            {/* Grid circles */}
-                            <circle cx="120" cy="120" r="80" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="1" />
-                            <circle cx="120" cy="120" r="60" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
-                            <circle cx="120" cy="120" r="40" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
-                            <circle cx="120" cy="120" r="20" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="1" />
+                            {/* Grid */}
+                            {[80, 60, 40, 20].map(r => (
+                                <circle key={r} cx="120" cy="120" r={r} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="1" />
+                            ))}
 
                             {/* Axes */}
                             {metrics.map((_, i) => {
                                 const angle = (i * 2 * Math.PI) / metrics.length - Math.PI / 2;
-                                return <line key={i} x1="120" y1="120" x2={120 + 80 * Math.cos(angle)} y2={120 + 80 * Math.sin(angle)} stroke="rgba(255,255,255,0.2)" strokeDasharray="4,4" />;
+                                return <line key={i} x1="120" y1="120" x2={120 + 80 * Math.cos(angle)} y2={120 + 80 * Math.sin(angle)} stroke="rgba(255,255,255,0.1)" strokeDasharray="3,3" />;
                             })}
 
                             {/* Shape */}
@@ -128,61 +155,145 @@ export default function UserStatsModal({ entry, isOpen, onClose }: UserStatsModa
                                     const y = 120 + (80 * (m.value / 100)) * Math.sin(angle);
                                     return `${x},${y}`;
                                 }).join(' ')}
-                                fill="url(#radarGlow)"
+                                fill="url(#radarFill)"
                                 stroke={league.color}
-                                strokeWidth="3"
-                                className="radar-polygon"
+                                strokeWidth="2.5"
+                                className="usm-radar-shape"
                             />
 
-                            {/* Interactive Labels */}
+                            {/* Labels */}
                             {metrics.map((m, i) => {
                                 const angle = (i * 2 * Math.PI) / metrics.length - Math.PI / 2;
-                                const x = 120 + 105 * Math.cos(angle);
-                                const y = 120 + 105 * Math.sin(angle);
-
-                                // Adjust text anchor based on position
-                                type TextAnchor = "inherit" | "middle" | "start" | "end";
+                                const x = 120 + 102 * Math.cos(angle);
+                                const y = 120 + 102 * Math.sin(angle);
+                                type TextAnchor = "middle" | "start" | "end";
                                 let textAnchor: TextAnchor = "middle";
                                 if (Math.cos(angle) > 0.1) textAnchor = "start";
                                 if (Math.cos(angle) < -0.1) textAnchor = "end";
 
                                 return (
-                                    <g key={i} className="radar-label-group">
-                                        <text
-                                            x={x}
-                                            y={y}
-                                            textAnchor={textAnchor}
-                                            className="radar-text"
-                                            dominantBaseline="middle"
-                                        >
+                                    <g key={i}>
+                                        <text x={x} y={y} textAnchor={textAnchor} dominantBaseline="middle" className="usm-radar-label">
                                             {m.label}
                                         </text>
                                         <title>{m.desc}</title>
-                                        {/* Larger hover target area */}
-                                        <circle cx={x} cy={y} r="25" fill="transparent" className="radar-hover-target" />
                                     </g>
                                 );
                             })}
                         </svg>
                     </div>
 
-                    <div className="stats-summary-grid">
-                        <div className="summary-card">
-                            <span className="sc-label">PUNTOS</span>
-                            <span className={`sc-value ${entry.totalPoints >= 0 ? 'positive' : 'negative'}`}>{Math.floor(entry.totalPoints).toLocaleString()}</span>
-                        </div>
-                        <div className="summary-card">
-                            <span className="sc-label">OBJETIVOS</span>
-                            <span className="sc-value highlight">{entry.goalsCompleted}</span>
-                        </div>
-                        <div className="summary-card">
-                            <span className="sc-label">FALTAS</span>
-                            <span className="sc-value negative">{entry.strikes}</span>
-                        </div>
-                    </div>
+                    {/* Stats Grid — context-aware */}
+                    {isWeekly ? (
+                        <>
+                            <div className="usm-stats-grid usm-stats-grid--4">
+                                <div className="usm-stat-card">
+                                    <span className="usm-stat-label">Puntos</span>
+                                    <span className={`usm-stat-value ${entry.totalPoints >= 0 ? 'usm-stat--pos' : 'usm-stat--neg'}`}>
+                                        {Math.floor(entry.totalPoints).toLocaleString()}
+                                    </span>
+                                </div>
+                                <div className="usm-stat-card">
+                                    <span className="usm-stat-label">Neto 24h</span>
+                                    <span className={`usm-stat-value ${net24h >= 0 ? 'usm-stat--pos' : 'usm-stat--neg'}`}>
+                                        {net24h >= 0 ? '+' : ''}{Math.floor(net24h).toLocaleString()}
+                                    </span>
+                                </div>
+                                <div className="usm-stat-card">
+                                    <span className="usm-stat-label">Metas</span>
+                                    <span className="usm-stat-value usm-stat--highlight">{entry.goalsCompleted}</span>
+                                </div>
+                                <div className="usm-stat-card">
+                                    <span className="usm-stat-label">Faltas</span>
+                                    <span className={`usm-stat-value ${entry.strikes > 0 ? 'usm-stat--neg' : 'usm-stat--muted'}`}>
+                                        {entry.strikes}
+                                    </span>
+                                </div>
+                            </div>
 
-                    <div className="modal-footer-info">
-                        Vencimiento de rango: Domingo 23:59hs
+                            {/* Activity breakdown — weekly specific */}
+                            <div className="usm-activity-bar">
+                                <div className="usm-activity-header">
+                                    <span className="usm-activity-title">Actividades</span>
+                                    <span className="usm-activity-total">{entry.positiveActivities + entry.negativeActivities} total</span>
+                                </div>
+                                <div className="usm-bar-track">
+                                    <div
+                                        className="usm-bar-fill usm-bar-fill--pos"
+                                        style={{
+                                            width: `${entry.positiveActivities + entry.negativeActivities > 0
+                                                ? (entry.positiveActivities / (entry.positiveActivities + entry.negativeActivities)) * 100
+                                                : 50}%`
+                                        }}
+                                    />
+                                </div>
+                                <div className="usm-bar-legend">
+                                    <div className="usm-bar-legend-item">
+                                        <span className="usm-dot usm-dot--pos" />
+                                        <span>{entry.positiveActivities} positivas</span>
+                                    </div>
+                                    <div className="usm-bar-legend-item">
+                                        <span className="usm-dot usm-dot--neg" />
+                                        <span>{entry.negativeActivities} negativas</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            <div className="usm-stats-grid usm-stats-grid--3">
+                                <div className="usm-stat-card">
+                                    <span className="usm-stat-label">Puntos totales</span>
+                                    <span className={`usm-stat-value ${entry.totalPoints >= 0 ? 'usm-stat--pos' : 'usm-stat--neg'}`}>
+                                        {Math.floor(entry.totalPoints).toLocaleString()}
+                                    </span>
+                                </div>
+                                <div className="usm-stat-card">
+                                    <span className="usm-stat-label">Objetivos</span>
+                                    <span className="usm-stat-value usm-stat--highlight">{entry.goalsCompleted}</span>
+                                </div>
+                                <div className="usm-stat-card">
+                                    <span className="usm-stat-label">Faltas</span>
+                                    <span className={`usm-stat-value ${entry.strikes > 0 ? 'usm-stat--neg' : 'usm-stat--muted'}`}>
+                                        {entry.strikes}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Activity breakdown — general */}
+                            <div className="usm-activity-bar">
+                                <div className="usm-activity-header">
+                                    <span className="usm-activity-title">Balance de actividades</span>
+                                    <span className="usm-activity-total">{entry.positiveActivities + entry.negativeActivities} total</span>
+                                </div>
+                                <div className="usm-bar-track">
+                                    <div
+                                        className="usm-bar-fill usm-bar-fill--pos"
+                                        style={{
+                                            width: `${entry.positiveActivities + entry.negativeActivities > 0
+                                                ? (entry.positiveActivities / (entry.positiveActivities + entry.negativeActivities)) * 100
+                                                : 50}%`
+                                        }}
+                                    />
+                                </div>
+                                <div className="usm-bar-legend">
+                                    <div className="usm-bar-legend-item">
+                                        <span className="usm-dot usm-dot--pos" />
+                                        <span>{entry.positiveActivities} positivas</span>
+                                    </div>
+                                    <div className="usm-bar-legend-item">
+                                        <span className="usm-dot usm-dot--neg" />
+                                        <span>{entry.negativeActivities} negativas</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </>
+                    )}
+
+                    <div className="usm-footer">
+                        {isWeekly
+                            ? `Semana: ${entry.weekStart} — ${entry.weekEnd}`
+                            : 'Estadísticas acumuladas de todos los tiempos'}
                     </div>
                 </div>
             </div>

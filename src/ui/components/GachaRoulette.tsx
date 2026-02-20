@@ -8,6 +8,15 @@ import Twemoji from './Twemoji';
 import GachaWheel from './GachaWheel';
 import './GachaRoulette.css';
 
+const FREE_SPIN_COOLDOWN_DAYS = 7;
+
+interface CountdownTime {
+    days: number;
+    hours: number;
+    minutes: number;
+    seconds: number;
+}
+
 // ─── Types ──────────────────────────────────────────
 type SpinPhase = 'idle' | 'spinning' | 'revealing' | 'result';
 
@@ -50,7 +59,7 @@ export default function GachaRoulette({ isOpen, onClose, currentBalance, onSpinC
         nextSpinCost: number;
     } | null>(null);
     const [error, setError] = useState<string | null>(null);
-    // wheelRef removed as animation is handled by GachaWheel component
+    const [countdown, setCountdown] = useState<CountdownTime | null>(null);
 
     // Load gacha state on open
     useEffect(() => {
@@ -61,6 +70,38 @@ export default function GachaRoulette({ isOpen, onClose, currentBalance, onSpinC
             setError(null);
         }
     }, [isOpen]);
+
+    // Live countdown timer for next free spin
+    useEffect(() => {
+        if (isFree || !gachaState?.freeSpinUsedAt) {
+            setCountdown(null);
+            return;
+        }
+
+        const computeCountdown = () => {
+            const usedAt = new Date(gachaState.freeSpinUsedAt!).getTime();
+            const nextFreeAt = usedAt + FREE_SPIN_COOLDOWN_DAYS * 24 * 60 * 60 * 1000;
+            const remaining = nextFreeAt - Date.now();
+
+            if (remaining <= 0) {
+                setCountdown(null);
+                setIsFree(true);
+                setSpinCost(0);
+                return;
+            }
+
+            const days = Math.floor(remaining / (24 * 60 * 60 * 1000));
+            const hours = Math.floor((remaining % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+            const minutes = Math.floor((remaining % (60 * 60 * 1000)) / (60 * 1000));
+            const seconds = Math.floor((remaining % (60 * 1000)) / 1000);
+
+            setCountdown({ days, hours, minutes, seconds });
+        };
+
+        computeCountdown();
+        const interval = setInterval(computeCountdown, 1000);
+        return () => clearInterval(interval);
+    }, [isFree, gachaState?.freeSpinUsedAt]);
 
     const loadGachaState = async () => {
         try {
@@ -231,10 +272,7 @@ export default function GachaRoulette({ isOpen, onClose, currentBalance, onSpinC
                 {phase !== 'result' ? (
                     <div className="gacha-wheel-container">
                         {/* Wheel */}
-                        {/* Wheel */}
-                        <div style={{ padding: '10px' }}>
-                            <GachaWheel spinning={phase === 'spinning'} size={260} />
-                        </div>
+                        <GachaWheel spinning={phase === 'spinning'} size={220} />
 
                         {/* Cost Display */}
                         <div className="gacha-cost-display">
@@ -257,9 +295,37 @@ export default function GachaRoulette({ isOpen, onClose, currentBalance, onSpinC
                             )}
                         </div>
 
+                        {/* Free Spin Countdown */}
+                        {!isFree && countdown && (
+                            <div className="gacha-countdown">
+                                <span className="gacha-countdown-label">Próximo giro gratis en</span>
+                                <div className="gacha-countdown-timer">
+                                    <div className="gacha-cd-unit">
+                                        <span className="gacha-cd-value">{String(countdown.days).padStart(2, '0')}</span>
+                                        <span className="gacha-cd-label">días</span>
+                                    </div>
+                                    <span className="gacha-cd-sep">:</span>
+                                    <div className="gacha-cd-unit">
+                                        <span className="gacha-cd-value">{String(countdown.hours).padStart(2, '0')}</span>
+                                        <span className="gacha-cd-label">hrs</span>
+                                    </div>
+                                    <span className="gacha-cd-sep">:</span>
+                                    <div className="gacha-cd-unit">
+                                        <span className="gacha-cd-value">{String(countdown.minutes).padStart(2, '0')}</span>
+                                        <span className="gacha-cd-label">min</span>
+                                    </div>
+                                    <span className="gacha-cd-sep">:</span>
+                                    <div className="gacha-cd-unit">
+                                        <span className="gacha-cd-value">{String(countdown.seconds).padStart(2, '0')}</span>
+                                        <span className="gacha-cd-label">seg</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Error Message */}
                         {error && (
-                            <p style={{ color: '#ff6b6b', fontSize: '0.8rem', margin: 0, textAlign: 'center' }}>
+                            <p className="gacha-error-msg">
                                 {error}
                             </p>
                         )}
