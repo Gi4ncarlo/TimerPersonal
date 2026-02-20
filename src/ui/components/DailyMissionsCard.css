@@ -1,242 +1,485 @@
-/* ═══════════════════════════════════════════
-   Daily Missions Card - Compact Professional UI
-   ═══════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════
+   DAILY MISSIONS — Premium Redesign
+   ═══════════════════════════════════════════════════════ */
 
-.daily-missions-card {
-    background: var(--color-surface-elevated);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: var(--radius-md);
-    padding: var(--space-md);
-    box-shadow: var(--shadow-sm);
+/* ── Card Container ──────────────────────────────────── */
+.dm-card {
+    background: linear-gradient(145deg, rgba(22, 25, 40, 0.95) 0%, rgba(14, 16, 24, 0.95) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 16px;
+    padding: 0;
     margin-bottom: 40px;
     position: relative;
     overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(12px);
 }
 
-/* Header - Compact */
-.missions-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: var(--space-md);
-    padding-bottom: var(--space-sm);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.missions-title-group {
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
-}
-
-.missions-icon {
-    font-size: 1.1rem;
-}
-
-.missions-title {
-    font-family: var(--font-display);
-    font-size: var(--font-sm);
-    font-weight: 700;
-    color: var(--color-text-primary);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin: 0;
-}
-
-.missions-difficulty-label {
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-family: var(--font-mono);
-    font-size: 0.55rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    opacity: 0.8;
-}
-
-.missions-difficulty-label.easy {
-    color: #4ade80;
-    background: rgba(74, 222, 128, 0.1);
-}
-
-.missions-difficulty-label.medium {
-    color: #facc15;
-    background: rgba(250, 204, 21, 0.1);
-}
-
-.missions-difficulty-label.hard {
-    color: #f87171;
-    background: rgba(248, 113, 113, 0.1);
-}
-
-/* Mission Items - Grid for Desktop */
-.missions-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.mission-item {
-    display: flex;
-    align-items: center;
-    gap: var(--space-md);
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid rgba(255, 255, 255, 0.04);
-    border-radius: var(--radius-sm);
-    padding: 8px 12px;
-    transition: all 0.2s ease;
-}
-
-.mission-item:hover {
-    background: rgba(255, 255, 255, 0.04);
-    border-color: rgba(255, 255, 255, 0.1);
-}
-
-.mission-item.completed {
-    background: rgba(34, 197, 94, 0.05);
+.dm-card--complete {
     border-color: rgba(34, 197, 94, 0.2);
 }
 
-.mission-item.failed {
-    opacity: 0.6;
+.dm-card--complete::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #22c55e, transparent);
+    animation: completeSweep 2.5s ease-in-out infinite;
 }
 
-/* Icon & Title Area */
-.mission-icon-area {
+@keyframes completeSweep {
+    0% {
+        opacity: 0.4;
+        transform: scaleX(0.3);
+    }
+
+    50% {
+        opacity: 1;
+        transform: scaleX(1);
+    }
+
+    100% {
+        opacity: 0.4;
+        transform: scaleX(0.3);
+    }
+}
+
+/* ── Header ──────────────────────────────────────────── */
+.dm-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 22px 12px;
+}
+
+.dm-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.dm-header-icon {
+    width: 36px;
+    height: 36px;
+    background: rgba(168, 85, 247, 0.12);
+    border: 1px solid rgba(168, 85, 247, 0.2);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+}
+
+.dm-header-text {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.dm-title {
+    font-family: var(--font-display);
+    font-size: 0.92rem;
+    font-weight: 800;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin: 0;
+}
+
+.dm-subtitle {
+    font-size: 0.7rem;
+    color: var(--color-text-muted);
+    font-weight: 500;
+}
+
+.dm-header-right {
+    display: flex;
+    align-items: center;
+}
+
+/* ── Difficulty Indicator ────────────────────────────── */
+.dm-difficulty {
     display: flex;
     align-items: center;
     gap: 8px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.dm-diff-dots {
+    display: flex;
+    gap: 4px;
+}
+
+.dm-diff-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.12);
+    transition: background 0.3s;
+}
+
+.dm-difficulty--easy .dm-diff-dot.active {
+    background: #4ade80;
+    box-shadow: 0 0 6px rgba(74, 222, 128, 0.5);
+}
+
+.dm-difficulty--medium .dm-diff-dot.active {
+    background: #facc15;
+    box-shadow: 0 0 6px rgba(250, 204, 21, 0.5);
+}
+
+.dm-difficulty--hard .dm-diff-dot.active {
+    background: #f87171;
+    box-shadow: 0 0 6px rgba(248, 113, 113, 0.5);
+}
+
+.dm-diff-label {
+    font-family: var(--font-display);
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-text-muted);
+}
+
+.dm-difficulty--easy .dm-diff-label {
+    color: #4ade80;
+}
+
+.dm-difficulty--medium .dm-diff-label {
+    color: #facc15;
+}
+
+.dm-difficulty--hard .dm-diff-label {
+    color: #f87171;
+}
+
+/* ── Overall Progress ────────────────────────────────── */
+.dm-overall-progress {
+    padding: 0 22px 6px;
+}
+
+.dm-overall-track {
+    width: 100%;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.dm-overall-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #a855f7, #6366f1);
+    border-radius: 4px;
+    transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dm-overall-fill--done {
+    background: linear-gradient(90deg, #22c55e, #10b981);
+}
+
+/* ── Mission List ────────────────────────────────────── */
+.dm-list {
+    display: flex;
+    flex-direction: column;
+    padding: 6px 14px 14px;
+    gap: 4px;
+}
+
+/* ── Mission Item ────────────────────────────────────── */
+.dm-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 10px;
+    border-radius: 10px;
+    transition: all 0.25s ease;
+    animation: dmItemIn 0.35s ease-out both;
+    cursor: default;
+}
+
+@keyframes dmItemIn {
+    from {
+        opacity: 0;
+        transform: translateX(-8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.dm-item:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.dm-item--completed {
+    opacity: 0.85;
+}
+
+.dm-item--failed {
+    opacity: 0.5;
+}
+
+/* ── Status Dot ──────────────────────────────────────── */
+.dm-status-dot {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.dm-status-dot--in_progress {
+    border: 2px solid rgba(168, 85, 247, 0.4);
+    background: rgba(168, 85, 247, 0.08);
+    animation: dotPulse 2.5s ease-in-out infinite;
+}
+
+@keyframes dotPulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 rgba(168, 85, 247, 0);
+    }
+
+    50% {
+        box-shadow: 0 0 0 4px rgba(168, 85, 247, 0.15);
+    }
+}
+
+.dm-status-dot--completed {
+    border: 2px solid #22c55e;
+    background: rgba(34, 197, 94, 0.15);
+    color: #22c55e;
+}
+
+.dm-status-dot--failed {
+    border: 2px solid #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+
+/* ── Item Body ────────────────────────────────────────── */
+.dm-item-body {
     flex: 1;
     min-width: 0;
-    /* Text truncation fix */
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
 }
 
-.mission-type-icon {
-    font-size: 1rem;
-    opacity: 0.8;
+.dm-item-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
 }
 
-.mission-name {
+.dm-item-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    flex: 1;
+}
+
+.dm-type-icon {
+    font-size: 0.95rem;
+    flex-shrink: 0;
+}
+
+.dm-item-name {
     font-family: var(--font-body);
-    font-size: 0.85rem;
-    font-weight: 500;
+    font-size: 0.88rem;
+    font-weight: 600;
     color: var(--color-text-primary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.mission-desc-tooltip {
-    display: none;
-    /* Only show on hover via title attr usually, or we can use a custom tooltip */
+.dm-item--completed .dm-item-name {
+    color: var(--color-text-secondary);
 }
 
-/* Progress & Reward Area */
-.mission-meta-area {
+.dm-item-right {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 10px;
     flex-shrink: 0;
 }
 
-.mission-reward-badge {
+.dm-progress-label {
     font-family: var(--font-mono);
-    font-size: 0.65rem;
-    color: #f59e0b;
-    background: rgba(245, 158, 11, 0.1);
-    padding: 2px 6px;
-    border-radius: 4px;
+    font-size: 0.68rem;
+    color: var(--color-text-muted);
+    font-weight: 600;
     white-space: nowrap;
 }
 
-.mission-reward-badge.claimed {
-    color: #4ade80;
-    background: rgba(74, 222, 128, 0.1);
+.dm-reward {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #f59e0b;
+    background: rgba(245, 158, 11, 0.1);
+    padding: 2px 8px;
+    border-radius: 6px;
+    white-space: nowrap;
+    border: 1px solid rgba(245, 158, 11, 0.15);
 }
 
-.mission-progress-compact {
-    width: 80px;
-    height: 4px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 2px;
+.dm-reward--claimed {
+    color: #22c55e;
+    background: rgba(34, 197, 94, 0.1);
+    border-color: rgba(34, 197, 94, 0.15);
+}
+
+/* ── Progress Bar ────────────────────────────────────── */
+.dm-progress-track {
+    width: 100%;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 4px;
     overflow: hidden;
 }
 
-.mission-progress-fill {
+.dm-progress-fill {
     height: 100%;
-    border-radius: 2px;
-    transition: width 0.5s ease;
+    border-radius: 4px;
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.mission-progress-fill.in_progress {
-    background: #a855f7;
+.dm-progress-fill--in_progress {
+    background: linear-gradient(90deg, #a855f7, #8b5cf6);
 }
 
-.mission-progress-fill.completed {
-    background: #22c55e;
+.dm-progress-fill--completed {
+    background: linear-gradient(90deg, #22c55e, #10b981);
 }
 
-.mission-progress-fill.failed {
-    background: #ef4444;
+.dm-progress-fill--failed {
+    background: linear-gradient(90deg, #ef4444, #dc2626);
 }
 
-.mission-progress-text {
-    font-family: var(--font-mono);
-    font-size: 0.65rem;
-    color: var(--color-text-muted);
-    width: 50px;
-    text-align: right;
+/* ── Footer ──────────────────────────────────────────── */
+.dm-footer {
+    padding: 10px 22px 14px;
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
 }
 
-.mission-status-icon {
-    font-size: 0.9rem;
-    width: 16px;
-    text-align: center;
-}
-
-/* Summary Footer - Minimal */
-.missions-summary {
+.dm-footer-reward {
     display: flex;
-    justify-content: space-between;
-    margin-top: var(--space-sm);
-    padding-top: var(--space-xs);
-    font-size: 0.7rem;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.72rem;
     color: var(--color-text-muted);
 }
 
-.missions-summary strong {
+.dm-footer-reward strong {
     color: #22c55e;
+    font-family: var(--font-mono);
 }
 
-/* Loading */
-.missions-loading {
-    padding: var(--space-lg);
+.dm-footer-icon {
+    color: #ffd700;
     font-size: 0.8rem;
-    justify-content: center;
-    display: flex;
-    gap: 8px;
-    color: var(--color-text-muted);
 }
 
-/* Responsive */
+/* ── Loading ─────────────────────────────────────────── */
+.dm-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 40px 20px;
+    color: var(--color-text-muted);
+    font-size: 0.82rem;
+}
+
+.dm-loading-bar {
+    width: 100px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--color-primary), transparent);
+    border-radius: 4px;
+    animation: dmLoadSlide 1.4s ease-in-out infinite;
+}
+
+@keyframes dmLoadSlide {
+    0% {
+        transform: translateX(-40px);
+        opacity: 0.3;
+    }
+
+    50% {
+        transform: translateX(40px);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateX(-40px);
+        opacity: 0.3;
+    }
+}
+
+/* ── Responsive ──────────────────────────────────────── */
 @media (max-width: 600px) {
-    .mission-item {
+    .dm-header {
+        padding: 14px 16px 10px;
+    }
+
+    .dm-list {
+        padding: 4px 10px 12px;
+    }
+
+    .dm-item {
+        gap: 10px;
+        padding: 10px 6px;
+    }
+
+    .dm-item-top {
         flex-wrap: wrap;
-        gap: 8px;
     }
 
-    .mission-icon-area {
-        width: 100%;
+    .dm-item-left {
+        flex: 1 1 auto;
     }
 
-    .mission-meta-area {
-        width: 100%;
-        justify-content: space-between;
-        padding-left: 28px;
-        /* Align with text */
+    .dm-item-right {
+        flex: 0 0 auto;
     }
 
-    .mission-progress-compact {
-        flex: 1;
+    .dm-overall-progress {
+        padding: 0 16px 4px;
+    }
+
+    .dm-footer {
+        padding: 8px 16px 12px;
+    }
+
+    .dm-header-icon {
+        width: 30px;
+        height: 30px;
+        border-radius: 8px;
+    }
+
+    .dm-status-dot {
+        width: 20px;
+        height: 20px;
+    }
+
+    .dm-difficulty {
+        padding: 4px 8px;
     }
 }

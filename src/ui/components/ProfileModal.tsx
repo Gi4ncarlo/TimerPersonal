@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { SupabaseDataStore } from '@/data/supabaseData';
 import { User, SarcasmLevel } from '@/core/types';
 import { getLevelTitle } from '@/core/config/levelRewards';
+import Avatar from './Avatar';
+import { useToast } from '@/core/contexts/ToastContext';
 import './ProfileModal.css';
 
 interface ProfileModalProps {
@@ -17,12 +19,14 @@ interface ProfileModalProps {
 
 export default function ProfileModal({ user, isOpen, isOnVacation = false, onClose, onUpdate }: ProfileModalProps) {
     const router = useRouter();
+    const { addToast } = useToast();
     const [activeTab, setActiveTab] = useState<'profile' | 'records' | 'settings'>('profile');
     const [newUsername, setNewUsername] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [isUpdating, setIsUpdating] = useState(false);
-    const [message, setMessage] = useState({ text: '', type: '' });
+    const [isZoomed, setIsZoomed] = useState(false);
+
     const [sarcasmLevel, setSarcasmLevel] = useState<SarcasmLevel>(
         (user.preferences?.sarcasmLevel as SarcasmLevel) || 'medium'
     );
@@ -35,65 +39,70 @@ export default function ProfileModal({ user, isOpen, isOnVacation = false, onClo
 
     if (!isOpen) return null;
 
+
+
     const levelTitle = getLevelTitle(user.level);
 
     const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!e.target.files || e.target.files.length === 0) return;
 
-        setIsUpdating(true);
-        setMessage({ text: '', type: '' });
         const file = e.target.files[0];
+        const input = e.target;
 
-        try {
-            const result = await SupabaseDataStore.uploadAvatar(user.id, file);
-            if (result.url) {
-                await SupabaseDataStore.updateProfilePicture(user.id, result.url);
-                setMessage({ text: '✓ Foto actualizada correctamente', type: 'success' });
-                onUpdate();
-            } else {
-                setMessage({ text: result.error || 'Error al subir imagen', type: 'error' });
+        setIsUpdating(true);
+        addToast('Subiendo imagen...', 'info');
+
+        // Use setTimeout to allow the UI to repaint (show loader) before starting the heavy upload process
+        setTimeout(async () => {
+            try {
+                const result = await SupabaseDataStore.uploadAvatar(user.id, file);
+
+                if (result.url) {
+                    await SupabaseDataStore.updateProfilePicture(user.id, result.url);
+                    addToast('Foto actualizada correctamente', 'success');
+                    onUpdate();
+                } else {
+                    addToast(result.error || 'Error al subir imagen', 'error');
+                }
+            } catch (error) {
+                console.error(error);
+                addToast('Error inesperado al subir la imagen', 'error');
+            } finally {
+                setIsUpdating(false);
+                input.value = '';
             }
-        } catch (error) {
-            setMessage({ text: 'Error inesperado', type: 'error' });
-        } finally {
-            setIsUpdating(false);
-        }
+        }, 100);
     };
 
     const handleProfileUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Validate that at least one field is filled
         if (!newUsername && !newPassword) {
-            setMessage({ text: 'Debes completar al menos un campo para actualizar', type: 'error' });
+            addToast('Completa un campo para actualizar', 'warning');
             return;
         }
 
-        // Validate password match if password is provided
         if (newPassword && newPassword !== confirmPassword) {
-            setMessage({ text: 'Las contraseñas no coinciden', type: 'error' });
+            addToast('Las contraseñas no coinciden', 'error');
             return;
         }
 
         setIsUpdating(true);
-        setMessage({ text: '', type: '' });
         const updates: string[] = [];
 
         try {
-            // Update username if provided
             if (newUsername && newUsername.trim() !== '') {
                 const result = await SupabaseDataStore.updateUsername(user.id, newUsername.trim());
                 if (result.success) {
                     updates.push('nombre de usuario');
                     setNewUsername('');
                 } else {
-                    setMessage({ text: result.error || 'Error al actualizar usuario', type: 'error' });
+                    addToast(result.error || 'Error al actualizar usuario', 'error');
                     setIsUpdating(false);
                     return;
                 }
             }
 
-            // Update password if provided
             if (newPassword && newPassword.trim() !== '') {
                 const result = await SupabaseDataStore.updatePassword(newPassword);
                 if (result.success) {
@@ -101,21 +110,18 @@ export default function ProfileModal({ user, isOpen, isOnVacation = false, onClo
                     setNewPassword('');
                     setConfirmPassword('');
                 } else {
-                    setMessage({ text: result.error || 'Error al actualizar contraseña', type: 'error' });
+                    addToast(result.error || 'Error al actualizar contraseña', 'error');
                     setIsUpdating(false);
                     return;
                 }
             }
 
             if (updates.length > 0) {
-                setMessage({
-                    text: `✓ ${updates.join(' y ')} actualizado${updates.length > 1 ? 's' : ''}`,
-                    type: 'success'
-                });
+                addToast(`${updates.join(' y ')} actualizado(s)`, 'success');
                 onUpdate();
             }
         } catch (error) {
-            setMessage({ text: 'Error inesperado', type: 'error' });
+            addToast('Error inesperado', 'error');
         } finally {
             setIsUpdating(false);
         }
@@ -131,11 +137,12 @@ export default function ProfileModal({ user, isOpen, isOnVacation = false, onClo
                     <nav className="profile-sidebar">
                         <div className="profile-sidebar-header">
                             <div className="sidebar-avatar">
-                                {user.avatarUrl ? (
-                                    <img src={user.avatarUrl} alt="Avatar" />
-                                ) : (
-                                    <div className="sidebar-avatar-placeholder">{user.username.charAt(0).toUpperCase()}</div>
-                                )}
+                                <Avatar
+                                    src={user.avatarUrl}
+                                    alt={user.username}
+                                    fallback={user.username}
+                                    size="lg"
+                                />
                             </div>
                             <div className="sidebar-user-info">
                                 <span className="sidebar-username">{user.username}</span>
@@ -194,13 +201,28 @@ export default function ProfileModal({ user, isOpen, isOnVacation = false, onClo
 
                                 <div className="avatar-section-large">
                                     <div className="avatar-container">
-                                        {user.avatarUrl ? (
-                                            <img src={user.avatarUrl} alt="Avatar" className="profile-avatar" />
-                                        ) : (
-                                            <div className="avatar-placeholder">{user.username.charAt(0).toUpperCase()}</div>
-                                        )}
+                                        <div
+                                            className="avatar-wrapper clickable-avatar"
+                                            onClick={() => setIsZoomed(true)}
+                                            title="Click para ampliar"
+                                        >
+                                            <Avatar
+                                                src={user.avatarUrl}
+                                                alt={user.username}
+                                                fallback={user.username}
+                                                size="xl"
+                                            />
+                                            {isUpdating && (
+                                                <div className="avatar-loading-overlay">
+                                                    <div className="avatar-spinner"></div>
+                                                </div>
+                                            )}
+                                        </div>
                                         <label htmlFor="avatar-upload" className="change-avatar-label" title="Cambiar foto">
-                                            📷
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                                                <circle cx="12" cy="13" r="4"></circle>
+                                            </svg>
                                         </label>
                                         <input
                                             id="avatar-upload"
@@ -211,7 +233,24 @@ export default function ProfileModal({ user, isOpen, isOnVacation = false, onClo
                                             disabled={isUpdating}
                                         />
                                     </div>
-                                    <p className="profile-email">{sessionStorage.getItem('currentUserEmail') || 'Usuario Antigravity'}</p>
+
+                                    {/* Zoom Modal */}
+                                    {isZoomed && (
+                                        <div className="avatar-zoom-overlay" onClick={() => setIsZoomed(false)}>
+                                            <div className="avatar-zoom-content" onClick={(e) => e.stopPropagation()}>
+                                                <img
+                                                    src={user.avatarUrl || `https://ui-avatars.com/api/?name=${user.username}&background=random`}
+                                                    alt={user.username}
+                                                    className="avatar-zoomed-img"
+                                                />
+                                                <button className="avatar-zoom-close" onClick={() => setIsZoomed(false)}>
+                                                    &times;
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                    <h3 className="profile-username-large">{user.username}</h3>
+                                    {user.email && <p className="profile-email">{user.email}</p>}
                                 </div>
 
                                 <div className="profile-stats-row">
@@ -343,7 +382,7 @@ export default function ProfileModal({ user, isOpen, isOnVacation = false, onClo
                                                     setSarcasmSaving(true);
                                                     await SupabaseDataStore.updateSarcasmLevel(user.id, opt.value);
                                                     setSarcasmSaving(false);
-                                                    setMessage({ text: `✓ Nivel de sarcasmo: ${opt.label}`, type: 'success' });
+                                                    addToast(`Nivel de sarcasmo: ${opt.label}`, 'success');
                                                     onUpdate();
                                                 }}
                                             >
@@ -356,11 +395,7 @@ export default function ProfileModal({ user, isOpen, isOnVacation = false, onClo
                             </div>
                         )}
 
-                        {message.text && (
-                            <div className={`profile-message msg-${message.type}`}>
-                                {message.text}
-                            </div>
-                        )}
+
                     </main>
                 </div>
             </div>

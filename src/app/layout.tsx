@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Toaster } from 'sonner';
 import AuthProvider from '@/ui/providers/AuthProvider';
+import { ToastProvider } from '@/core/contexts/ToastContext';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -22,7 +23,11 @@ export default function RootLayout({
         <html lang="en">
             <body>
                 <AuthProvider>
-                    {children}
+                    <ToastProvider>
+                        <main className="main-content">
+                            {children}
+                        </main>
+                    </ToastProvider>
                     <Toaster
                         position="top-right"
                         theme="dark"

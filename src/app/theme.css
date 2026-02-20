@@ -31,7 +31,7 @@
   /* Typography - Professional Condensed */
   --font-display: 'Orbitron', sans-serif;
   --font-body: 'Rajdhani', sans-serif;
-  --font-mono: 'Fira Code', monospace;
+  --font-mono: 'JetBrains Mono', monospace;
 
   /* Text Colors - High Contrast */
   --color-text-primary: #ffffff;

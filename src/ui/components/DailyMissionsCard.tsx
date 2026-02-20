@@ -15,16 +15,10 @@ const TYPE_CONFIG: Record<DailyMission['missionType'], { icon: string; label: st
     consistency: { icon: '🔄', label: 'Variedad' },
 };
 
-const STATUS_ICONS: Record<DailyMission['status'], string> = {
-    in_progress: '🟡',
-    completed: '✅',
-    failed: '❌',
-};
-
-const DIFFICULTY_LABELS: Record<DailyMission['difficulty'], string> = {
-    easy: 'Fácil',
-    medium: 'Medio',
-    hard: 'Difícil',
+const DIFFICULTY_CONFIG: Record<DailyMission['difficulty'], { label: string; dots: number }> = {
+    easy: { label: 'Fácil', dots: 1 },
+    medium: { label: 'Medio', dots: 2 },
+    hard: { label: 'Difícil', dots: 3 },
 };
 
 function getProgressPercent(mission: DailyMission): number {
@@ -42,15 +36,29 @@ function getProgressLabel(mission: DailyMission): string {
     if (mission.missionType === 'consistency') {
         return `${mission.currentValue}/${mission.targetValue}`;
     }
-    // For time based, just show current/target without 'min' to save space
     return `${mission.currentValue}/${mission.targetValue}m`;
 }
+
+const CheckIcon = () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="20 6 9 17 4 12" />
+    </svg>
+);
+
+const XIcon = () => (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+        <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+);
 
 export default function DailyMissionsCard({ missions, loading }: DailyMissionsCardProps) {
     if (loading) {
         return (
-            <div className="daily-missions-card">
-                <div className="missions-loading">Generando misiones...</div>
+            <div className="dm-card">
+                <div className="dm-loading">
+                    <div className="dm-loading-bar" />
+                    <span>Generando misiones...</span>
+                </div>
             </div>
         );
     }
@@ -61,74 +69,108 @@ export default function DailyMissionsCard({ missions, loading }: DailyMissionsCa
     const totalReward = missions
         .filter(m => m.status === 'completed')
         .reduce((sum, m) => sum + m.rewardPoints, 0);
+    const allCompleted = completedCount === missions.length;
 
     const difficulty = missions[0]?.difficulty || 'easy';
+    const diffConfig = DIFFICULTY_CONFIG[difficulty];
+    const overallProgress = Math.round((completedCount / missions.length) * 100);
 
     return (
-        <div className="daily-missions-card">
-            {/* Compact Header */}
-            <div className="missions-header">
-                <div className="missions-title-group">
-                    <span className="missions-icon"><Twemoji emoji="⚔️" /></span>
-                    <h3 className="missions-title">Misiones Diarias</h3>
+        <div className={`dm-card ${allCompleted ? 'dm-card--complete' : ''}`}>
+            {/* Header */}
+            <div className="dm-header">
+                <div className="dm-header-left">
+                    <div className="dm-header-icon">
+                        <Twemoji emoji="⚔️" />
+                    </div>
+                    <div className="dm-header-text">
+                        <h3 className="dm-title">Misiones Diarias</h3>
+                        <span className="dm-subtitle">
+                            {allCompleted ? '¡Todas completadas!' : `${completedCount} de ${missions.length} completadas`}
+                        </span>
+                    </div>
                 </div>
-                <span className={`missions-difficulty-label ${difficulty}`}>
-                    {DIFFICULTY_LABELS[difficulty]}
-                </span>
+                <div className="dm-header-right">
+                    <div className={`dm-difficulty dm-difficulty--${difficulty}`}>
+                        <div className="dm-diff-dots">
+                            {Array.from({ length: 3 }).map((_, i) => (
+                                <span key={i} className={`dm-diff-dot ${i < diffConfig.dots ? 'active' : ''}`} />
+                            ))}
+                        </div>
+                        <span className="dm-diff-label">{diffConfig.label}</span>
+                    </div>
+                </div>
             </div>
 
-            {/* List */}
-            <div className="missions-list">
-                {missions.map(mission => {
+            {/* Overall progress bar */}
+            <div className="dm-overall-progress">
+                <div className="dm-overall-track">
+                    <div
+                        className={`dm-overall-fill ${allCompleted ? 'dm-overall-fill--done' : ''}`}
+                        style={{ width: `${overallProgress}%` }}
+                    />
+                </div>
+            </div>
+
+            {/* Mission Items */}
+            <div className="dm-list">
+                {missions.map((mission, idx) => {
                     const typeConfig = TYPE_CONFIG[mission.missionType];
                     const progress = getProgressPercent(mission);
-                    const statusIcon = STATUS_ICONS[mission.status];
+                    const isCompleted = mission.status === 'completed';
+                    const isFailed = mission.status === 'failed';
 
                     return (
                         <div
                             key={mission.id}
-                            className={`mission-item ${mission.status}`}
-                            title={mission.description} // Tooltip approach
+                            className={`dm-item dm-item--${mission.status}`}
+                            title={mission.description}
+                            style={{ animationDelay: `${idx * 60}ms` }}
                         >
-                            {/* Left: Icon + Title */}
-                            <div className="mission-icon-area">
-                                <span className="mission-type-icon">
-                                    <Twemoji emoji={typeConfig.icon} />
-                                </span>
-                                <span className="mission-name">{mission.title}</span>
+                            {/* Status indicator */}
+                            <div className={`dm-status-dot dm-status-dot--${mission.status}`}>
+                                {isCompleted ? <CheckIcon /> : isFailed ? <XIcon /> : null}
                             </div>
 
-                            {/* Right: Meta, Progress, Status */}
-                            <div className="mission-meta-area">
-                                <span className={`mission-reward-badge ${mission.status === 'completed' ? 'claimed' : ''}`}>
-                                    +{mission.rewardPoints}pts
-                                </span>
+                            {/* Content */}
+                            <div className="dm-item-body">
+                                <div className="dm-item-top">
+                                    <div className="dm-item-left">
+                                        <span className="dm-type-icon">
+                                            <Twemoji emoji={typeConfig.icon} />
+                                        </span>
+                                        <span className="dm-item-name">{mission.title}</span>
+                                    </div>
+                                    <div className="dm-item-right">
+                                        <span className="dm-progress-label">{getProgressLabel(mission)}</span>
+                                        <span className={`dm-reward ${isCompleted ? 'dm-reward--claimed' : ''}`}>
+                                            +{mission.rewardPoints}
+                                        </span>
+                                    </div>
+                                </div>
 
-                                <div className="mission-progress-compact">
+                                {/* Progress bar */}
+                                <div className="dm-progress-track">
                                     <div
-                                        className={`mission-progress-fill ${mission.status}`}
+                                        className={`dm-progress-fill dm-progress-fill--${mission.status}`}
                                         style={{ width: `${progress}%` }}
                                     />
                                 </div>
-
-                                <span className="mission-progress-text">
-                                    {getProgressLabel(mission)}
-                                </span>
-
-                                <span className="mission-status-icon">
-                                    <Twemoji emoji={statusIcon} />
-                                </span>
                             </div>
                         </div>
                     );
                 })}
             </div>
 
-            {/* Micro Footer */}
-            <div className="missions-summary">
-                <span>Progreso: <strong>{completedCount}/{missions.length}</strong></span>
-                {totalReward > 0 && <span>Bonus: <strong>+{totalReward}</strong></span>}
-            </div>
+            {/* Footer */}
+            {totalReward > 0 && (
+                <div className="dm-footer">
+                    <div className="dm-footer-reward">
+                        <span className="dm-footer-icon">✦</span>
+                        <span>Bonus ganado: <strong>+{totalReward} pts</strong></span>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

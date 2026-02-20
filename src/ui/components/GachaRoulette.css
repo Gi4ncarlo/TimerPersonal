@@ -171,13 +171,13 @@
 
 /* ─── Header ─────────────────────────────────── */
 .gacha-header {
-    padding: 24px 24px 16px;
+    padding: 16px 20px 10px;
     text-align: center;
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .gacha-title {
-    font-size: 1.5rem;
+    font-size: 1.3rem;
     font-weight: 800;
     background: linear-gradient(135deg, #ffd700, #ff8c00, #ffd700);
     -webkit-background-clip: text;
@@ -185,13 +185,15 @@
     background-clip: text;
     text-transform: uppercase;
     letter-spacing: 2px;
-    margin: 0 0 8px 0;
+    margin: 0 0 4px 0;
 }
 
 .gacha-subtitle {
-    font-size: 0.8rem;
-    color: rgba(255, 255, 255, 0.45);
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.6);
     margin: 0;
+    font-weight: 500;
 }
 
 .gacha-close {
@@ -222,19 +224,22 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 24px;
+    padding: 8px 20px;
     background: rgba(255, 255, 255, 0.03);
 }
 
 .gacha-balance-label {
-    font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.4);
+    font-family: var(--font-display);
+    font-size: 0.72rem;
+    color: rgba(255, 255, 255, 0.55);
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 1.5px;
+    font-weight: 700;
 }
 
 .gacha-balance-value {
-    font-size: 1.1rem;
+    font-family: var(--font-mono);
+    font-size: 1.15rem;
     font-weight: 700;
     color: #4dff88;
     font-variant-numeric: tabular-nums;
@@ -246,11 +251,11 @@
 
 /* ─── Wheel Container ────────────────────────── */
 .gacha-wheel-container {
-    padding: 32px 24px;
+    padding: 12px 20px 16px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 24px;
+    gap: 12px;
 }
 
 /* Old CSS Wheel styles removed in favor of SVG component */
@@ -263,7 +268,8 @@
 }
 
 .gacha-cost-amount {
-    font-size: 1.6rem;
+    font-family: var(--font-mono);
+    font-size: 1.3rem;
     font-weight: 800;
     color: #fff;
     margin: 0;
@@ -277,18 +283,21 @@
 }
 
 .gacha-cost-note {
-    font-size: 0.7rem;
-    color: rgba(255, 255, 255, 0.35);
+    font-family: var(--font-body);
+    font-size: 0.72rem;
+    color: rgba(255, 255, 255, 0.5);
     margin: 4px 0 0;
+    font-weight: 500;
 }
 
 /* ─── Spin Button ────────────────────────────── */
 .gacha-spin-btn {
     width: 100%;
-    padding: 16px;
+    padding: 12px;
     border: none;
-    border-radius: 14px;
-    font-size: 1.1rem;
+    border-radius: 12px;
+    font-family: var(--font-display);
+    font-size: 0.88rem;
     font-weight: 700;
     cursor: pointer;
     text-transform: uppercase;
@@ -296,8 +305,8 @@
     transition: all 0.3s;
     position: relative;
     overflow: hidden;
-    margin: 0 24px;
-    width: calc(100% - 48px);
+    margin: 0 20px;
+    width: calc(100% - 40px);
 }
 
 .gacha-spin-btn.ready {
@@ -458,16 +467,16 @@
 
 /* ─── Prize Pool Legend ──────────────────────── */
 .gacha-legend {
-    padding: 16px 24px 24px;
+    padding: 10px 20px 14px;
     border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .gacha-legend-title {
-    font-size: 0.7rem;
+    font-size: 0.62rem;
     color: rgba(255, 255, 255, 0.3);
     text-transform: uppercase;
     letter-spacing: 1.5px;
-    margin: 0 0 10px;
+    margin: 0 0 6px;
     text-align: center;
 }
 
@@ -481,9 +490,11 @@
 .gacha-legend-item {
     display: flex;
     align-items: center;
-    gap: 4px;
-    font-size: 0.65rem;
-    color: rgba(255, 255, 255, 0.45);
+    gap: 5px;
+    font-family: var(--font-body);
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.55);
 }
 
 .gacha-legend-dot {
@@ -659,7 +670,7 @@
 }
 
 .timer-text {
-    font-family: monospace;
+    font-family: var(--font-mono);
     font-weight: 700;
     color: #fff;
     font-size: 0.9rem;
@@ -769,17 +780,102 @@
 .gacha-free-label {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: 3px 10px;
+    gap: 6px;
+    padding: 4px 14px;
     border-radius: 100px;
-    font-size: 0.65rem;
+    font-family: var(--font-display);
+    font-size: 0.62rem;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 1.5px;
     background: rgba(77, 255, 136, 0.1);
     border: 1px solid rgba(77, 255, 136, 0.25);
     color: #4dff88;
     margin-bottom: 8px;
+}
+
+/* ─── Error Message ──────────────────────────── */
+.gacha-error-msg {
+    font-family: var(--font-body);
+    color: #ff6b6b;
+    font-size: 0.82rem;
+    font-weight: 600;
+    margin: 0;
+    text-align: center;
+}
+
+/* ─── Free Spin Countdown Timer ──────────────── */
+.gacha-countdown {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 16px;
+    background: rgba(168, 85, 247, 0.06);
+    border: 1px solid rgba(168, 85, 247, 0.15);
+    border-radius: 10px;
+}
+
+.gacha-countdown-label {
+    font-family: var(--font-body);
+    font-size: 0.62rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.5);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+}
+
+.gacha-countdown-timer {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.gacha-cd-unit {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+    min-width: 34px;
+}
+
+.gacha-cd-value {
+    font-family: var(--font-mono);
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+
+.gacha-cd-label {
+    font-family: var(--font-body);
+    font-size: 0.5rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.35);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.gacha-cd-sep {
+    font-family: var(--font-mono);
+    font-size: 1rem;
+    font-weight: 700;
+    color: rgba(168, 85, 247, 0.5);
+    animation: cdBlink 1s step-end infinite;
+    margin-bottom: 10px;
+}
+
+@keyframes cdBlink {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.2;
+    }
 }
 
 /* ─── Responsive ─────────────────────────────── */

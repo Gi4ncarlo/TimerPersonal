@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import Twemoji from './Twemoji';
-import { LEAGUE_THRESHOLDS, LeagueTier } from '@/core/types';
+import { useState, useMemo } from 'react';
+import Avatar from './Avatar';
+import { LEAGUE_THRESHOLDS } from '@/core/types';
 import './Leaderboard.css';
 
 interface LeaderboardEntry {
@@ -27,20 +27,32 @@ interface LeaderboardProps {
     entries: LeaderboardEntry[];
     isLoading?: boolean;
     onRowClick?: (entry: LeaderboardEntry) => void;
-}
-
-interface LeaderboardProps {
-    currentEntry?: LeaderboardEntry;
-    entries: LeaderboardEntry[];
-    isLoading?: boolean;
-    onRowClick?: (entry: LeaderboardEntry) => void;
     title?: string;
     subtitle?: string;
+    viewMode?: 'weekly' | 'general';
 }
 
-export default function Leaderboard({ currentEntry, entries, isLoading, onRowClick, title, subtitle }: LeaderboardProps) {
+const SearchIcon = () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="11" cy="11" r="8" />
+        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+    </svg>
+);
+
+const CrownIcon = () => (
+    <svg className="crown-icon" width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <path d="M2 17L4 7L8 11L12 3L16 11L20 7L22 17H2Z" fill="url(#crownGrad)" stroke="#ffd700" strokeWidth="1.5" strokeLinejoin="round" />
+        <defs>
+            <linearGradient id="crownGrad" x1="12" y1="3" x2="12" y2="17">
+                <stop offset="0%" stopColor="#ffd700" />
+                <stop offset="100%" stopColor="#f59e0b" />
+            </linearGradient>
+        </defs>
+    </svg>
+);
+
+export default function Leaderboard({ currentEntry, entries, isLoading, onRowClick, viewMode = 'weekly' }: LeaderboardProps) {
     const [searchTerm, setSearchTerm] = useState('');
-    const [pinnedUserId, setPinnedUserId] = useState<string | null>(null);
 
     const sortedEntries = useMemo(() => {
         let result = [...entries].sort((a, b) => b.totalPoints - a.totalPoints);
@@ -57,45 +69,32 @@ export default function Leaderboard({ currentEntry, entries, isLoading, onRowCli
         return [...LEAGUE_THRESHOLDS].reverse().find(l => points >= l.minPoints) || LEAGUE_THRESHOLDS[0];
     };
 
-    const getRankTheme = (rank: number) => {
-        switch (rank) {
-            case 1: return { label: 'CAMPEÓN', class: 'first' };
-            case 2: return { label: 'SUB-COMANDANTE', class: 'second' };
-            case 3: return { label: 'ÉLITE GALÁCTICA', class: 'third' };
-            default: return { label: `RANGO ${rank}`, class: '' };
-        }
+    const getMedalEmoji = (rank: number) => {
+        if (rank === 1) return '🥇';
+        if (rank === 2) return '🥈';
+        if (rank === 3) return '🥉';
+        return '';
     };
 
-    const getInsignias = (entry: LeaderboardEntry) => {
-        const badges = [];
-        if (entry.strikes === 0 && entry.totalPoints > 5000) badges.push({ icon: '🛡️', label: 'Impecable', color: '#00d4ff' });
-        if (entry.positiveActivities > 40) badges.push({ icon: '🔥', label: 'En Racha', color: '#ff4d4d' });
-        if (entry.goalsCompleted > 5) badges.push({ icon: '🎯', label: 'Francotirador', color: '#00ff88' });
-        return badges;
-    };
-
-    // Simple deterministic sparkline path based on user points history (simulated for visual effect)
     const getSparklinePath = (userId: string, points: number) => {
         const seed = userId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-        const pointsArray = [points * 0.8, points * 0.9, points * 0.85, points * 0.95, points * 1, points * 0.92, points];
-        const max = Math.max(...pointsArray, 1);
-        const min = Math.min(...pointsArray, 0);
-        const range = max - min;
+        const vals = [0.78, 0.85, 0.82, 0.91, 0.88, 0.96, 1].map(v => points * v);
+        const max = Math.max(...vals, 1);
+        const min = Math.min(...vals, 0);
+        const range = max - min || 1;
 
-        return pointsArray.map((p, i) => {
-            const x = (i / 6) * 60;
-            const y = 20 - ((p - min) / range) * 15;
+        return vals.map((p, i) => {
+            const x = (i / 6) * 56;
+            const y = 18 - ((p - min) / range) * 14;
             return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
         }).join(' ');
     };
 
     if (isLoading) {
         return (
-            <div className="leaderboard-container">
-                <div className="loading-state">
-                    <div className="scanner-line"></div>
-                    <p className="loading-text">ACCEDIENDO A LOS ARCHIVOS DEL COMANDO...</p>
-                </div>
+            <div className="lb-loading">
+                <div className="lb-loading-shimmer" />
+                <p className="lb-loading-text">Cargando ranking...</p>
             </div>
         );
     }
@@ -103,163 +102,152 @@ export default function Leaderboard({ currentEntry, entries, isLoading, onRowCli
     const renderRow = (entry: LeaderboardEntry, index: number) => {
         const rank = index + 1;
         const isCurrentUser = currentEntry?.userId === entry.userId;
-        const isPinned = pinnedUserId === entry.userId;
         const league = getLeague(entry.totalPoints);
-        const insignias = getInsignias(entry);
         const net24h = (entry.pointsLast24hPositive || 0) + (entry.pointsLast24hNegative || 0);
+        // For general view, net24h acts as "last week" net (data comes from the same field)
+        const deltaValue = net24h;
 
         return (
             <div
                 key={entry.id}
-                className={`leaderboard-row ${isCurrentUser ? 'current-user' : ''} ${isPinned ? 'pinned-row' : ''}`}
-                onClick={() => onRowClick && onRowClick(entry)}
+                className={`lb-row ${isCurrentUser ? 'lb-row--me' : ''}`}
+                onClick={() => onRowClick?.(entry)}
+                style={{ animationDelay: `${index * 40}ms` }}
             >
-                <div className="rank-col">
-                    <span className="rank-number">{rank}</span>
-                    <button
-                        className={`pin-btn ${isPinned ? 'active' : ''}`}
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            setPinnedUserId(isPinned ? null : entry.userId);
-                        }}
-                    >
-                        📌
-                    </button>
+                <div className="lb-cell lb-cell--rank">
+                    {rank <= 3 ? (
+                        <span className={`lb-medal lb-medal--${rank}`}>{getMedalEmoji(rank)}</span>
+                    ) : (
+                        <span className="lb-rank-num">{rank}</span>
+                    )}
                 </div>
 
-                <div className="username-col">
-                    <div className="avatar-info-group">
-                        <div className="avatar-ring" style={{ borderColor: league.color }}>
-                            {entry.avatarUrl ? (
-                                <img src={entry.avatarUrl} alt="" className="user-avatar-small" />
-                            ) : (
-                                <div className="avatar-placeholder-small">{entry.username.charAt(0).toUpperCase()}</div>
+                <div className="lb-cell lb-cell--user">
+                    <div className="lb-avatar-ring" style={{ '--ring-color': league.color } as React.CSSProperties}>
+                        <Avatar
+                            src={entry.avatarUrl}
+                            alt={entry.username}
+                            fallback={entry.username}
+                            size="sm"
+                            className="lb-avatar"
+                            showBorder={false}
+                        />
+                    </div>
+                    <div className="lb-user-info">
+                        <div className="lb-user-top">
+                            <span className="lb-username">{entry.username}</span>
+                            {entry.isOnVacation && (
+                                <span className="lb-badge lb-badge--vacation">🏖 Vacaciones</span>
                             )}
                         </div>
-                        <div className="user-info-stack">
-                            <div className="username-row">
-                                <span className="username-text">{entry.username}</span>
-                                <div className={`status-badge-mini ${entry.isOnVacation ? 'on-vacation' : 'active'}`}>
-                                    <span className="status-dot-mini"></span>
-                                    {entry.isOnVacation ? 'VACACIONES' : 'ACTIVO'}
-                                </div>
-                                <div className="insignia-belt">
-                                    {insignias.map((b, i) => (
-                                        <span key={i} className="insignia-icon" title={b.label} style={{ color: b.color }}>{b.icon}</span>
-                                    ))}
-                                </div>
-                            </div>
-                            <span className="league-text" style={{ color: league.color }}>
-                                {league.icon} {league.tier}
-                            </span>
-                        </div>
+                        <span className="lb-league" style={{ color: league.color }}>
+                            {league.icon} {league.tier}
+                        </span>
                     </div>
                 </div>
 
-                <div className="sparkline-col">
-                    <svg width="60" height="20" className="sparkline-svg">
+                <div className="lb-cell lb-cell--trend">
+                    <svg width="56" height="20" className="lb-sparkline">
                         <path d={getSparklinePath(entry.userId, entry.totalPoints)} fill="none" stroke={entry.totalPoints >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'} strokeWidth="1.5" />
                     </svg>
                 </div>
 
-                <div className="points-col">
-                    <span className={`points-value ${entry.totalPoints >= 0 ? 'points-positive' : 'points-negative'}`}>
-                        {Math.floor(entry.totalPoints).toLocaleString()} <small>pts</small>
+                <div className="lb-cell lb-cell--points">
+                    <span className={`lb-points ${entry.totalPoints >= 0 ? 'lb-points--pos' : 'lb-points--neg'}`}>
+                        {Math.floor(entry.totalPoints).toLocaleString()}
                     </span>
+                    <span className="lb-points-label">pts</span>
                 </div>
 
-                <div className="balance-24h-col">
-                    <span className={`balance-chip ${net24h >= 0 ? 'pos' : 'neg'}`}>
-                        {net24h >= 0 ? '+' : ''}{Math.floor(net24h).toLocaleString()}
+                <div className="lb-cell lb-cell--delta">
+                    <span className={`lb-delta ${deltaValue >= 0 ? 'lb-delta--pos' : 'lb-delta--neg'}`}>
+                        {deltaValue >= 0 ? '+' : ''}{Math.floor(deltaValue).toLocaleString()}
                     </span>
-                </div>
-
-                <div className="strikes-col">
-                    {entry.strikes > 0 ? (
-                        <div className="strike-warning-mini">
-                            <span className="strike-count">!{entry.strikes}</span>
-                        </div>
-                    ) : (
-                        <span className="stat-clean">OK</span>
-                    )}
-                </div>
-
-                <div className="goals-col">
-                    <div className="goals-progress-mini">
-                        <span className="goals-count">{entry.goalsCompleted}</span>
-                        <div className="mini-bar"><div className="fill" style={{ width: `${Math.min(100, (entry.goalsCompleted / 10) * 100)}%` }}></div></div>
-                    </div>
                 </div>
             </div>
         );
     };
 
     return (
-        <div className="leaderboard-container">
-            <div className="leaderboard-top-controls">
-                <div className="search-box">
-                    <span className="search-icon">🔍</span>
+        <div className="lb-container">
+            {/* Search Bar */}
+            <div className="lb-toolbar">
+                <div className="lb-search">
+                    <SearchIcon />
                     <input
                         type="text"
-                        placeholder="BUSCAR GUERRERO..."
+                        placeholder="Buscar usuario..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="search-input"
+                        className="lb-search-input"
                     />
+                    {searchTerm && (
+                        <button className="lb-search-clear" onClick={() => setSearchTerm('')}>×</button>
+                    )}
                 </div>
-                {searchTerm && <span className="search-results-count">{sortedEntries.length} ENCONTRADOS</span>}
+                {searchTerm && (
+                    <span className="lb-search-count">{sortedEntries.length} encontrados</span>
+                )}
             </div>
 
-            {/* HALL OF FAME PODIUM - Only show if not searching */}
+            {/* Podium — only when not searching and have enough entries */}
             {!searchTerm && sortedEntries.length >= 3 && (
-                <div className="podium-section">
+                <div className="lb-podium">
                     {[1, 0, 2].map(idx => {
                         const entry = podium[idx];
                         if (!entry) return null;
-                        const rankInfo = getRankTheme(idx + 1);
                         const league = getLeague(entry.totalPoints);
+                        const rankLabel = idx + 1;
 
                         return (
-                            <div key={entry.id} className={`podium-item ${rankInfo.class}`} onClick={() => onRowClick?.(entry)}>
-                                <div className="podium-avatar-wrapper">
-                                    <div className="podium-halo" style={{ background: `radial-gradient(circle, ${league.color}33 0%, transparent 70%)` }}></div>
-                                    {entry.avatarUrl ? (
-                                        <img src={entry.avatarUrl} alt="" className="podium-avatar" />
-                                    ) : (
-                                        <div className="podium-placeholder">{idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉'}</div>
-                                    )}
-                                    <div className="podium-rank-tag">{rankInfo.label}</div>
-                                </div>
-                                <div className="podium-info">
-                                    <span className="podium-name">{entry.username}</span>
-                                    <div className={`status-badge ${entry.isOnVacation ? 'on-vacation' : 'active'}`}>
-                                        <span className="status-dot"></span>
-                                        {entry.isOnVacation ? 'DE VACACIONES' : 'ACTIVO'}
+                            <div
+                                key={entry.id}
+                                className={`lb-podium-card lb-podium-card--${rankLabel}`}
+                                onClick={() => onRowClick?.(entry)}
+                            >
+                                {rankLabel === 1 && <CrownIcon />}
+                                <div className="lb-podium-avatar-wrap">
+                                    <div className="lb-podium-glow" style={{ background: `radial-gradient(circle, ${league.color}40 0%, transparent 70%)` }} />
+                                    <Avatar
+                                        src={entry.avatarUrl}
+                                        alt={entry.username}
+                                        fallback={entry.username}
+                                        size="lg"
+                                        className={`lb-podium-avatar lb-podium-avatar--${rankLabel}`}
+                                        showBorder={false}
+                                    />
+                                    <div className={`lb-podium-rank lb-podium-rank--${rankLabel}`}>
+                                        {getMedalEmoji(rankLabel)} #{rankLabel}
                                     </div>
-                                    <span className="podium-points" style={{ color: league.color }}>{Math.floor(entry.totalPoints).toLocaleString()} <small>PTS</small></span>
                                 </div>
+                                <span className="lb-podium-name">{entry.username}</span>
+                                {entry.isOnVacation && (
+                                    <span className="lb-badge lb-badge--vacation lb-badge--sm">🏖</span>
+                                )}
+                                <span className="lb-podium-points" style={{ color: league.color }}>
+                                    {Math.floor(entry.totalPoints).toLocaleString()} <small>pts</small>
+                                </span>
                             </div>
                         );
                     })}
                 </div>
             )}
 
-            <div className="leaderboard-table-container">
-                <div className="leaderboard-header">
-                    <div className="header-cell">RANGO</div>
-                    <div className="header-cell">GUERRERO</div>
-                    <div className="header-cell">TENDENCIA</div>
-                    <div className="header-cell">BALANCE TOTAL</div>
-                    <div className="header-cell">NETO 24H</div>
-                    <div className="header-cell">FALTAS</div>
-                    <div className="header-cell">MISIÓN</div>
+            {/* Table */}
+            <div className="lb-table">
+                <div className="lb-table-header">
+                    <div className="lb-th lb-th--rank">#</div>
+                    <div className="lb-th lb-th--user">Usuario</div>
+                    <div className="lb-th lb-th--trend">Tendencia</div>
+                    <div className="lb-th lb-th--points">Puntos</div>
+                    <div className="lb-th lb-th--delta">{viewMode === 'weekly' ? '24h' : 'Últ. Sem.'}</div>
                 </div>
 
-                <div className="leaderboard-body">
+                <div className="lb-table-body">
                     {sortedEntries.map((entry, index) => renderRow(entry, index))}
                     {sortedEntries.length === 0 && (
-                        <div className="no-results">
-                            <p>NO SE ENCONTRARON GUERREROS EN ESTA FRECUENCIA</p>
+                        <div className="lb-empty">
+                            <p>No se encontraron usuarios</p>
                         </div>
                     )}
                 </div>
