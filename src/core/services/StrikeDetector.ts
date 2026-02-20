@@ -161,7 +161,7 @@ export class StrikeDetector {
     }
 
     /**
-     * Compara los puntos de esta semana vs la anterior
+     * Compara los sendas de esta semana vs la anterior
      */
     static getWeeklyComparison(records: DailyRecord[]): {
         thisWeekPoints: number;

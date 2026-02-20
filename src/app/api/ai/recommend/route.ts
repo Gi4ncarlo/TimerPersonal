@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
                 {
                     role: 'system',
                     content: `Eres un coach personal que ayuda a las personas a maximizar su tiempo.
-Balance actual: ${currentBalance} puntos (positivo = tiempo ganado, negativo = tiempo en deuda).
+Balance actual: ${currentBalance} sendas (positivo = tiempo ganado, negativo = tiempo en deuda).
 Proporciona recomendaciones específicas y motivacionales en español.`,
                 },
                 {

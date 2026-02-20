@@ -126,37 +126,104 @@
 }
 
 .accumulated-time-card {
-    background: var(--color-surface-sunken);
-    border: var(--border-ethereal);
+    background: radial-gradient(circle at 50% 50%, #1A1A24 0%, #0B0E14 100%);
+    background-size: 200% 200%;
+    border: 1px solid rgba(138, 43, 226, 0.2);
     border-radius: var(--radius-lg);
-    padding: var(--space-lg) var(--space-xl);
+    padding: var(--space-3xl) var(--space-xl);
     text-align: center;
     position: relative;
     overflow: hidden;
-    box-shadow: var(--shadow-inner-glow);
+    box-shadow: 0 0 30px rgba(138, 43, 226, 0.05), inset 0 0 40px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
     width: 100%;
-    /* Ensure it takes full available width */
+    height: 100%;
+    min-height: 350px;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    z-index: 1;
+    /* For isolation */
+    animation: nexusBreathe 10s ease-in-out infinite alternate;
 }
 
+/* Base card breathing effect */
+@keyframes nexusBreathe {
+    0% {
+        background-position: 50% 50%;
+        box-shadow: 0 0 30px rgba(138, 43, 226, 0.05), inset 0 0 40px rgba(0, 0, 0, 0.5);
+        border-color: rgba(138, 43, 226, 0.15);
+    }
+
+    100% {
+        background-position: 40% 60%;
+        box-shadow: 0 0 50px rgba(138, 43, 226, 0.15), inset 0 0 60px rgba(138, 43, 226, 0.1);
+        border-color: rgba(138, 43, 226, 0.4);
+    }
+}
+
+/* Layer 1: The Neural Network Drift */
 .accumulated-time-card::before {
+    content: '';
+    position: absolute;
+    top: -20%;
+    left: -20%;
+    width: 140%;
+    height: 140%;
+    background-image: url('/images/neural-network-bg.png');
+    background-size: cover;
+    background-position: center;
+    opacity: 0.2;
+    z-index: 0;
+    pointer-events: none;
+    animation: neuralDrift 15s ease-in-out infinite alternate;
+    mix-blend-mode: screen;
+}
+
+@keyframes neuralDrift {
+    0% {
+        transform: rotate(-2deg) scale(1) translate(0, 0);
+        opacity: 0.15;
+        filter: hue-rotate(0deg) brightness(1);
+    }
+
+    100% {
+        transform: rotate(4deg) scale(1.15) translate(-3%, -2%);
+        opacity: 0.45;
+        filter: hue-rotate(30deg) brightness(1.3);
+    }
+}
+
+/* Layer 2: The Data Scanline */
+.accumulated-time-card::after {
     content: '';
     position: absolute;
     top: -50%;
     left: -50%;
     width: 200%;
     height: 200%;
-    background: conic-gradient(from 0deg, transparent, var(--color-primary-glow), transparent 30%);
-    animation: rotate 10s linear infinite;
-    opacity: 0.3;
+    background: linear-gradient(to bottom,
+            transparent 0%,
+            rgba(138, 43, 226, 0.05) 45%,
+            rgba(138, 43, 226, 0.4) 50%,
+            rgba(34, 211, 238, 0.5) 51%,
+            transparent 55%);
+    transform: rotate(15deg) translateY(-100%);
+    z-index: 0;
+    pointer-events: none;
+    animation: dataScan 6s cubic-bezier(0.8, 0, 0.2, 1) infinite;
+    opacity: 0.8;
 }
 
-@keyframes rotate {
-    from {
-        transform: rotate(0deg);
+@keyframes dataScan {
+    0% {
+        transform: rotate(15deg) translateY(-100%);
     }
 
-    to {
-        transform: rotate(360deg);
+    30%,
+    100% {
+        transform: rotate(15deg) translateY(100%);
     }
 }
 
@@ -170,6 +237,12 @@
     font-weight: 700;
     position: relative;
     z-index: 1;
+}
+
+.accumulated-value {
+    position: relative;
+    z-index: 1;
+    text-shadow: 0 0 20px rgba(138, 43, 226, 0.5);
 }
 
 .command-hub-layout {
@@ -207,21 +280,7 @@
     flex: 1;
 }
 
-.accumulated-time-card {
-    background: var(--color-surface-sunken);
-    border: var(--border-ethereal);
-    border-radius: var(--radius-lg);
-    padding: var(--space-3xl) var(--space-xl);
-    text-align: center;
-    position: relative;
-    overflow: hidden;
-    box-shadow: 0 0 50px rgba(168, 85, 247, 0.1), var(--shadow-inner-glow);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    height: 100%;
-    min-height: 350px;
-}
+
 
 /* ROW 2: THE MISSION */
 .mission-row {
@@ -381,9 +440,10 @@
 }
 
 .glass-chronicle {
-    background: rgba(13, 17, 28, 0.4) !important;
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(168, 85, 247, 0.2) !important;
+    background: var(--card-bg-glass) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border: 1px solid rgba(138, 43, 226, 0.15) !important;
 }
 
 .today-summary-hub {

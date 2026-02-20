@@ -125,7 +125,7 @@ export async function POST(request: Request) {
                 timestamp: new Date().toISOString(),
                 duration_minutes: 0,
                 points_calculated: -cost,
-                notes: `Tirada de ruleta (costo: ${cost.toLocaleString()} pts)`,
+                notes: `Tirada de ruleta (costo: ${cost.toLocaleString()} sendas)`,
             });
         }
 

@@ -20,6 +20,7 @@ import ActiveBuffsDisplay from '@/ui/components/ActiveBuffsDisplay';
 import ConfirmModal from '@/ui/components/ConfirmModal';
 import Navbar from '@/ui/components/Navbar';
 import LogoLoader from '@/ui/components/LogoLoader';
+import LevelUpModal from '@/ui/components/LevelUpModal';
 import { SupabaseDataStore } from '@/data/supabaseData';
 import { BalanceCalculator } from '@/core/services/BalanceCalculator';
 import { PointsCalculator } from '@/core/services/PointsCalculator';
@@ -27,7 +28,7 @@ import { StrikeDetector } from '@/core/services/StrikeDetector';
 import { VacationService } from '@/core/services/VacationService';
 import { DailyMissionEngine } from '@/core/services/DailyMissionEngine';
 import { NotificationEngine } from '@/core/services/NotificationEngine';
-import { Action, DailyRecord, DailyMission, Goal, Strike, User, VacationPeriod, SmartNotification, SarcasmLevel, ActiveBuff, NotificationType } from '@/core/types';
+import { Action, DailyRecord, DailyMission, Goal, Strike, User, VacationPeriod, SmartNotification, SarcasmLevel, ActiveBuff, NotificationType, League, LEAGUE_THRESHOLDS } from '@/core/types';
 import { format, differenceInCalendarDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -63,9 +64,15 @@ export default function Dashboard() {
     const [isArmoryOpen, setIsArmoryOpen] = useState(false);
     const [isOnVacation, setIsOnVacation] = useState(false);
 
+    // League / Level Up State
+    const currentLeagueRef = useRef<League | null>(null);
+    const [showLevelUpModal, setShowLevelUpModal] = useState(false);
+    const [achievedLeague, setAchievedLeague] = useState<League | null>(null);
+
     // Daily Missions State
     const [dailyMissions, setDailyMissions] = useState<DailyMission[]>([]);
     const [missionsLoading, setMissionsLoading] = useState(false);
+    const [missionStreak, setMissionStreak] = useState(0);
 
     // Smart Notifications State
     const [notifications, setNotifications] = useState<SmartNotification[]>([]);
@@ -117,6 +124,16 @@ export default function Dashboard() {
             // Calculate total points (already in points, no conversion needed)
             const totalPoints = fetchedRecords.reduce((sum, r) => sum + r.pointsCalculated, 0);
             setAccumulatedPoints(totalPoints);
+
+            // Level Up logic
+            const newLeague = LEAGUE_THRESHOLDS.reduce((prev, curr) => totalPoints >= curr.minPoints ? curr : prev);
+            if (currentLeagueRef.current) {
+                if (newLeague.tier !== currentLeagueRef.current.tier && newLeague.minPoints > currentLeagueRef.current.minPoints) {
+                    setAchievedLeague(newLeague);
+                    setShowLevelUpModal(true);
+                }
+            }
+            currentLeagueRef.current = newLeague;
 
             // Check vacation status
             const today = getTodayString();
@@ -247,7 +264,7 @@ export default function Dashboard() {
                                 });
                                 console.log('DEBUG: Retroactive notification creation result:', { mission: m.title, result: 'created' });
 
-                                toast.success(`¡Misión de ayer completada!`, { description: `${m.title}: +${m.rewardPoints} pts` });
+                                toast.success(`¡Misión de ayer completada!`, { description: `${m.title}: +${m.rewardPoints} sendas` });
                                 localAddedRecords.push(successTitle);
                             }
                         }
@@ -261,6 +278,7 @@ export default function Dashboard() {
                     // First login of the day → generate new missions
                     missionsGeneratedRef.current = true;
                     const streak = await SupabaseDataStore.getMissionStreak(user.id);
+                    setMissionStreak(streak); // Save for UI
                     const generated = DailyMissionEngine.generateDailyMissions(
                         fetchedActions, today, user.id, streak
                     );
@@ -314,7 +332,7 @@ export default function Dashboard() {
                                 context: { missionId: u.mission.id, points: u.mission.rewardPoints }
                             });
 
-                            toast.success(`¡Misión completada!`, { description: `${u.mission.title}: +${u.mission.rewardPoints} pts` });
+                            toast.success(`¡Misión completada!`, { description: `${u.mission.title}: +${u.mission.rewardPoints} sendas` });
 
                             localAddedRecords.push(missionTitle);
                             anyChanges = true;
@@ -342,13 +360,13 @@ export default function Dashboard() {
                 // Re-fetch after updates for accurate state
                 if (anyChanges || limitMissions.length > 0) {
                     missions = await SupabaseDataStore.getDailyMissions(today);
+
                     const refreshedUser = await SupabaseDataStore.getCurrentUser();
                     if (refreshedUser) {
                         setUserLevel({ level: refreshedUser.level, xp: refreshedUser.xp });
                     }
                     // Refresh records to show new system events
                     const newRecs = await SupabaseDataStore.getRecordsByDate(today);
-                    // Update state carefully without losing other days from fetchedRecords snapshot if it was used elsewhere (it's local so fine)
                     recordsSnapshot = [...fetchedRecords.filter(r => r.date !== today), ...newRecs];
                     setRecords(recordsSnapshot);
                 }
@@ -358,6 +376,12 @@ export default function Dashboard() {
                 setNotifications(allNotifs);
 
                 setDailyMissions(missions);
+
+                // ALWAYS load streak unconditionally — no conditions, no stale closures
+                const currentStreak = await SupabaseDataStore.getMissionStreak(user.id);
+                console.log('[DASHBOARD] Streak loaded:', currentStreak);
+                setMissionStreak(currentStreak);
+
             } catch (missionErr) {
                 console.warn('Daily missions error:', missionErr);
             } finally {
@@ -837,6 +861,12 @@ export default function Dashboard() {
 
     return (
         <main className="dashboard">
+            <LevelUpModal
+                isOpen={showLevelUpModal}
+                league={achievedLeague}
+                onClose={() => setShowLevelUpModal(false)}
+            />
+
             <div className="dashboard-container-new">
                 <Navbar
                     currentUser={currentUser}
@@ -852,7 +882,7 @@ export default function Dashboard() {
 
                 {getQuickAdds()}
 
-                <DailyMissionsCard missions={dailyMissions} loading={missionsLoading} />
+                <DailyMissionsCard missions={dailyMissions} loading={missionsLoading} streakDays={missionStreak} />
 
                 <div className="command-hub-layout">
                     {/* ROW 1: THE HEROES (POINTS & HISTORY) */}
@@ -923,8 +953,9 @@ export default function Dashboard() {
                                                     <div className="record-header">
                                                         <span className="record-name">{record.actionName.replace(/ðŸŽ‰/g, '✨')}</span>
                                                         <div className="record-actions-hub">
-                                                            <p className={`record-impact ${record.pointsCalculated >= 0 ? 'positive' : 'negative'}`}>
-                                                                {record.pointsCalculated >= 0 ? '+' : ''}{Math.floor(record.pointsCalculated)}
+                                                            <p className={`record-impact ${record.pointsCalculated >= 0 ? 'positive' : 'negative'}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                                                <img src="/images/senda-coin-large-sinbg.png" alt="Senda" className="senda-floating-icon senda-floating-icon--sm" />
+                                                                {Math.abs(Math.floor(record.pointsCalculated))}{record.pointsCalculated >= 0 ? '+' : '-'}
                                                             </p>
                                                             <button
                                                                 className="record-delete-hub"
@@ -960,7 +991,7 @@ export default function Dashboard() {
                                     <p className="summary-line">
                                         <strong className={todayBalance.totalPoints >= 0 ? 'positive' : 'negative'}>
                                             {todayBalance.totalPoints >= 0 ? '+' : ''}
-                                            {Math.floor(todayBalance.totalPoints)} pts acumulados hoy
+                                            {Math.floor(todayBalance.totalPoints)} sendas acumuladas hoy
                                         </strong>
                                     </p>
                                 </div>
@@ -1108,7 +1139,7 @@ export default function Dashboard() {
                 onClose={() => setIsConfirmOpen(false)}
                 onConfirm={confirmDeleteRecord}
                 title="¿Eliminar actividad?"
-                message="Esta acción eliminará los puntos obtenidos y no se puede deshacer."
+                message="Esta acción restará las sendas obtenidas y no se puede deshacer."
                 confirmText="Sí, eliminar"
                 cancelText="Cancelar"
                 isDestructive={true}

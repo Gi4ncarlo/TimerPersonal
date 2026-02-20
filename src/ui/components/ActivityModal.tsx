@@ -248,7 +248,7 @@ export default function ActivityModal({ action, goals = [], isOpen, onClose, onS
                                 autoFocus
                             />
                             <input type="hidden" name="impact" value="1" />
-                            <p className="impact-hint">✨ Se registrará 1 unidad. Los puntos se sumarán al completar la misión.</p>
+                            <p className="impact-hint">✨ Se registrará 1 unidad. Las sendas se sumarán al completar la misión.</p>
                         </div>
                     );
                 }
@@ -256,7 +256,7 @@ export default function ActivityModal({ action, goals = [], isOpen, onClose, onS
                 return (
                     <>
                         <div className="form-group">
-                            <label htmlFor="impact">Puntos de Impacto</label>
+                            <label htmlFor="impact">Sendas</label>
                             <input
                                 id="impact"
                                 name="impact"
@@ -295,7 +295,7 @@ export default function ActivityModal({ action, goals = [], isOpen, onClose, onS
                         ) : (
                             <div className="no-goals-message">No tienes hitos activos para completar.</div>
                         )}
-                        <p className="impact-hint">✨ Este logro te sumará 20,000 puntos automáticamente.</p>
+                        <p className="impact-hint">✨ Este logro te sumará 20,000 sendas automáticamente.</p>
                     </div>
                 );
 

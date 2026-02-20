@@ -16,14 +16,14 @@ import './tienda.css';
 const COMING_SOON_ITEMS = [
     {
         name: 'El VAR',
-        description: 'Pedí prueba de cualquier actividad registrada por un rival. Si no la justifica, perdés los puntos.',
+        description: 'Pedí prueba de cualquier actividad registrada por un rival. Si no la justifica, perdés las sendas.',
         icon: '📹',
         type: 'attack' as const,
         cost: 15000,
     },
     {
         name: 'Rayo de Júpiter',
-        description: 'Lanzá un rayo que le quita entre 500 y 7,500 puntos a un rival al azar.',
+        description: 'Lanzá un rayo que le quita entre 500 y 7,500 sendas a un rival al azar.',
         icon: '⚡',
         type: 'attack' as const,
         cost: 3000,
@@ -106,14 +106,14 @@ export default function TiendaPage() {
 
                 if (result.success) {
                     toast.success('¡Amnistía aplicada!', {
-                        description: `Strike del ${result.strikeRemoved} eliminado. -${result.costPaid?.toLocaleString()} pts`,
+                        description: `Strike del ${result.strikeRemoved} eliminado. -${result.costPaid?.toLocaleString()} sendas`,
                     });
                     await loadData();
                 } else {
                     switch (result.error) {
                         case 'INSUFFICIENT_BALANCE':
                             toast.error('Saldo insuficiente', {
-                                description: `Necesitás ${result.cost?.toLocaleString()} pts. Tenés ${result.balance?.toLocaleString()}.`,
+                                description: `Necesitás ${result.cost?.toLocaleString()} sendas. Tenés ${result.balance?.toLocaleString()}.`,
                             });
                             break;
                         case 'NO_STRIKES':
@@ -175,15 +175,15 @@ export default function TiendaPage() {
                 {/* ── Header ── */}
                 <div className="shop-header">
                     <h1 className="shop-title">Tienda</h1>
-                    <p className="shop-subtitle">Gastá tus puntos en ventajas estratégicas</p>
+                    <p className="shop-subtitle">Gastá tus sendas en ventajas estratégicas</p>
                 </div>
 
                 {/* ── Balance Banner ── */}
                 <div className="shop-balance-banner">
-                    <span className="balance-icon">💰</span>
+                    <span className="balance-icon" style={{ display: 'flex', marginLeft: '-10px' }}><img src="/images/senda-coin-large-sinbg.png" alt="Senda" className="senda-floating-icon senda-floating-icon--lg" style={{ transform: 'scale(1.4)' }} /></span>
                     <div className="balance-info">
                         <span className="balance-label">Tu saldo actual</span>
-                        <span className="balance-amount">{balance.toLocaleString()} pts</span>
+                        <span className="balance-amount">{balance.toLocaleString()}</span>
                     </div>
                 </div>
 
@@ -204,13 +204,12 @@ export default function TiendaPage() {
                                 <p className="shop-card__desc">{item.description}</p>
 
                                 <div className="shop-card__price-tag">
-                                    <span className="shop-card__price-icon">🪙</span>
+                                    <span className="shop-card__price-icon" style={{ display: 'flex', marginRight: '6px' }}><img src="/images/senda-coin-large-sinbg.png" alt="Senda" className="senda-floating-icon senda-floating-icon--sm" style={{ transform: 'scale(1.4)' }} /></span>
                                     <span className="shop-card__price-value">
                                         {item.name === 'Amnistía'
                                             ? amnistiaInfo.currentCost.toLocaleString()
                                             : item.cost.toLocaleString()}
                                     </span>
-                                    <span className="shop-card__price-label">pts</span>
                                 </div>
 
                                 {/* Cooldown indicator */}
@@ -263,11 +262,10 @@ export default function TiendaPage() {
                                 <h3 className="shop-card__name">{item.name}</h3>
                                 <p className="shop-card__desc">{item.description}</p>
                                 <div className="shop-card__price-tag">
-                                    <span className="shop-card__price-icon">🪙</span>
+                                    <span className="shop-card__price-icon" style={{ display: 'flex', marginRight: '6px' }}><img src="/images/senda-coin-large-sinbg.png" alt="Senda" className="senda-floating-icon senda-floating-icon--sm" style={{ transform: 'scale(1.4)' }} /></span>
                                     <span className="shop-card__price-value">
                                         {item.cost.toLocaleString()}
                                     </span>
-                                    <span className="shop-card__price-label">pts</span>
                                 </div>
                                 <button className="shop-card__buy-btn" disabled>
                                     BLOQUEADO
@@ -300,7 +298,7 @@ export default function TiendaPage() {
                                         </div>
                                     </div>
                                     <span className="shop-history-item__cost">
-                                        -{p.costPaid.toLocaleString()} pts
+                                        -{p.costPaid.toLocaleString()} sendas
                                     </span>
                                 </div>
                             ))}
@@ -323,10 +321,13 @@ export default function TiendaPage() {
                         <span className="shop-confirm-icon">{confirmItem.icon}</span>
                         <h3 className="shop-confirm-title">¿Confirmar compra?</h3>
                         <p className="shop-confirm-desc">{confirmItem.description}</p>
-                        <div className="shop-confirm-cost">
-                            🪙 {confirmItem.name === 'Amnistía'
-                                ? amnistiaInfo.currentCost.toLocaleString()
-                                : confirmItem.cost.toLocaleString()} pts
+                        <div className="shop-confirm-cost" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '14px', fontSize: '1.25rem' }}>
+                            <img src="/images/senda-coin-large-sinbg.png" alt="Senda" className="senda-floating-icon senda-floating-icon--lg" style={{ transform: 'scale(1.5)' }} />
+                            <span>
+                                {confirmItem.name === 'Amnistía'
+                                    ? amnistiaInfo.currentCost.toLocaleString()
+                                    : confirmItem.cost.toLocaleString()} <span style={{ fontSize: '0.8em', opacity: 0.8 }}>sendas</span>
+                            </span>
                         </div>
                         <div className="shop-confirm-actions">
                             <button

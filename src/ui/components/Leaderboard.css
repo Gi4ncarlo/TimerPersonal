@@ -147,32 +147,46 @@
     order: 1;
 }
 
-/* Crown icon */
-.crown-icon {
-    position: absolute;
-    top: -14px;
-    animation: crownFloat 3s ease-in-out infinite;
-    filter: drop-shadow(0 2px 8px rgba(255, 215, 0, 0.5));
-}
-
-@keyframes crownFloat {
-
-    0%,
-    100% {
-        transform: translateY(0);
-    }
-
-    50% {
-        transform: translateY(-4px);
-    }
-}
-
 .lb-podium-avatar-wrap {
     position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: 4px;
+    margin-bottom: 24px;
+    /* increased to fit bottom badges */
+}
+
+/* ── 3D Podium Badges ─────────────────────────── */
+.lb-podium-badge {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 5;
+    /* transition for subtle scale effects if any */
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.lb-podium-card:hover .lb-podium-badge {
+    transform: translateX(-50%) scale(1.1);
+}
+
+.lb-podium-badge--1 {
+    width: 46px;
+    height: 46px;
+    bottom: -23px;
+    /* Hangs exactly half its height outside the boundary */
+}
+
+.lb-podium-badge--2 {
+    width: 36px;
+    height: 36px;
+    bottom: -18px;
+}
+
+.lb-podium-badge--3 {
+    width: 32px;
+    height: 32px;
+    bottom: -16px;
 }
 
 .lb-podium-glow {
@@ -268,6 +282,9 @@
     font-family: var(--font-mono);
     font-size: 0.95rem;
     font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .lb-podium-points small {

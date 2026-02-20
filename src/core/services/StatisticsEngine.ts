@@ -194,7 +194,7 @@ export class StatisticsEngine {
             {
                 label: 'Puntos Totales',
                 value: Math.floor(totalPoints),
-                unit: 'pts',
+                unit: 'sendas',
                 change: pointsChange,
                 sparkline: sparkPoints,
                 icon: '⚡',
@@ -202,7 +202,7 @@ export class StatisticsEngine {
             {
                 label: 'Promedio Diario',
                 value: avgDaily,
-                unit: 'pts/día',
+                unit: 'sendas/día',
                 change: pointsChange,
                 sparkline: sparkPoints,
                 icon: '📊',
@@ -219,7 +219,7 @@ export class StatisticsEngine {
             {
                 label: 'Mejor Día',
                 value: Math.floor(bestDay.totalPoints),
-                unit: 'pts',
+                unit: 'sendas',
                 change: 0,
                 sparkline: sparkActivities,
                 icon: '🏅',
@@ -260,7 +260,7 @@ export class StatisticsEngine {
             if (best.totalPoints > 0) {
                 bests.push({
                     label: 'Mejor Día',
-                    value: `+${Math.floor(best.totalPoints)} pts`,
+                    value: `+${Math.floor(best.totalPoints)} sendas`,
                     detail: best.dateFormatted,
                     icon: '🏆',
                 });
@@ -292,7 +292,7 @@ export class StatisticsEngine {
         if (bestWeekEntry && bestWeekEntry[1] > 0) {
             bests.push({
                 label: 'Mejor Semana',
-                value: `+${Math.floor(bestWeekEntry[1])} pts`,
+                value: `+${Math.floor(bestWeekEntry[1])} sendas`,
                 detail: bestWeekEntry[0],
                 icon: '📅',
             });
@@ -424,7 +424,7 @@ export class StatisticsEngine {
         if (Math.max(...avgByDay) > 0) {
             insights.push({
                 icon: '📆',
-                text: `Los ${DAY_NAMES[bestDow]} son tu día más productivo (promedio ${Math.floor(avgByDay[bestDow])} pts).`,
+                text: `Los ${DAY_NAMES[bestDow]} son tu día más productivo (promedio ${Math.floor(avgByDay[bestDow])} sendas).`,
                 type: 'neutral',
             });
         }

@@ -1,7 +1,7 @@
 ﻿import { supabase } from '@/lib/supabase/client';
 import { Action, DailyRecord, User, Goal, Strike, VacationPeriod, DailyMission, SmartNotification, SarcasmLevel, GachaState, ActiveBuff, ShopItem, UserPurchase, PurchaseResult } from '@/core/types';
 import { getTodayString, getWeekStartString, getWeekEndString, getArgentinaDate, getMonthEndString, getYearEndString, getFarFutureString } from '@/core/utils/dateUtils';
-import { subDays, differenceInDays, parseISO } from 'date-fns';
+import { subDays, differenceInDays, parseISO, format } from 'date-fns';
 
 export const SupabaseDataStore = {
     // Authentication
@@ -1196,7 +1196,7 @@ export const SupabaseDataStore = {
                 timestamp: new Date().toISOString(),
                 duration_minutes: 0,
                 points_calculated: -penalty,
-                notes: `Strike detectado el ${strikeDate}. PenalizaciÃ³n del ${(penaltyPercent * 100).toFixed(0)}% sobre ${currentTotal} puntos globales.`
+                notes: `Strike detectado el ${strikeDate}. Penalización del ${(penaltyPercent * 100).toFixed(0)}% sobre ${currentTotal} sendas globales.`
             });
 
             // Update leaderboard cache
@@ -1463,24 +1463,41 @@ export const SupabaseDataStore = {
     },
 
     /**
-     * Get the number of consecutive days (before today) where ALL missions were completed.
+     * Get the number of consecutive days (including today if completed, strictly backwards) where ALL missions were completed.
      */
     async getMissionStreak(userId: string): Promise<number> {
-        // Fetch last 30 days of missions grouped by date
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        const startDate = thirtyDaysAgo.toISOString().split('T')[0];
         const today = getTodayString();
+        // Generar las fechas como strings exactos hacia atrás en lugar de parsear "today"
+        // ya que parseISO de "YYYY-MM-DD" puede dar un objeto Date desplazado dependiendo de la PC local y UTC
+
+        // Creamos un arreglo con los últimos 30 días en formato String
+        const daysMap: string[] = [];
+        const baseDate = new Date();
+        for (let i = 0; i <= 30; i++) {
+            daysMap.push(format(subDays(baseDate, i), 'yyyy-MM-dd'));
+        }
+        // daysMap[0] is roughly today, but just to be 100% sure with Argentina timezone:
+        // we'll rely on the existing getTodayString() logic and subtract days correctly
+        const exactTodayStr = today;
+        const [y, m, d] = exactTodayStr.split('-').map(Number);
+        const exactTodayDate = new Date(y, m - 1, d, 12, 0, 0); // Noon to avoid midnight timezone jumps
+
+        const startDate = format(subDays(exactTodayDate, 30), 'yyyy-MM-dd');
 
         const { data, error } = await supabase
             .from('daily_missions')
             .select('date, status')
             .eq('user_id', userId)
             .gte('date', startDate)
-            .lt('date', today)
+            .lte('date', today) // Include today
             .order('date', { ascending: false });
 
-        if (error || !data || data.length === 0) return 0;
+        if (error || !data || data.length === 0) {
+            console.log('[STREAK DEBUG] No data found or error:', { error, dataLength: data?.length, userId, today, startDate });
+            return 0;
+        }
+
+        console.log('[STREAK DEBUG] Raw data from DB:', JSON.stringify(data));
 
         // Group by date
         const byDate: Record<string, string[]> = {};
@@ -1489,18 +1506,39 @@ export const SupabaseDataStore = {
             byDate[row.date].push(row.status);
         }
 
-        // Count consecutive days where all missions are completed
+        console.log('[STREAK DEBUG] Grouped by date:', JSON.stringify(byDate));
+        console.log('[STREAK DEBUG] Today string:', today);
+
         let streak = 0;
-        const sortedDates = Object.keys(byDate).sort().reverse(); // newest first
-        for (const d of sortedDates) {
-            const statuses = byDate[d];
-            const allCompleted = statuses.length > 0 && statuses.every(s => s === 'completed');
+
+        // 1. Check today explicitly
+        const todayStatuses = byDate[today];
+        const todayCompleted = todayStatuses && todayStatuses.length > 0 && todayStatuses.every(s => s === 'completed');
+        console.log('[STREAK DEBUG] Today statuses:', todayStatuses, 'todayCompleted:', todayCompleted);
+
+        if (todayCompleted) {
+            streak++;
+        }
+
+        // 2. Check backwards continuously, starting from yesterday
+        for (let i = 1; i <= 30; i++) {
+            const checkDate = subDays(exactTodayDate, i);
+            const dateStr = format(checkDate, 'yyyy-MM-dd');
+
+            const statuses = byDate[dateStr];
+            const allCompleted = statuses && statuses.length > 0 && statuses.every(s => s === 'completed');
+            console.log(`[STREAK DEBUG] Day -${i} (${dateStr}):`, statuses, 'allCompleted:', allCompleted);
+
             if (allCompleted) {
                 streak++;
             } else {
+                // If a day is missed (not all completed, or no missions), the streak breaks.
+                console.log(`[STREAK DEBUG] Streak broken at day -${i} (${dateStr}). Final streak:`, streak);
                 break;
             }
         }
+
+        console.log('[STREAK DEBUG] Final calculated streak:', streak);
         return streak;
     },
 

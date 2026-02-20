@@ -97,7 +97,7 @@ export default function AdminPanel() {
                 <header className="admin-header">
                     <div>
                         <h1 className="admin-title">Panel de Administración</h1>
-                        <p style={{ color: 'var(--color-text-muted)' }}>Gestiona los puntos globales de la aplicación</p>
+                        <p style={{ color: 'var(--color-text-muted)' }}>Gestiona las sendas globales de la aplicación</p>
                     </div>
                     <Link href="/dashboard" className="nav-link">← Volver al Panel</Link>
                 </header>
