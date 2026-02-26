@@ -8,6 +8,18 @@ import { getLevelTitle } from '@/core/config/levelRewards';
 import Avatar from './Avatar';
 import { useToast } from '@/core/contexts/ToastContext';
 import './ProfileModal.css';
+import Twemoji from './Twemoji';
+
+const COSMETIC_AVATAR_MAP: Record<string, string> = {
+    crown: '👑',
+    bolt: '⚡',
+    shield_avatar: '🛡️',
+    fire: '🔥',
+    star: '⭐',
+    skull: '💀',
+};
+
+const getCosmeticEmoji = (slug: string): string => COSMETIC_AVATAR_MAP[slug] || slug;
 
 interface ProfileModalProps {
     user: User;
@@ -150,16 +162,22 @@ export default function ProfileModal({ user, isOpen, isOnVacation = false, onClo
                     {/* Sidebar / Topbar Navigation */}
                     <nav className="profile-sidebar">
                         <div className="profile-sidebar-header">
-                            <div className="sidebar-avatar">
+                            <div className="sidebar-avatar" style={{ position: 'relative' }}>
                                 <Avatar
                                     src={user.avatarUrl}
                                     alt={user.username}
                                     fallback={user.username}
                                     size="lg"
                                 />
+                                {user.cosmeticAvatar && (
+                                    <div className="cosmetic-badge cosmetic-badge--sm" style={{ position: 'absolute', top: '-10px', left: '50%', transform: 'translateX(-50%)', zIndex: 10 }}>
+                                        <Twemoji emoji={getCosmeticEmoji(user.cosmeticAvatar)} />
+                                    </div>
+                                )}
                             </div>
                             <div className="sidebar-user-info">
-                                <span className="sidebar-username">{user.username}</span>
+                                <span className="sidebar-username" style={user.nameColor ? { color: user.nameColor, textShadow: `0 0 10px ${user.nameColor}40` } : {}}>{user.username}</span>
+                                {user.nameTitle && <span className="sidebar-title" style={{ fontSize: '0.7rem', color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{user.nameTitle}</span>}
                                 <span className="sidebar-level" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                                     <img src={league.imgUrl} alt={league.tier} style={{ width: '20px', height: '20px', objectFit: 'contain' }} /> {league.tier}
                                 </span>
@@ -228,6 +246,11 @@ export default function ProfileModal({ user, isOpen, isOnVacation = false, onClo
                                                 fallback={user.username}
                                                 size="xl"
                                             />
+                                            {user.cosmeticAvatar && (
+                                                <div className="cosmetic-badge cosmetic-badge--lg" style={{ position: 'absolute', top: '-16px', left: '50%', transform: 'translateX(-50%)', zIndex: 10 }}>
+                                                    <Twemoji emoji={getCosmeticEmoji(user.cosmeticAvatar)} />
+                                                </div>
+                                            )}
                                             {isUpdating && (
                                                 <div className="avatar-loading-overlay">
                                                     <div className="avatar-spinner"></div>
@@ -253,19 +276,25 @@ export default function ProfileModal({ user, isOpen, isOnVacation = false, onClo
                                     {/* Zoom Modal */}
                                     {isZoomed && (
                                         <div className="avatar-zoom-overlay" onClick={() => setIsZoomed(false)}>
-                                            <div className="avatar-zoom-content" onClick={(e) => e.stopPropagation()}>
+                                            <div className="avatar-zoom-content" onClick={(e) => e.stopPropagation()} style={{ position: 'relative' }}>
                                                 <img
                                                     src={user.avatarUrl || `https://ui-avatars.com/api/?name=${user.username}&background=random`}
                                                     alt={user.username}
                                                     className="avatar-zoomed-img"
                                                 />
+                                                {user.cosmeticAvatar && (
+                                                    <div className="cosmetic-badge cosmetic-badge--xl" style={{ position: 'absolute', top: '-30px', left: '50%', transform: 'translateX(-50%)' }}>
+                                                        <Twemoji emoji={getCosmeticEmoji(user.cosmeticAvatar)} />
+                                                    </div>
+                                                )}
                                                 <button className="avatar-zoom-close" onClick={() => setIsZoomed(false)}>
                                                     &times;
                                                 </button>
                                             </div>
                                         </div>
                                     )}
-                                    <h3 className="profile-username-large">{user.username}</h3>
+                                    <h3 className="profile-username-large" style={user.nameColor ? { color: user.nameColor, textShadow: `0 0 10px ${user.nameColor}40` } : {}}>{user.username}</h3>
+                                    {user.nameTitle && <h4 style={{ color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: '-10px', marginBottom: '10px' }}>{user.nameTitle}</h4>}
                                     {user.email && <p className="profile-email">{user.email}</p>}
                                 </div>
 

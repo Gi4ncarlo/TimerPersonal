@@ -16,6 +16,11 @@ export default function AdminPanel() {
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState<string | null>(null);
     const [successMsg, setSuccessMsg] = useState('');
+    const [allUsers, setAllUsers] = useState<{ id: string, username: string, level: number, balance: number }[]>([]);
+
+    // Quick Point Adjustment State
+    const [adjustmentAmounts, setAdjustmentAmounts] = useState<Record<string, number>>({});
+    const [adjustmentReasons, setAdjustmentReasons] = useState<Record<string, string>>({});
 
     // Form state for new action
     const [newName, setNewName] = useState('');
@@ -39,10 +44,36 @@ export default function AdminPanel() {
             // Filter global actions (userId is null)
             const globals = allActions.filter(a => !a.userId);
             setGlobalActions(globals);
+
+            const usersList = await SupabaseDataStore.getAllUsers();
+            setAllUsers(usersList as any);
+
         } catch (error) {
             console.error('Error loading admin data:', error);
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handleModifyPoints = async (targetUserId: string, points: number, reason: string = 'Ajuste de Administrador') => {
+        setIsSaving(targetUserId);
+        try {
+            const result = await SupabaseDataStore.adminModifyUserPoints(targetUserId, points, reason);
+            if (result.success) {
+                setSuccessMsg(`Puntos actualizados correctamente para el usuario`);
+                // Clear inputs for this user
+                setAdjustmentAmounts(prev => ({ ...prev, [targetUserId]: 0 }));
+                setAdjustmentReasons(prev => ({ ...prev, [targetUserId]: '' }));
+                // Reload list to get updated XP
+                await loadData();
+            } else {
+                alert(`Error: ${result.error}`);
+            }
+        } catch (error) {
+            alert('Error al modificar puntos');
+        } finally {
+            setIsSaving(null);
+            setTimeout(() => setSuccessMsg(''), 3000);
         }
     };
 
@@ -204,6 +235,80 @@ export default function AdminPanel() {
                             Añadir Actividad
                         </button>
                     </form>
+                </div>
+
+                <div className="admin-card">
+                    <h3 style={{ fontFamily: 'var(--font-display)', marginBottom: 'var(--space-md)' }}>Gestión de Múltiples Usuarios</h3>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginBottom: 'var(--space-lg)' }}>
+                        Puedes modificar directamente las sendas (XP) de los usuarios desde la base de datos para pruebas.
+                    </p>
+
+                    <table className="actions-table" style={{ width: '100%', textAlign: 'left' }}>
+                        <thead>
+                            <tr>
+                                <th>Usuario</th>
+                                <th>Nivel</th>
+                                <th>Sendas Actuales</th>
+                                <th>Ajuste de Sendas</th>
+                                <th>Acciones Rápidas</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {allUsers.map(u => (
+                                <tr key={u.id}>
+                                    <td style={{ fontWeight: 'bold' }}>{u.username}</td>
+                                    <td>Nvl. {u.level}</td>
+                                    <td style={{ color: 'var(--color-accent)' }}>{u.balance?.toLocaleString()}</td>
+                                    <td>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                            <input
+                                                type="number"
+                                                placeholder="..."
+                                                className="form-control"
+                                                value={adjustmentAmounts[u.id] || ''}
+                                                onChange={e => setAdjustmentAmounts(prev => ({ ...prev, [u.id]: parseInt(e.target.value) || 0 }))}
+                                            />
+                                            <input
+                                                type="text"
+                                                placeholder="Motivo (opcional)"
+                                                className="form-control"
+                                                value={adjustmentReasons[u.id] || ''}
+                                                onChange={e => setAdjustmentReasons(prev => ({ ...prev, [u.id]: e.target.value }))}
+                                            />
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+                                            <button
+                                                className="shop-card__buy-btn"
+                                                style={{ fontSize: '0.75rem', padding: '4px 8px', flex: '1', minWidth: '80px', background: 'var(--gradient-positive)' }}
+                                                onClick={() => handleModifyPoints(u.id, 10000, '👑 Test Admin +10k')}
+                                                disabled={isSaving === u.id}
+                                            >
+                                                +10K
+                                            </button>
+                                            <button
+                                                className="shop-card__buy-btn"
+                                                style={{ fontSize: '0.75rem', padding: '4px 8px', flex: '1', minWidth: '80px', background: 'var(--color-danger)' }}
+                                                onClick={() => handleModifyPoints(u.id, -10000, '⚖️ Test Admin -10k')}
+                                                disabled={isSaving === u.id}
+                                            >
+                                                -10K
+                                            </button>
+                                            <button
+                                                className="admin-btn btn-save"
+                                                onClick={() => handleModifyPoints(u.id, adjustmentAmounts[u.id] || 0, adjustmentReasons[u.id] || 'Ajuste de Admin Manual')}
+                                                disabled={isSaving === u.id || !adjustmentAmounts[u.id]}
+                                                style={{ width: '100%', marginTop: '4px', fontSize: '0.8rem' }}
+                                            >
+                                                {isSaving === u.id ? 'Guardando...' : 'Aplicar Ajuste Manual'}
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </main>

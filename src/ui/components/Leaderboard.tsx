@@ -2,8 +2,20 @@
 
 import { useState, useMemo } from 'react';
 import Avatar from './Avatar';
+import Twemoji from './Twemoji';
 import { LEAGUE_THRESHOLDS } from '@/core/types';
 import './Leaderboard.css';
+
+const COSMETIC_AVATAR_MAP: Record<string, string> = {
+    crown: '👑',
+    bolt: '⚡',
+    shield_avatar: '🛡️',
+    fire: '🔥',
+    star: '⭐',
+    skull: '💀',
+};
+
+const getCosmeticEmoji = (slug: string): string => COSMETIC_AVATAR_MAP[slug] || slug;
 
 interface LeaderboardEntry {
     id: string;
@@ -14,9 +26,12 @@ interface LeaderboardEntry {
     negativeActivities: number;
     goalsCompleted: number;
     pointsLast24hPositive?: number;
-    pointsLast24hNegative?: number;
     strikes: number;
     avatarUrl?: string;
+    cosmeticAvatar?: string;
+    nameColor?: string;
+    nameTitle?: string;
+    activePowers?: string[];
     isOnVacation?: boolean;
     weekStart: string;
     weekEnd: string;
@@ -93,7 +108,7 @@ export default function Leaderboard({ currentEntry, entries, isLoading, onRowCli
         const rank = index + 1;
         const isCurrentUser = currentEntry?.userId === entry.userId;
         const league = getLeague(entry.totalPoints);
-        const net24h = (entry.pointsLast24hPositive || 0) + (entry.pointsLast24hNegative || 0);
+        const net24h = (entry.pointsLast24hPositive || 0);
         // For general view, net24h acts as "last week" net (data comes from the same field)
         const deltaValue = net24h;
 
@@ -122,14 +137,29 @@ export default function Leaderboard({ currentEntry, entries, isLoading, onRowCli
                             className="lb-avatar"
                             showBorder={false}
                         />
+                        {entry.cosmeticAvatar && (
+                            <div className="cosmetic-badge cosmetic-badge--sm" style={{ position: 'absolute', top: '-8px', left: '50%', transform: 'translateX(-50%)', zIndex: 5 }}>
+                                <Twemoji emoji={getCosmeticEmoji(entry.cosmeticAvatar)} />
+                            </div>
+                        )}
+                        {entry.isOnVacation && <div className="lb-vacation-overlay" title="De vacaciones">🌴</div>}
                     </div>
                     <div className="lb-user-info">
                         <div className="lb-user-top">
-                            <span className="lb-username">{entry.username}</span>
+                            <span className="lb-username" style={entry.nameColor ? { color: entry.nameColor, textShadow: `0 0 10px ${entry.nameColor}40` } : {}}>
+                                {entry.username}
+                                {entry.activePowers && entry.activePowers.length > 0 && (
+                                    <span style={{ fontSize: '0.8em', marginLeft: '4px' }}>
+                                        {entry.activePowers.includes('escudo') ? '🛡️' : ''}
+                                        {entry.activePowers.includes('boveda') ? '🏦' : ''}
+                                    </span>
+                                )}
+                            </span>
                             {entry.isOnVacation && (
                                 <span className="lb-badge lb-badge--vacation">🏖 Vacaciones</span>
                             )}
                         </div>
+                        {entry.nameTitle && <span className="lb-title" style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block' }}>{entry.nameTitle}</span>}
                         <span className="lb-league" style={{ color: league.color, display: 'flex', alignItems: 'center', gap: '4px' }}>
                             <img src={league.imgUrl} alt={league.tier} style={{ width: '20px', height: '20px', objectFit: 'contain' }} /> {league.tier}
                         </span>
