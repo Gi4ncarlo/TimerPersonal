@@ -63,6 +63,9 @@ export const SupabaseDataStore = {
             level: profile.level || 1,
             xp: profile.xp || 0,
             avatarUrl: profile.avatar_url,
+            cosmeticAvatar: profile.cosmetic_avatar,
+            nameColor: profile.name_color,
+            nameTitle: profile.name_title,
         };
     },
 
@@ -370,7 +373,23 @@ export const SupabaseDataStore = {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('Not authenticated');
 
-        // 1. Create record
+        // 1. Check for Active "Sabotaje" from another user if trying to log a positive action
+        if (record.pointsCalculated > 0) {
+            const { data: sabotaje } = await supabase
+                .from('user_active_powers')
+                .select('id')
+                .eq('target_user_id', user.id)
+                .eq('power_type', 'sabotaje')
+                .gt('expires_at', new Date().toISOString())
+                .limit(1)
+                .maybeSingle();
+
+            if (sabotaje) {
+                throw new Error('Tenés un Sabotaje activo. No podés registrar actividades positivas por ahora.');
+            }
+        }
+
+        // 2. Create the main record
         const { data, error } = await supabase
             .from('daily_records')
             .insert({
@@ -390,12 +409,54 @@ export const SupabaseDataStore = {
 
         if (error) throw error;
 
-        // 2. Update XP if positive
+        // 3. Update XP if positive
         if (record.pointsCalculated > 0) {
             await SupabaseDataStore.updateUserProgress(user.id, record.durationMinutes);
+
+            // 3.1 Check for "Parásito" active on this user
+            const { data: parasitos, error: parasitoError } = await supabase
+                .from('user_active_powers')
+                .select('attacker_id, attacker:users!user_active_powers_attacker_id_fkey(username), power_type')
+                .eq('target_user_id', user.id)
+                .in('power_type', ['parasito_agresivo', 'parasito_lento'])
+                .gt('expires_at', new Date().toISOString());
+
+            if (parasitoError) console.error('Parasite logic error:', parasitoError);
+
+            if (parasitos && parasitos.length > 0) {
+                for (const p of parasitos) {
+                    const stealPercent = p.power_type === 'parasito_agresivo' ? 0.65 : 0.20;
+                    const parasiticGains = Math.floor(record.pointsCalculated * stealPercent);
+
+                    if (parasiticGains > 0) {
+                        const parasitoName = p.power_type === 'parasito_agresivo' ? 'Garrapata Agresiva' : 'Sanguijuela';
+                        const emoji = p.power_type === 'parasito_agresivo' ? '🦠' : '🪱';
+
+                        const percentageText = `${stealPercent * 100}% de ${record.pointsCalculated}`;
+
+                        const { data: currentUsr } = await supabase.from('users').select('username').eq('id', user.id).single();
+                        const victimUsername = currentUsr?.username || 'Un usuario';
+
+                        // Apply parasite effect via RPC to bypass Row Level Security for cross-user inserts
+                        const { error: rpcError } = await supabase.rpc('apply_parasite_effect', {
+                            p_attacker_id: p.attacker_id,
+                            p_target_id: user.id,
+                            p_stolen_points: parasiticGains,
+                            p_parasite_name: parasitoName,
+                            p_emoji: emoji,
+                            p_percentage_text: percentageText,
+                            p_victim_name: victimUsername
+                        });
+
+                        if (rpcError) {
+                            console.error('Error applying parasite via RPC:', rpcError);
+                        }
+                    }
+                }
+            }
         }
 
-        // 3. Update Goals
+        // 4. Update Goals
         await SupabaseDataStore.updateGoalsProgress(
             user.id,
             record.actionId,
@@ -405,7 +466,7 @@ export const SupabaseDataStore = {
             record
         );
 
-        // 4. Update Leaderboard Stats (Weekly)
+        // 5. Update Leaderboard Stats (Weekly)
         const weekStart = getWeekStartString();
         const weekEnd = getWeekEndString();
 
@@ -1920,6 +1981,7 @@ export const SupabaseDataStore = {
             type: item.type,
             icon: item.icon,
             isActive: item.is_active,
+            metadata: item.metadata,
             maxPurchasesPerDay: item.max_purchases_per_day,
             cooldownDays: item.cooldown_days,
         }));
@@ -2007,5 +2069,105 @@ export const SupabaseDataStore = {
         }
 
         return { currentCost, cooldownEnds, purchaseCount: count };
+    },
+
+    getUserCosmetics: async (): Promise<string[]> => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return [];
+
+        const { data } = await supabase
+            .from('user_purchases')
+            .select('metadata')
+            .eq('user_id', user.id)
+            .contains('metadata', { type: 'cosmetic' });
+
+        if (!data) return [];
+        return data.map(p => p.metadata.cosmetic_value as string);
+    },
+
+    getUserActivePowers: async (userId: string) => {
+        const { data, error } = await supabase
+            .from('user_active_powers')
+            .select('*')
+            .eq('target_user_id', userId)
+            .gt('expires_at', new Date().toISOString())
+            .order('created_at', { ascending: false });
+
+        if (error || !data) return [];
+        return data;
+    },
+
+    getAllUsers: async (): Promise<{ id: string, username: string, level: number, balance: number }[]> => {
+        const { data, error } = await supabase.rpc('get_all_users_with_balance');
+
+        if (error || !data) {
+            console.error('Error fetching users with balance:', error);
+            return [];
+        }
+        return data as { id: string, username: string, level: number, balance: number }[];
+    },
+
+    adminModifyUserPoints: async (userId: string, points: number, reason: string): Promise<{ success: boolean; error?: string }> => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return { success: false, error: 'NOT_AUTHENTICATED' };
+
+        const { data, error } = await supabase.rpc('admin_modify_user_points', {
+            p_admin_id: user.id,
+            p_target_id: userId,
+            p_points: points,
+            p_reason: reason
+        });
+
+        if (error) {
+            console.error('RPC Error in adminModifyUserPoints:', error);
+            return { success: false, error: error.message };
+        }
+
+        if (data && !data.success) {
+            console.error('Logic Error in adminModifyUserPoints:', data.error);
+            return { success: false, error: data.error };
+        }
+
+        return { success: true };
+    },
+
+    purchaseCosmetic: async (itemId: string): Promise<PurchaseResult> => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return { success: false, error: 'NOT_AUTHENTICATED' };
+
+        const { data, error } = await supabase.rpc('purchase_cosmetic', {
+            p_user_id: user.id,
+            p_item_id: itemId
+        });
+
+        if (error) return { success: false, error: error.message };
+        return data as PurchaseResult;
+    },
+
+    purchaseDefensivePower: async (itemId: string): Promise<PurchaseResult> => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return { success: false, error: 'NOT_AUTHENTICATED' };
+
+        const { data, error } = await supabase.rpc('purchase_defensive_power', {
+            p_user_id: user.id,
+            p_item_id: itemId
+        });
+
+        if (error) return { success: false, error: error.message };
+        return data as PurchaseResult;
+    },
+
+    purchaseOffensivePower: async (itemId: string, targetUserId: string): Promise<PurchaseResult> => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return { success: false, error: 'NOT_AUTHENTICATED' };
+
+        const { data, error } = await supabase.rpc('purchase_offensive_power', {
+            p_user_id: user.id,
+            p_item_id: itemId,
+            p_target_user_id: targetUserId
+        });
+
+        if (error) return { success: false, error: error.message };
+        return data as PurchaseResult;
     },
 };

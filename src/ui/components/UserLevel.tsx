@@ -4,6 +4,12 @@ import { getLevelTitle } from '@/core/config/levelRewards';
 import { SupabaseDataStore } from '@/data/supabaseData';
 import { LEAGUE_THRESHOLDS, League } from '@/core/types';
 import Avatar from './Avatar';
+import Twemoji from './Twemoji';
+
+const COSMETIC_AVATAR_MAP: Record<string, string> = {
+    crown: '👑', bolt: '⚡', shield_avatar: '🛡️', fire: '🔥', star: '⭐', skull: '💀',
+};
+const getCosmeticEmoji = (slug: string): string => COSMETIC_AVATAR_MAP[slug] || slug;
 
 interface UserLevelProps {
     userId?: string;
@@ -11,10 +17,11 @@ interface UserLevelProps {
     xp: number;
     avatarUrl?: string;
     isOnVacation?: boolean;
+    cosmeticAvatar?: string;
     onClick?: () => void;
 }
 
-export default function UserLevel({ userId, level, xp, avatarUrl, isOnVacation, onClick }: UserLevelProps) {
+export default function UserLevel({ userId, level, xp, avatarUrl, isOnVacation, cosmeticAvatar, onClick }: UserLevelProps) {
     const xpForNextLevel = 1000;
     const currentLevelXp = xp % 1000;
     const progress = Math.min(100, (currentLevelXp / xpForNextLevel) * 100);
@@ -36,7 +43,7 @@ export default function UserLevel({ userId, level, xp, avatarUrl, isOnVacation, 
 
     return (
         <div className={`user-level-card ${onClick ? 'clickable' : ''}`} onClick={onClick} title="Ver Perfil">
-            <div className="avatar-preview">
+            <div className="avatar-preview" style={{ position: 'relative' }}>
                 <Avatar
                     src={avatarUrl}
                     alt="User"
@@ -45,6 +52,11 @@ export default function UserLevel({ userId, level, xp, avatarUrl, isOnVacation, 
                     className="preview-img"
                     showBorder={false}
                 />
+                {cosmeticAvatar && (
+                    <div className="cosmetic-badge cosmetic-badge--sm" style={{ position: 'absolute', top: '-8px', left: '50%', transform: 'translateX(-50%)', zIndex: 10 }}>
+                        <Twemoji emoji={getCosmeticEmoji(cosmeticAvatar)} />
+                    </div>
+                )}
             </div>
 
             <div className="level-info">

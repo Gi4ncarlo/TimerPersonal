@@ -2,7 +2,7 @@
 
 .dashboard {
     min-height: 100vh;
-    padding: var(--space-2xl) var(--space-xl);
+    padding: var(--space-3xl) var(--space-2xl);
     background: var(--color-background);
     background-image:
         radial-gradient(circle at 20% 20%, var(--color-void-glow) 0%, transparent 40%),
@@ -55,8 +55,7 @@
 
 .main-title {
     font-family: var(--font-display);
-    font-size: 1.5rem;
-    /* Further reduced to ensure it fits with buttons */
+    font-size: 1.8rem;
     font-weight: 950;
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -229,11 +228,11 @@
 
 .accumulated-label {
     font-family: var(--font-display);
-    font-size: 0.8rem;
+    font-size: 0.95rem;
     color: var(--color-primary);
     text-transform: uppercase;
     letter-spacing: 0.4em;
-    margin-bottom: var(--space-sm);
+    margin-bottom: var(--space-md);
     font-weight: 700;
     position: relative;
     z-index: 1;
@@ -257,11 +256,9 @@
 /* ROW 1: THE HEROES */
 .hero-row {
     display: grid;
-    grid-template-columns: 1fr 340px;
-    /* Even wider points, tighter chronicle */
-    gap: var(--space-xl);
+    grid-template-columns: 1fr 400px;
+    gap: var(--space-2xl);
     align-items: stretch;
-    /* Forces children to match height */
 }
 
 .the-chronicle {

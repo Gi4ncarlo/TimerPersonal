@@ -38,6 +38,9 @@ export interface User {
     level: number;
     xp: number;
     avatarUrl?: string;
+    cosmeticAvatar?: string;
+    nameColor?: string;
+    nameTitle?: string;
 }
 
 export interface Goal {
@@ -196,6 +199,7 @@ export interface League {
 
 // Shop System
 export type ShopItemType = 'utility' | 'attack' | 'defense';
+export type ShopItemCategory = 'utility' | 'cosmetic' | 'offensive' | 'defensive';
 
 export interface ShopItem {
     id: string;
@@ -205,8 +209,20 @@ export interface ShopItem {
     type: ShopItemType;
     icon: string;
     isActive: boolean;
+    metadata?: Record<string, any>;
     maxPurchasesPerDay?: number;
     cooldownDays?: number;
+}
+
+export interface UserActivePower {
+    id: string;
+    userId: string;
+    targetUserId: string | null;
+    powerType: 'escudo' | 'boveda' | 'seguro_racha' | 'parasito_agresivo' | 'parasito_lento' | 'sabotaje' | 'jupiter_ray';
+    expiresAt: string;
+    attackerId: string | null;
+    metadata: Record<string, any>;
+    createdAt: string;
 }
 
 export interface UserPurchase {

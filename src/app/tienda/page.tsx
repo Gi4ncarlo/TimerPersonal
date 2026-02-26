@@ -21,31 +21,24 @@ const COMING_SOON_ITEMS = [
         type: 'attack' as const,
         cost: 15000,
     },
-    {
-        name: 'Rayo de Júpiter',
-        description: 'Lanzá un rayo que le quita entre 500 y 7,500 sendas a un rival al azar.',
-        icon: '⚡',
-        type: 'attack' as const,
-        cost: 3000,
-    },
-    {
-        name: 'Escudo Pretoriano',
-        description: 'Activá un escudo que refleja el próximo ataque que recibas. Dura 24 horas.',
-        icon: '🛡️',
-        type: 'defense' as const,
-        cost: 2500,
-    },
 ];
+
+type ShopCategory = 'utility' | 'cosmetic' | 'offensive' | 'defensive';
 
 export default function TiendaPage() {
     const [shopItems, setShopItems] = useState<ShopItem[]>([]);
     const [purchases, setPurchases] = useState<UserPurchase[]>([]);
     const [currentUser, setCurrentUser] = useState<User | null>(null);
+    const [allUsers, setAllUsers] = useState<{ id: string, username: string, level: number }[]>([]);
     const [strikes, setStrikes] = useState<Strike[]>([]);
     const [balance, setBalance] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
     const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
     const [isOnVacation, setIsOnVacation] = useState(false);
+    const [ownedCosmetics, setOwnedCosmetics] = useState<string[]>([]);
+    const [activePowers, setActivePowers] = useState<any[]>([]);
+
+    const [activeTab, setActiveTab] = useState<ShopCategory>('utility');
 
     // Amnistía-specific state
     const [amnistiaInfo, setAmnistiaInfo] = useState<{
@@ -57,6 +50,7 @@ export default function TiendaPage() {
     // Confirm modal
     const [confirmItem, setConfirmItem] = useState<ShopItem | null>(null);
     const [isPurchasing, setIsPurchasing] = useState(false);
+    const [targetUserId, setTargetUserId] = useState<string>('');
 
     useEffect(() => {
         loadData();
@@ -67,23 +61,30 @@ export default function TiendaPage() {
             const user = await SupabaseDataStore.getCurrentUser();
             setCurrentUser(user);
 
-            const [items, userPurchases, userStrikes, vacations, amnistia] = await Promise.all([
+            const [items, userPurchases, userStrikes, vacations, amnistia, cosmetics] = await Promise.all([
                 SupabaseDataStore.getShopItems(),
                 SupabaseDataStore.getUserPurchases(),
                 SupabaseDataStore.getStrikes(),
                 SupabaseDataStore.getVacationPeriods(),
                 SupabaseDataStore.getAmnistiaInfo(),
+                SupabaseDataStore.getUserCosmetics(),
             ]);
 
             setShopItems(items);
             setPurchases(userPurchases);
             setStrikes(userStrikes);
             setAmnistiaInfo(amnistia);
+            setOwnedCosmetics(cosmetics);
 
-            // Calculate balance
             if (user) {
-                const userBalance = await SupabaseDataStore.getUserBalance(user.id);
+                const [userBalance, activePws, usersList] = await Promise.all([
+                    SupabaseDataStore.getUserBalance(user.id),
+                    SupabaseDataStore.getUserActivePowers(user.id),
+                    SupabaseDataStore.getAllUsers()
+                ]);
                 setBalance(Math.floor(userBalance));
+                setActivePowers(activePws);
+                setAllUsers(usersList.filter(u => u.id !== user.id)); // Remove self from targets
             }
 
             const today = getTodayString();
@@ -103,33 +104,35 @@ export default function TiendaPage() {
         try {
             if (confirmItem.name === 'Amnistía') {
                 const result = await SupabaseDataStore.purchaseAmnistia();
-
                 if (result.success) {
                     toast.success('¡Amnistía aplicada!', {
-                        description: `Strike del ${result.strikeRemoved} eliminado. -${result.costPaid?.toLocaleString()} sendas`,
+                        description: `Strike eliminado. -${result.costPaid?.toLocaleString()} sendas`,
                     });
                     await loadData();
-                } else {
-                    switch (result.error) {
-                        case 'INSUFFICIENT_BALANCE':
-                            toast.error('Saldo insuficiente', {
-                                description: `Necesitás ${result.cost?.toLocaleString()} sendas. Tenés ${result.balance?.toLocaleString()}.`,
-                            });
-                            break;
-                        case 'NO_STRIKES':
-                            toast.error('Sin strikes', {
-                                description: '¡No tenés ningún strike que borrar!',
-                            });
-                            break;
-                        case 'COOLDOWN_ACTIVE':
-                            toast.error('Enfriamiento activo', {
-                                description: `Podés volver a comprar el ${new Date(result.nextAvailable!).toLocaleDateString()}.`,
-                            });
-                            break;
-                        default:
-                            toast.error('Error en la compra', { description: result.error });
-                    }
+                } else handlePurchaseError(result.error);
+            } else if (confirmItem.metadata?.category === 'cosmetic') {
+                const result = await SupabaseDataStore.purchaseCosmetic(confirmItem.id);
+                if (result.success) {
+                    toast.success('¡Cosmético adquirido!', { description: 'Ya podés verlo en tu perfil.' });
+                    await loadData();
+                } else handlePurchaseError(result.error);
+            } else if (confirmItem.metadata?.category === 'defensive') {
+                const result = await SupabaseDataStore.purchaseDefensivePower(confirmItem.id);
+                if (result.success) {
+                    toast.success('¡Poder defensivo activado!', { description: 'Tus defensas están listas.' });
+                    await loadData();
+                } else handlePurchaseError(result.error);
+            } else if (confirmItem.metadata?.category === 'offensive') {
+                if (!targetUserId) {
+                    toast.error('Error', { description: 'Debes seleccionar un rival.' });
+                    setIsPurchasing(false);
+                    return;
                 }
+                const result = await SupabaseDataStore.purchaseOffensivePower(confirmItem.id, targetUserId);
+                if (result.success) {
+                    toast.success('¡Ataque ejecutado!', { description: 'El rival ha sido afectado.' });
+                    await loadData();
+                } else handlePurchaseError(result.error);
             }
         } catch (error) {
             console.error('Purchase error:', error);
@@ -137,30 +140,99 @@ export default function TiendaPage() {
         } finally {
             setIsPurchasing(false);
             setConfirmItem(null);
+            setTargetUserId('');
+        }
+    };
+
+    const handlePurchaseError = (error: string | undefined) => {
+        switch (error) {
+            case 'INSUFFICIENT_BALANCE':
+                toast.error('Saldo insuficiente');
+                break;
+            case 'NO_STRIKES':
+                toast.error('Sin strikes', { description: '¡No tenés ningún strike que borrar!' });
+                break;
+            case 'COOLDOWN_ACTIVE':
+                toast.error('Enfriamiento activo');
+                break;
+            case 'ALREADY_ACTIVE':
+            case 'ALREADY_ACTIVE_ON_TARGET':
+                toast.error('Poder ya activo', { description: 'Este poder ya está surtiendo efecto.' });
+                break;
+            case 'TARGET_ALREADY_UNDER_ATTACK':
+                toast.error('Objetivo bajo ataque', { description: 'Este jugador ya está sufriendo un efecto negativo.' });
+                break;
+            default:
+                toast.error('Error en la compra', { description: error || 'Desconocido' });
         }
     };
 
     const getCooldownText = () => {
         if (!amnistiaInfo.cooldownEnds) return null;
-        const end = new Date(amnistiaInfo.cooldownEnds);
-        const now = new Date();
-        const diffMs = end.getTime() - now.getTime();
+        const diffMs = new Date(amnistiaInfo.cooldownEnds).getTime() - new Date().getTime();
         if (diffMs <= 0) return null;
         const days = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
         return `Disponible en ${days} día${days !== 1 ? 's' : ''}`;
     };
 
-    const isAmnistiaDisabled = () => {
-        return (
-            balance < amnistiaInfo.currentCost ||
-            strikes.length === 0 ||
-            !!getCooldownText()
-        );
-    };
-
     if (isLoading) return <LogoLoader />;
 
-    const cooldownText = getCooldownText();
+    // Filter items by tab
+    const filteredItems = shopItems.filter(item => {
+        if (activeTab === 'utility') return !item.metadata?.category || item.metadata?.category === 'utility' || item.name === 'Amnistía';
+        return item.metadata?.category === activeTab;
+    });
+
+    const renderCardAction = (item: ShopItem) => {
+        if (item.name === 'Amnistía') {
+            const isAmnistiaDisabled = balance < amnistiaInfo.currentCost || strikes.length === 0 || !!getCooldownText();
+            return (
+                <button
+                    className="shop-card__buy-btn"
+                    disabled={isAmnistiaDisabled}
+                    onClick={() => setConfirmItem(item)}
+                >
+                    {strikes.length === 0 ? 'SIN STRIKES' : balance < amnistiaInfo.currentCost ? 'SALDO INSUFICIENTE' : getCooldownText() ? 'EN ENFRIAMIENTO' : 'COMPRAR'}
+                </button>
+            );
+        }
+
+        if (item.metadata?.category === 'cosmetic') {
+            const isOwned = ownedCosmetics.includes(item.metadata.cosmetic_value);
+            return (
+                <button
+                    className={`shop-card__buy-btn ${isOwned ? 'btn-owned' : ''}`}
+                    disabled={isOwned || balance < item.cost}
+                    onClick={() => setConfirmItem(item)}
+                >
+                    {isOwned ? 'YA OBTENIDO' : balance < item.cost ? 'SALDO INSUFICIENTE' : 'COMPRAR'}
+                </button>
+            );
+        }
+
+        if (item.metadata?.category === 'defensive') {
+            const isActive = activePowers.some(p => p.power_type === item.metadata?.power_type);
+            return (
+                <button
+                    className="shop-card__buy-btn"
+                    disabled={isActive || balance < item.cost}
+                    onClick={() => setConfirmItem(item)}
+                >
+                    {isActive ? 'ACTIVO' : balance < item.cost ? 'SALDO INSUFICIENTE' : 'ACTIVAR'}
+                </button>
+            );
+        }
+
+        return (
+            <button
+                className="shop-card__buy-btn"
+                disabled={balance < item.cost}
+                onClick={() => setConfirmItem(item)}
+            >
+                {balance < item.cost ? 'SALDO INSUFICIENTE' : 'COMPRAR'}
+            </button>
+        );
+    };
 
     return (
         <main className="dashboard">
@@ -172,13 +244,11 @@ export default function TiendaPage() {
                     onProfileClick={() => setIsProfileModalOpen(true)}
                 />
 
-                {/* ── Header ── */}
                 <div className="shop-header">
                     <h1 className="shop-title">Tienda</h1>
-                    <p className="shop-subtitle">Gastá tus sendas en ventajas estratégicas</p>
+                    <p className="shop-subtitle">Adquirí ventajas y cosméticos legendarios</p>
                 </div>
 
-                {/* ── Balance Banner ── */}
                 <div className="shop-balance-banner">
                     <span className="balance-icon" style={{ display: 'flex', marginLeft: '-10px' }}><img src="/images/senda-coin-large-sinbg.png" alt="Senda" className="senda-floating-icon senda-floating-icon--lg" style={{ transform: 'scale(1.4)' }} /></span>
                     <div className="balance-info">
@@ -187,161 +257,135 @@ export default function TiendaPage() {
                     </div>
                 </div>
 
-                {/* ── Shop Grid ── */}
+                {/* TABS */}
+                <div className="shop-tabs">
+                    <button className={`shop-tab-btn ${activeTab === 'utility' ? 'active' : ''}`} onClick={() => setActiveTab('utility')}>🛠️ Utilidades</button>
+                    <button className={`shop-tab-btn ${activeTab === 'cosmetic' ? 'active' : ''}`} onClick={() => setActiveTab('cosmetic')}>✨ Cosméticos</button>
+                    <button className={`shop-tab-btn ${activeTab === 'offensive' ? 'active' : ''}`} onClick={() => setActiveTab('offensive')}>⚔️ Ataque</button>
+                    <button className={`shop-tab-btn ${activeTab === 'defensive' ? 'active' : ''}`} onClick={() => setActiveTab('defensive')}>🛡️ Defensa</button>
+                </div>
+
                 <div className="shop-grid">
-                    {/* Real Items */}
-                    {shopItems.map(item => (
-                        <div
-                            key={item.id}
-                            className={`shop-card card--${item.type} ${isAmnistiaDisabled() && item.name === 'Amnistía' ? '' : ''}`}
-                        >
+                    {filteredItems.map(item => (
+                        <div key={item.id} className={`shop-card card--${item.type}`}>
                             <div className="shop-card__glow-bar" />
                             <div className="shop-card__body">
                                 <div className="shop-card__icon-wrap">
-                                    {item.icon}
+                                    {item.metadata?.cosmetic_type === 'name_color' ? (
+                                        <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: item.metadata.cosmetic_value, boxShadow: `0 0 15px ${item.metadata.cosmetic_value}` }} />
+                                    ) : (
+                                        item.icon
+                                    )}
                                 </div>
-                                <h3 className="shop-card__name">{item.name}</h3>
+                                <h3 className="shop-card__name" style={item.metadata?.cosmetic_type === 'name_color' ? { color: item.metadata.cosmetic_value } : {}}>{item.name}</h3>
                                 <p className="shop-card__desc">{item.description}</p>
 
                                 <div className="shop-card__price-tag">
                                     <span className="shop-card__price-icon" style={{ display: 'flex', marginRight: '6px' }}><img src="/images/senda-coin-large-sinbg.png" alt="Senda" className="senda-floating-icon senda-floating-icon--sm" style={{ transform: 'scale(1.4)' }} /></span>
                                     <span className="shop-card__price-value">
-                                        {item.name === 'Amnistía'
-                                            ? amnistiaInfo.currentCost.toLocaleString()
-                                            : item.cost.toLocaleString()}
+                                        {item.name === 'Amnistía' ? amnistiaInfo.currentCost.toLocaleString() : item.cost.toLocaleString()}
                                     </span>
                                 </div>
 
-                                {/* Cooldown indicator */}
-                                {item.name === 'Amnistía' && cooldownText && (
-                                    <div className="shop-card__cooldown shop-card__cooldown--active">
-                                        ⏳ {cooldownText}
-                                    </div>
-                                )}
-
-                                {/* Strike count info */}
-                                {item.name === 'Amnistía' && (
-                                    <div className="shop-card__cooldown">
-                                        ⚠️ Strikes activos: {strikes.length}
-                                    </div>
-                                )}
-
-                                {/* Escalation info */}
-                                {item.name === 'Amnistía' && amnistiaInfo.purchaseCount > 0 && (
-                                    <div className="shop-card__cooldown">
-                                        📈 Compra #{amnistiaInfo.purchaseCount + 1} — precio escalado
-                                    </div>
-                                )}
-
-                                <button
-                                    className="shop-card__buy-btn"
-                                    disabled={item.name === 'Amnistía' ? isAmnistiaDisabled() : true}
-                                    onClick={() => setConfirmItem(item)}
-                                >
-                                    {item.name === 'Amnistía' && strikes.length === 0
-                                        ? 'SIN STRIKES'
-                                        : item.name === 'Amnistía' && balance < amnistiaInfo.currentCost
-                                            ? 'SALDO INSUFICIENTE'
-                                            : item.name === 'Amnistía' && cooldownText
-                                                ? 'EN ENFRIAMIENTO'
-                                                : 'COMPRAR'}
-                                </button>
+                                {item.name === 'Amnistía' && getCooldownText() && <div className="shop-card__cooldown shop-card__cooldown--active">⏳ {getCooldownText()}</div>}
+                                {renderCardAction(item)}
                             </div>
                         </div>
                     ))}
 
-                    {/* Coming Soon Cards */}
-                    {COMING_SOON_ITEMS.map((item, idx) => (
+                    {/* Coming Soon logic only on Utilities/Offensive for now */}
+                    {activeTab === 'offensive' && COMING_SOON_ITEMS.map((item, idx) => (
                         <div key={idx} className={`shop-card card--${item.type} card--coming-soon`}>
                             <div className="shop-card__glow-bar" />
                             <div className="shop-card__coming-soon-badge">PRÓXIMAMENTE</div>
                             <div className="shop-card__body">
-                                <div className="shop-card__icon-wrap">
-                                    {item.icon}
-                                </div>
+                                <div className="shop-card__icon-wrap">{item.icon}</div>
                                 <h3 className="shop-card__name">{item.name}</h3>
                                 <p className="shop-card__desc">{item.description}</p>
-                                <div className="shop-card__price-tag">
-                                    <span className="shop-card__price-icon" style={{ display: 'flex', marginRight: '6px' }}><img src="/images/senda-coin-large-sinbg.png" alt="Senda" className="senda-floating-icon senda-floating-icon--sm" style={{ transform: 'scale(1.4)' }} /></span>
-                                    <span className="shop-card__price-value">
-                                        {item.cost.toLocaleString()}
-                                    </span>
-                                </div>
-                                <button className="shop-card__buy-btn" disabled>
-                                    BLOQUEADO
-                                </button>
+                                <button className="shop-card__buy-btn" disabled>BLOQUEADO</button>
                             </div>
                         </div>
                     ))}
                 </div>
 
-                {/* ── Purchase History ── */}
                 {purchases.length > 0 && (
                     <div className="shop-history-section">
                         <h3 className="shop-history-title">Historial de Compras</h3>
                         <div className="shop-history-list">
-                            {purchases.map(p => (
+                            {purchases.slice(0, 15).map(p => (
                                 <div key={p.id} className="shop-history-item">
-                                    <span className="shop-history-item__icon">🕊️</span>
+                                    <span className="shop-history-item__icon">
+                                        {p.metadata?.type === 'cosmetic' ? '✨' : p.metadata?.type === 'offensive' ? '⚔️' : p.metadata?.type === 'defensive' ? '🛡️' : '🕊️'}
+                                    </span>
                                     <div className="shop-history-item__details">
                                         <div className="shop-history-item__name">
-                                            Amnistía — Strike {p.metadata?.strike_date || ''}
+                                            {p.metadata?.strike_date ? `Amnistía — Strike ${p.metadata.strike_date}` :
+                                                p.metadata?.cosmetic_value ? `Cosmético: ${p.metadata.cosmetic_value}` :
+                                                    p.metadata?.power_type ? `Poder: ${p.metadata.power_type}${p.metadata.target_name ? ` a ${p.metadata.target_name}` : ''}${p.metadata.damage ? ` (-${p.metadata.damage} pts)` : ''}` : 'Compra'}
                                         </div>
                                         <div className="shop-history-item__date">
                                             {new Date(p.purchasedAt).toLocaleDateString('es-AR', {
-                                                day: 'numeric',
-                                                month: 'short',
-                                                year: 'numeric',
-                                                hour: '2-digit',
-                                                minute: '2-digit',
+                                                day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
                                             })}
                                         </div>
                                     </div>
-                                    <span className="shop-history-item__cost">
-                                        -{p.costPaid.toLocaleString()} sendas
-                                    </span>
+                                    <span className="shop-history-item__cost">-{p.costPaid.toLocaleString()} sendas</span>
                                 </div>
                             ))}
                         </div>
                     </div>
                 )}
-
-                {shopItems.length === 0 && COMING_SOON_ITEMS.length === 0 && (
-                    <div className="shop-empty-state">
-                        <span className="shop-empty-state__icon">🏪</span>
-                        <p>La tienda está vacía por ahora. ¡Próximamente nuevos ítems!</p>
-                    </div>
-                )}
             </div>
 
-            {/* ── Confirm Purchase Modal ── */}
+            {/* Confirm Purchase Modal */}
             {confirmItem && (
                 <div className="shop-confirm-overlay" onClick={() => !isPurchasing && setConfirmItem(null)}>
                     <div className="shop-confirm-card" onClick={e => e.stopPropagation()}>
                         <span className="shop-confirm-icon">{confirmItem.icon}</span>
                         <h3 className="shop-confirm-title">¿Confirmar compra?</h3>
                         <p className="shop-confirm-desc">{confirmItem.description}</p>
-                        <div className="shop-confirm-cost" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '14px', fontSize: '1.25rem' }}>
+
+                        {confirmItem.metadata?.category === 'offensive' && (
+                            <div className="rival-selector-container">
+                                <label className="rival-selector-label">Seleccionar Objetivo:</label>
+                                <select
+                                    className="rival-selector"
+                                    value={targetUserId}
+                                    onChange={(e) => setTargetUserId(e.target.value)}
+                                >
+                                    <option value="" disabled>Elegir un rival...</option>
+                                    {allUsers.map(u => (
+                                        <option key={u.id} value={u.id}>{u.username} (Nivel {u.level})</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+
+                        {confirmItem.metadata?.category === 'defensive' && activePowers.some(p => ['sabotaje', 'parasito_agresivo', 'parasito_lento'].includes(p.power_type)) && (
+                            <div style={{
+                                marginTop: '16px',
+                                padding: '12px',
+                                background: 'rgba(244, 63, 94, 0.1)',
+                                border: '1px solid rgba(244, 63, 94, 0.3)',
+                                borderRadius: '8px',
+                                color: '#f43f5e',
+                                fontSize: '0.85rem',
+                                textAlign: 'left',
+                                lineHeight: '1.4'
+                            }}>
+                                <strong>⚠️ Advertencia:</strong> Ya estás bajo los efectos de un ataque. Esta defensa no curará tu estado actual, solo te protegerá de ataques <strong>futuros</strong>.
+                            </div>
+                        )}
+
+                        <div className="shop-confirm-cost" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '14px', fontSize: '1.25rem', marginTop: '20px' }}>
                             <img src="/images/senda-coin-large-sinbg.png" alt="Senda" className="senda-floating-icon senda-floating-icon--lg" style={{ transform: 'scale(1.5)' }} />
                             <span>
-                                {confirmItem.name === 'Amnistía'
-                                    ? amnistiaInfo.currentCost.toLocaleString()
-                                    : confirmItem.cost.toLocaleString()} <span style={{ fontSize: '0.8em', opacity: 0.8 }}>sendas</span>
+                                {confirmItem.name === 'Amnistía' ? amnistiaInfo.currentCost.toLocaleString() : confirmItem.cost.toLocaleString()} <span style={{ fontSize: '0.8em', opacity: 0.8 }}>sendas</span>
                             </span>
                         </div>
                         <div className="shop-confirm-actions">
-                            <button
-                                className="btn-confirm-cancel"
-                                onClick={() => setConfirmItem(null)}
-                                disabled={isPurchasing}
-                            >
-                                CANCELAR
-                            </button>
-                            <button
-                                className="btn-confirm-buy"
-                                onClick={handlePurchase}
-                                disabled={isPurchasing}
-                            >
+                            <button className="btn-confirm-cancel" onClick={() => { setConfirmItem(null); setTargetUserId(''); }} disabled={isPurchasing}>CANCELAR</button>
+                            <button className="btn-confirm-buy" onClick={handlePurchase} disabled={isPurchasing || (confirmItem.metadata?.category === 'offensive' && !targetUserId)}>
                                 {isPurchasing ? 'PROCESANDO...' : 'COMPRAR'}
                             </button>
                         </div>
@@ -349,7 +393,6 @@ export default function TiendaPage() {
                 </div>
             )}
 
-            {/* ── Profile Modal ── */}
             {currentUser && (
                 <ProfileModal
                     user={currentUser}

@@ -59,6 +59,7 @@ export default function Navbar({
                             xp={userLevel.xp}
                             avatarUrl={currentUser.avatarUrl}
                             isOnVacation={isOnVacation}
+                            cosmeticAvatar={currentUser.cosmeticAvatar}
                         />
                     </button>
                 )}
