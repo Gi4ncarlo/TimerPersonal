@@ -153,7 +153,7 @@ export class DailyMissionEngine {
             'consistency', 'consistency',
             'limit_negative'
         ];
-        
+
         // Shuffle and pick 2 unique types
         const missionTypes: MissionType[] = [];
         while (missionTypes.length < 2 && typePool.length > 0) {
@@ -212,8 +212,79 @@ export class DailyMissionEngine {
                 rewardPoints,
             });
         }
-
         return missions;
+    }
+
+    /**
+     * Generate a single replacement mission that is different from current missions.
+     */
+    static generateSingleReplacementMission(
+        currentMissions: DailyMission[],
+        actions: Action[],
+        date: string,
+        userId: string,
+        streakDays: number = 0,
+    ): Omit<DailyMission, 'id'> {
+        const difficulty = this.getDifficultyForStreak(streakDays);
+        const existingTitles = currentMissions.map(m => m.title);
+
+        const typePool: MissionType[] = [
+            'threshold_positive', 'threshold_positive',
+            'consistency', 'consistency',
+            'limit_negative'
+        ];
+
+        const positiveActions = actions.filter(a => a.type === 'positive');
+        const negativeActions = actions.filter(a => a.type === 'negative');
+
+        // Try up to 20 times to find a unique mission
+        for (let i = 0; i < 20; i++) {
+            const type = typePool[Math.floor(Math.random() * typePool.length)];
+            const candidates = MISSION_TEMPLATES.filter(t => t.missionType === type);
+            const template = candidates[Math.floor(Math.random() * candidates.length)];
+
+            let actionId: string | undefined;
+            let actionName = '';
+
+            if (template.requiresAction) {
+                const pool = template.actionFilter === 'positive' ? positiveActions : negativeActions;
+                if (pool.length === 0) continue;
+                const picked = pool[Math.floor(Math.random() * pool.length)];
+                actionId = picked.id;
+                actionName = picked.name;
+            }
+
+            const targetValue = template.targets[difficulty];
+            const rewardPoints = template.rewards[difficulty];
+
+            const title = template.titleTemplate
+                .replace('{action}', actionName)
+                .replace('{value}', String(targetValue));
+
+            // If we found a unique title, return it
+            if (!existingTitles.includes(title)) {
+                const description = template.descriptionTemplate
+                    .replace('{action}', actionName)
+                    .replace('{value}', String(targetValue));
+
+                return {
+                    userId,
+                    date,
+                    missionType: type,
+                    difficulty,
+                    title,
+                    description,
+                    targetValue,
+                    currentValue: 0,
+                    actionId,
+                    status: 'in_progress',
+                    rewardPoints,
+                };
+            }
+        }
+
+        // Fallback if we somehow can't find a unique one (extremely unlikely)
+        return this.generateDailyMissions(actions, date, userId, streakDays)[0];
     }
 
     /**

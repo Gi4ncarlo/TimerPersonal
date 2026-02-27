@@ -26,6 +26,8 @@ interface LeaderboardEntry {
     strikes: number;
     avatarUrl?: string;
     isOnVacation?: boolean;
+    lastActivity?: string;
+    streakDays?: number;
     weekStart: string;
     weekEnd: string;
 }
@@ -86,10 +88,13 @@ export default function LeaderboardPage() {
 
                 <header className="page-header">
                     <div className="title-area">
-                        <h1 className="page-title">{viewMode === 'weekly' ? 'Ranking Semanal' : 'Ranking General'}</h1>
+                        <p className="page-eyebrow">Senda de Logros · Ciclo Actual</p>
+                        <h1 className="page-title">
+                            Ranking <span className="page-title-accent">{viewMode === 'weekly' ? 'Semanal' : 'General'}</span>
+                        </h1>
                         <p className="page-subtitle">
                             {viewMode === 'weekly'
-                                ? 'Rendimiento del ciclo actual'
+                                ? 'Rendimiento en tiempo real del ciclo activo'
                                 : 'Ranking acumulado de todos los tiempos'}
                         </p>
                     </div>

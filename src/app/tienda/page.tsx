@@ -51,6 +51,7 @@ export default function TiendaPage() {
     const [confirmItem, setConfirmItem] = useState<ShopItem | null>(null);
     const [isPurchasing, setIsPurchasing] = useState(false);
     const [targetUserId, setTargetUserId] = useState<string>('');
+    const [purifyBonus, setPurifyBonus] = useState<number | null>(null);
 
     useEffect(() => {
         loadData();
@@ -105,6 +106,7 @@ export default function TiendaPage() {
             if (confirmItem.name === 'Amnistía') {
                 const result = await SupabaseDataStore.purchaseAmnistia();
                 if (result.success) {
+                    setPurifyBonus(result.bonus || 200);
                     toast.success('¡Amnistía aplicada!', {
                         description: `Strike eliminado. -${result.costPaid?.toLocaleString()} sendas`,
                     });
@@ -187,13 +189,31 @@ export default function TiendaPage() {
         if (item.name === 'Amnistía') {
             const isAmnistiaDisabled = balance < amnistiaInfo.currentCost || strikes.length === 0 || !!getCooldownText();
             return (
-                <button
-                    className="shop-card__buy-btn"
-                    disabled={isAmnistiaDisabled}
-                    onClick={() => setConfirmItem(item)}
-                >
-                    {strikes.length === 0 ? 'SIN STRIKES' : balance < amnistiaInfo.currentCost ? 'SALDO INSUFICIENTE' : getCooldownText() ? 'EN ENFRIAMIENTO' : 'COMPRAR'}
-                </button>
+                <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <button
+                        className="shop-card__buy-btn"
+                        disabled={isAmnistiaDisabled}
+                        onClick={() => setConfirmItem(item)}
+                    >
+                        {strikes.length === 0 ? 'SIN STRIKES' : balance < amnistiaInfo.currentCost ? 'SALDO INSUFICIENTE' : getCooldownText() ? 'EN ENFRIAMIENTO' : 'COMPRAR'}
+                    </button>
+                    <div style={{ fontSize: '0.8rem', textAlign: 'center', color: strikes.length === 0 ? '#4ade80' : 'var(--color-warning)', fontWeight: 600 }}>
+                        {strikes.length === 0 ? '✨ Tu perfil está limpio' : `⚠️ Tenés ${strikes.length} strike${strikes.length > 1 ? 's' : ''} activo${strikes.length > 1 ? 's' : ''}`}
+                    </div>
+                </div>
+            );
+        }
+
+        if (item.metadata?.category === 'offensive' && strikes.length >= 4) {
+            return (
+                <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <button className="shop-card__buy-btn" disabled style={{ background: 'rgba(244, 63, 94, 0.1)', color: '#f43f5e', border: '1px solid rgba(244, 63, 94, 0.3)' }}>
+                        BLOQUEADO
+                    </button>
+                    <div style={{ fontSize: '0.8rem', textAlign: 'center', color: '#f43f5e', fontWeight: 600 }}>
+                        Bloqueado por mala conducta
+                    </div>
+                </div>
             );
         }
 
@@ -401,6 +421,22 @@ export default function TiendaPage() {
                     onClose={() => setIsProfileModalOpen(false)}
                     onUpdate={() => loadData()}
                 />
+            )}
+
+            {purifyBonus !== null && (
+                <div className="purify-overlay">
+                    <img src="/images/stryke_purified_bg.png" className="purify-bg" alt="Purified Background" />
+                    <div className="purify-content">
+                        <div className="purify-icon">🕊️</div>
+                        <h2 className="purify-title">¡PERFIL RESTAURADO!</h2>
+                        <p className="purify-desc">Has limpiado una mancha de tu historial y recuperado honor.</p>
+                        <div className="purify-bonus-box">
+                            <span className="purify-bonus-label">BONUS DE RECUPERACIÓN</span>
+                            <span className="purify-bonus-amount">+{purifyBonus} sendas</span>
+                        </div>
+                        <button className="purify-btn" onClick={() => setPurifyBonus(null)}>ACEPTAR</button>
+                    </div>
+                </div>
             )}
         </main>
     );

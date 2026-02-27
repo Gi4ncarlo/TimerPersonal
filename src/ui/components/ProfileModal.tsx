@@ -7,6 +7,7 @@ import { User, SarcasmLevel, LEAGUE_THRESHOLDS } from '@/core/types';
 import { getLevelTitle } from '@/core/config/levelRewards';
 import Avatar from './Avatar';
 import { useToast } from '@/core/contexts/ToastContext';
+import { Strike } from '@/core/types';
 import './ProfileModal.css';
 import Twemoji from './Twemoji';
 
@@ -46,6 +47,7 @@ export default function ProfileModal({ user, isOpen, isOnVacation = false, onClo
 
     // Liga Premium
     const [league, setLeague] = useState(LEAGUE_THRESHOLDS[0]);
+    const [strikes, setStrikes] = useState<Strike[]>([]);
 
     useEffect(() => {
         if (isOpen && user?.id) {
@@ -55,6 +57,7 @@ export default function ProfileModal({ user, isOpen, isOnVacation = false, onClo
                 });
                 setLeague(currentLeague);
             });
+            SupabaseDataStore.getStrikes().then(s => setStrikes(s));
         }
     }, [isOpen, user?.id]);
 
@@ -307,6 +310,19 @@ export default function ProfileModal({ user, isOpen, isOnVacation = false, onClo
                                         <span className="stat-lbl">XP Total</span>
                                         <span className="stat-val">{user.xp.toLocaleString()}</span>
                                     </div>
+                                </div>
+
+                                <div className={`profile-strikes-block strikes-${strikes.length >= 5 ? 'critical' : strikes.length >= 3 ? 'danger' : strikes.length > 0 ? 'warning' : 'clean'}`}>
+                                    <h4 className="strikes-block-title">
+                                        Estado de Conducta
+                                        <span className="strikes-count-badge">{strikes.length} STRIKES</span>
+                                    </h4>
+                                    <p className="strikes-block-desc">
+                                        {strikes.length === 0 && '✨ Perfil limpio. Seguí manteniendo tu honor intacto y sumá sendas.'}
+                                        {strikes.length > 0 && strikes.length <= 2 && '⚠️ Atención. Tenés penalizaciones leves. Intentá mejorar tu comportamiento.'}
+                                        {strikes.length >= 3 && strikes.length < 5 && '🔥 Peligro. Se está aplicando una penalidad del -10% en todas tus ganancias. Tu capacidad ofensiva fue bloqueada.'}
+                                        {strikes.length >= 5 && '🚨 Situación Crítica. Penalidad activa del -25% en ingresos. Comprá una amnistía urgente en la tienda.'}
+                                    </p>
                                 </div>
 
                                 <div className="profile-settings-section">

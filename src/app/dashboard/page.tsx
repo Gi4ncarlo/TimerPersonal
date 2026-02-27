@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { supabase } from '@/lib/supabase/client';
 import QuestCard from '@/ui/components/QuestCard';
 import ActionItem from '@/ui/components/ActionItem';
 import ActivityModal from '@/ui/components/ActivityModal';
@@ -73,6 +74,8 @@ export default function Dashboard() {
     const [dailyMissions, setDailyMissions] = useState<DailyMission[]>([]);
     const [missionsLoading, setMissionsLoading] = useState(false);
     const [missionStreak, setMissionStreak] = useState(0);
+    const [dailyRerollsUsed, setDailyRerollsUsed] = useState(0);
+    const [rerollingMissionId, setRerollingMissionId] = useState<string | null>(null);
 
     // Smart Notifications State
     const [notifications, setNotifications] = useState<SmartNotification[]>([]);
@@ -80,6 +83,7 @@ export default function Dashboard() {
     // Gacha Roulette State
     const [isGachaOpen, setIsGachaOpen] = useState(false);
     const [activeBuffs, setActiveBuffs] = useState<ActiveBuff[]>([]);
+    const [hasFreeSpin, setHasFreeSpin] = useState(false);
 
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [recordToDelete, setRecordToDelete] = useState<string | null>(null);
@@ -124,6 +128,32 @@ export default function Dashboard() {
             // Calculate total points (already in points, no conversion needed)
             const totalPoints = fetchedRecords.reduce((sum, r) => sum + r.pointsCalculated, 0);
             setAccumulatedPoints(totalPoints);
+
+            // Check free spin availability
+            try {
+                const { data: gachaData } = await supabase
+                    .from('gacha_state')
+                    .select('free_spin_available, free_spin_used_at')
+                    .eq('user_id', user.id)
+                    .maybeSingle();
+
+                if (!gachaData) {
+                    setHasFreeSpin(true); // New user, first spin is free
+                } else {
+                    const FREE_SPIN_COOLDOWN_DAYS = 7;
+                    let free = gachaData.free_spin_available;
+                    if (!free && gachaData.free_spin_used_at) {
+                        const usedDate = new Date(gachaData.free_spin_used_at);
+                        const diffDays = (Date.now() - usedDate.getTime()) / (1000 * 60 * 60 * 24);
+                        free = diffDays >= FREE_SPIN_COOLDOWN_DAYS;
+                    } else if (!gachaData.free_spin_used_at) {
+                        free = true;
+                    }
+                    setHasFreeSpin(free);
+                }
+            } catch {
+                // Non-critical, default to false
+            }
 
             // Level Up logic
             const newLeague = LEAGUE_THRESHOLDS.reduce((prev, curr) => totalPoints >= curr.minPoints ? curr : prev);
@@ -262,7 +292,6 @@ export default function Dashboard() {
                                     message: notifMsg.message,
                                     context: { missionId: m.id, points: m.rewardPoints }
                                 });
-                                console.log('DEBUG: Retroactive notification creation result:', { mission: m.title, result: 'created' });
 
                                 toast.success(`¡Misión de ayer completada!`, { description: `${m.title}: +${m.rewardPoints} sendas` });
                                 localAddedRecords.push(successTitle);
@@ -379,8 +408,10 @@ export default function Dashboard() {
 
                 // ALWAYS load streak unconditionally — no conditions, no stale closures
                 const currentStreak = await SupabaseDataStore.getMissionStreak(user.id);
-                console.log('[DASHBOARD] Streak loaded:', currentStreak);
                 setMissionStreak(currentStreak);
+
+                const currentRerolls = await SupabaseDataStore.getDailyRerolls(user.id, today);
+                setDailyRerollsUsed(currentRerolls);
 
             } catch (missionErr) {
                 console.warn('Daily missions error:', missionErr);
@@ -588,7 +619,6 @@ export default function Dashboard() {
                 message: trigger.message,
                 context: trigger.context,
             });
-            console.log('DEBUG: Smart notification saved:', { type: trigger.type, saved });
 
             if (saved) {
                 toast(trigger.title, {
@@ -812,6 +842,46 @@ export default function Dashboard() {
         }
     };
 
+    const handleRerollMission = async (missionId: string) => {
+        if (!currentUser) return;
+        if (dailyRerollsUsed >= 2) {
+            toast.error('Límite alcanzado', { description: 'Ya usaste tus 2 cambios de hoy.' });
+            return;
+        }
+
+        setRerollingMissionId(missionId);
+        try {
+            const today = getTodayString();
+            const newMissionData = DailyMissionEngine.generateSingleReplacementMission(
+                dailyMissions,
+                actions,
+                today,
+                currentUser.id,
+                missionStreak
+            );
+
+            const success = await SupabaseDataStore.rerollDailyMission(missionId, newMissionData, currentUser.id, today);
+
+            if (success) {
+                // Refresh missions and reroll count
+                const [refreshedMissions, refreshedRerolls] = await Promise.all([
+                    SupabaseDataStore.getDailyMissions(today),
+                    SupabaseDataStore.getDailyRerolls(currentUser.id, today)
+                ]);
+                setDailyMissions(refreshedMissions);
+                setDailyRerollsUsed(refreshedRerolls);
+                toast.success('Misión reemplazada', { description: 'Te ha tocado un nuevo desafío.' });
+            } else {
+                toast.error('Error', { description: 'No se pudo reemplazar la misión.' });
+            }
+        } catch (error) {
+            console.error('Error rerolling:', error);
+            toast.error('Error', { description: 'Ocurrió un problema de conexión.' });
+        } finally {
+            setRerollingMissionId(null);
+        }
+    };
+
     // Quick Add Presets (Dynamic)
     const getQuickAdds = () => {
         return (
@@ -879,10 +949,16 @@ export default function Dashboard() {
                     notifications={notifications}
                     onNotifRefresh={refreshNotifications}
                 />
-
                 {getQuickAdds()}
 
-                <DailyMissionsCard missions={dailyMissions} loading={missionsLoading} streakDays={missionStreak} />
+                <DailyMissionsCard
+                    missions={dailyMissions}
+                    loading={missionsLoading}
+                    streakDays={missionStreak}
+                    rerollsUsed={dailyRerollsUsed}
+                    onReroll={handleRerollMission}
+                    rerollingId={rerollingMissionId}
+                />
 
                 <div className="command-hub-layout">
                     {/* ROW 1: THE HEROES (POINTS & HISTORY) */}
@@ -901,9 +977,15 @@ export default function Dashboard() {
                                 </p>
                                 <StaticTimeDisplay totalPoints={accumulatedPoints} />
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '12px' }}>
-                                    <button className="gacha-trigger-btn" onClick={() => setIsGachaOpen(true)}>
-                                        🎰 Ruleta
-                                        {/* Free spin indicator */}
+                                    <button className={`gacha-cta-banner ${hasFreeSpin ? 'has-free-spin' : ''}`} onClick={() => setIsGachaOpen(true)}>
+                                        <span className="gacha-cta-icon">🎰</span>
+                                        <span className="gacha-cta-text">Ruleta de Premios</span>
+                                        {hasFreeSpin && (
+                                            <span className="gacha-cta-free-badge">
+                                                🎁 ¡TIRADA GRATIS!
+                                            </span>
+                                        )}
+                                        <span className="gacha-cta-shine"></span>
                                     </button>
                                 </div>
                                 <ActiveBuffsDisplay buffs={activeBuffs} />

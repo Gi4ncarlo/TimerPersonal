@@ -389,6 +389,23 @@ export const SupabaseDataStore = {
             }
         }
 
+        // 1.5 Penalizaciones por Strikes
+        if (record.pointsCalculated > 0) {
+            const { data: strikesData } = await supabase
+                .from('strikes')
+                .select('id')
+                .eq('user_id', user.id);
+            const strikeCount = strikesData?.length || 0;
+
+            if (strikeCount >= 5) {
+                record.pointsCalculated = Math.floor(record.pointsCalculated * 0.75);
+                record.notes = record.notes ? `${record.notes} (-25% Penalización por strikes)` : '(-25% Penalización por strikes)';
+            } else if (strikeCount >= 3) {
+                record.pointsCalculated = Math.floor(record.pointsCalculated * 0.90);
+                record.notes = record.notes ? `${record.notes} (-10% Penalización por strikes)` : '(-10% Penalización por strikes)';
+            }
+        }
+
         // 2. Create the main record
         const { data, error } = await supabase
             .from('daily_records')
@@ -414,46 +431,7 @@ export const SupabaseDataStore = {
             await SupabaseDataStore.updateUserProgress(user.id, record.durationMinutes);
 
             // 3.1 Check for "Parásito" active on this user
-            const { data: parasitos, error: parasitoError } = await supabase
-                .from('user_active_powers')
-                .select('attacker_id, attacker:users!user_active_powers_attacker_id_fkey(username), power_type')
-                .eq('target_user_id', user.id)
-                .in('power_type', ['parasito_agresivo', 'parasito_lento'])
-                .gt('expires_at', new Date().toISOString());
-
-            if (parasitoError) console.error('Parasite logic error:', parasitoError);
-
-            if (parasitos && parasitos.length > 0) {
-                for (const p of parasitos) {
-                    const stealPercent = p.power_type === 'parasito_agresivo' ? 0.65 : 0.20;
-                    const parasiticGains = Math.floor(record.pointsCalculated * stealPercent);
-
-                    if (parasiticGains > 0) {
-                        const parasitoName = p.power_type === 'parasito_agresivo' ? 'Garrapata Agresiva' : 'Sanguijuela';
-                        const emoji = p.power_type === 'parasito_agresivo' ? '🦠' : '🪱';
-
-                        const percentageText = `${stealPercent * 100}% de ${record.pointsCalculated}`;
-
-                        const { data: currentUsr } = await supabase.from('users').select('username').eq('id', user.id).single();
-                        const victimUsername = currentUsr?.username || 'Un usuario';
-
-                        // Apply parasite effect via RPC to bypass Row Level Security for cross-user inserts
-                        const { error: rpcError } = await supabase.rpc('apply_parasite_effect', {
-                            p_attacker_id: p.attacker_id,
-                            p_target_id: user.id,
-                            p_stolen_points: parasiticGains,
-                            p_parasite_name: parasitoName,
-                            p_emoji: emoji,
-                            p_percentage_text: percentageText,
-                            p_victim_name: victimUsername
-                        });
-
-                        if (rpcError) {
-                            console.error('Error applying parasite via RPC:', rpcError);
-                        }
-                    }
-                }
-            }
+            await SupabaseDataStore.checkAndApplyParasites(user.id, record.pointsCalculated);
         }
 
         // 4. Update Goals
@@ -509,6 +487,54 @@ export const SupabaseDataStore = {
             metric_value: 0,
             notes: record.notes,
         });
+
+        if (record.points > 0) {
+            await SupabaseDataStore.checkAndApplyParasites(record.userId, record.points);
+        }
+    },
+
+    checkAndApplyParasites: async (userId: string, pointsCalculated: number): Promise<void> => {
+        const { data: parasitos, error: parasitoError } = await supabase
+            .from('user_active_powers')
+            .select('attacker_id, attacker:users!user_active_powers_attacker_id_fkey(username), power_type')
+            .eq('target_user_id', userId)
+            .in('power_type', ['parasito_agresivo', 'parasito_lento'])
+            .gt('expires_at', new Date().toISOString());
+
+        if (parasitoError) {
+            console.error('Parasite logic error:', parasitoError);
+            return;
+        }
+
+        if (parasitos && parasitos.length > 0) {
+            for (const p of parasitos) {
+                const stealPercent = p.power_type === 'parasito_agresivo' ? 0.65 : 0.20;
+                const parasiticGains = Math.floor(pointsCalculated * stealPercent);
+
+                if (parasiticGains > 0) {
+                    const parasitoName = p.power_type === 'parasito_agresivo' ? 'Garrapata Agresiva' : 'Sanguijuela';
+                    const emoji = p.power_type === 'parasito_agresivo' ? '🦠' : '🪱';
+                    const percentageText = `${stealPercent * 100}% de ${pointsCalculated}`;
+
+                    const { data: currentUsr } = await supabase.from('users').select('username').eq('id', userId).single();
+                    const victimUsername = currentUsr?.username || 'Un usuario';
+
+                    const { error: rpcError } = await supabase.rpc('apply_parasite_effect', {
+                        p_attacker_id: p.attacker_id,
+                        p_target_id: userId,
+                        p_stolen_points: parasiticGains,
+                        p_parasite_name: parasitoName,
+                        p_emoji: emoji,
+                        p_percentage_text: percentageText,
+                        p_victim_name: victimUsername
+                    });
+
+                    if (rpcError) {
+                        console.error('Error applying parasite via RPC:', rpcError);
+                    }
+                }
+            }
+        }
     },
 
     deleteRecord: async (id: string): Promise<boolean> => {
@@ -837,6 +863,87 @@ export const SupabaseDataStore = {
         }
     },
 
+    // ═══════════════════════════════════════════════════
+    // ACTIVITY STREAKS (for Leaderboard)
+    // ═══════════════════════════════════════════════════
+    getActivityStreaksForUsers: async (userIds: string[]): Promise<Record<string, number>> => {
+        if (userIds.length === 0) return {};
+
+        const today = getTodayString();
+        const lookbackDate = format(subDays(new Date(), 365), 'yyyy-MM-dd');
+
+        // 1. Fetch all daily_records for these users (only date + user_id, positive points)
+        const { data: records } = await supabase
+            .from('daily_records')
+            .select('user_id, date, points_calculated')
+            .in('user_id', userIds)
+            .gte('date', lookbackDate)
+            .gt('points_calculated', 0);
+
+        // 2. Fetch all vacation periods for these users
+        const { data: vacations } = await supabase
+            .from('vacation_periods')
+            .select('user_id, start_date, end_date')
+            .in('user_id', userIds);
+
+        // 3. Build a set of active dates per user
+        const activeDates: Record<string, Set<string>> = {};
+        for (const uid of userIds) activeDates[uid] = new Set();
+        if (records) {
+            for (const r of records) {
+                activeDates[r.user_id]?.add(r.date);
+            }
+        }
+
+        // 4. Build vacation date ranges per user for quick lookup
+        const vacationRanges: Record<string, { start: string; end: string }[]> = {};
+        for (const uid of userIds) vacationRanges[uid] = [];
+        if (vacations) {
+            for (const v of vacations) {
+                if (!vacationRanges[v.user_id]) vacationRanges[v.user_id] = [];
+                vacationRanges[v.user_id].push({ start: v.start_date, end: v.end_date });
+            }
+        }
+
+        const isOnVacation = (userId: string, dateStr: string): boolean => {
+            const ranges = vacationRanges[userId] || [];
+            return ranges.some(r => dateStr >= r.start && dateStr <= r.end);
+        };
+
+        // 5. Calculate streak for each user going backwards from today
+        const result: Record<string, number> = {};
+        const [y, m, d] = today.split('-').map(Number);
+        const todayDate = new Date(y, m - 1, d, 12, 0, 0);
+
+        for (const uid of userIds) {
+            let streak = 0;
+            const userDates = activeDates[uid];
+
+            for (let i = 0; i <= 365; i++) {
+                const checkDate = subDays(todayDate, i);
+                const dateStr = format(checkDate, 'yyyy-MM-dd');
+
+                if (userDates.has(dateStr)) {
+                    // Active day — counts toward streak
+                    streak++;
+                } else if (isOnVacation(uid, dateStr)) {
+                    // Vacation day — skip, don't break streak
+                    continue;
+                } else if (i === 0) {
+                    // Today with no activity yet — don't break, just skip
+                    continue;
+                } else {
+                    // Gap day with no activity and no vacation — streak breaks
+                    break;
+                }
+            }
+
+            result[uid] = streak;
+        }
+
+        return result;
+    },
+
     // Leaderboard Stats
     getLeaderboardStats: async (weekStart: string, weekEnd: string): Promise<any[]> => {
         const { data, error } = await supabase
@@ -872,6 +979,7 @@ export const SupabaseDataStore = {
                 pointsLast24hPositive: isFresh ? (stat.points_last_24h_positive || 0) : 0,
                 pointsLast24hNegative: isFresh ? (stat.points_last_24h_negative || 0) : 0,
                 strikes: stat.strikes || 0,
+                lastActivity: stat.updated_at,
                 weekStart: stat.week_start,
                 weekEnd: stat.week_end,
             };
@@ -889,7 +997,7 @@ export const SupabaseDataStore = {
         if (userIds.length > 0) {
             const { data: userData } = await supabase
                 .from('users')
-                .select('id, avatar_url')
+                .select('id, username, avatar_url')
                 .in('id', userIds);
 
             const { data: strikesData } = await supabase
@@ -901,20 +1009,25 @@ export const SupabaseDataStore = {
             const vacationMap = await SupabaseDataStore.getActiveVacationsForAllUsers();
 
             const userMap = (userData || []).reduce((acc, curr) => {
-                acc[curr.id] = curr.avatar_url;
+                acc[curr.id] = { avatar_url: curr.avatar_url, username: curr.username };
                 return acc;
-            }, {} as Record<string, string>);
+            }, {} as Record<string, { avatar_url: string; username: string }>);
 
             const strikeCounts = (strikesData || []).reduce((acc, curr) => {
                 acc[curr.user_id] = (acc[curr.user_id] || 0) + 1;
                 return acc;
             }, {} as Record<string, number>);
 
+            // Calculate real activity streaks
+            const streakMap = await SupabaseDataStore.getActivityStreaksForUsers(userIds);
+
             return result.map(r => ({
                 ...r,
-                avatarUrl: userMap[r.userId],
+                username: userMap[r.userId]?.username || r.username,
+                avatarUrl: userMap[r.userId]?.avatar_url,
                 strikes: strikeCounts[r.userId] || 0,
                 isOnVacation: vacationMap[r.userId] || false,
+                streakDays: streakMap[r.userId] || 0,
             }));
         }
 
@@ -941,12 +1054,13 @@ export const SupabaseDataStore = {
             // Fetch all daily records (include date for weekly calc)
             const { data: records } = await supabase
                 .from('daily_records')
-                .select('user_id, points_calculated, date');
+                .select('user_id, points_calculated, date, timestamp');
 
             const pointsAggregator: Record<string, number> = {};
             const positiveCountAggregator: Record<string, number> = {};
             const negativeCountAggregator: Record<string, number> = {};
             const weeklyNetAggregator: Record<string, number> = {};
+            const lastActivityAggregator: Record<string, string> = {};
 
             // Compute current week start (Monday)
             const now = new Date();
@@ -971,6 +1085,11 @@ export const SupabaseDataStore = {
                     // Accumulate current week net
                     if (r.date && r.date >= weekStartStr) {
                         weeklyNetAggregator[r.user_id] = (weeklyNetAggregator[r.user_id] || 0) + points;
+                    }
+
+                    // Track last activity
+                    if (!lastActivityAggregator[r.user_id] || (r.timestamp && r.timestamp > lastActivityAggregator[r.user_id])) {
+                        lastActivityAggregator[r.user_id] = r.timestamp || r.date;
                     }
                 });
             }
@@ -998,6 +1117,10 @@ export const SupabaseDataStore = {
             // Fetch active vacations for all users
             const vacationMap = await SupabaseDataStore.getActiveVacationsForAllUsers();
 
+            // Calculate real activity streaks
+            const allUserIds = allUsers.map(u => u.id);
+            const streakMap = await SupabaseDataStore.getActivityStreaksForUsers(allUserIds);
+
             // Create leaderboard entry for EVERY user
             const leaderboard = allUsers.map(user => ({
                 id: user.id,
@@ -1012,6 +1135,8 @@ export const SupabaseDataStore = {
                 pointsLast24hPositive: weeklyNetAggregator[user.id] || 0,
                 pointsLast24hNegative: 0,
                 isOnVacation: vacationMap[user.id] || false,
+                lastActivity: lastActivityAggregator[user.id] || null,
+                streakDays: streakMap[user.id] || 0,
                 weekStart: 'All Time',
                 weekEnd: 'All Time'
             }));
@@ -1247,8 +1372,6 @@ export const SupabaseDataStore = {
         const penalty = Math.floor(currentTotal * penaltyPercent);
 
         if (penalty > 0) {
-            console.log(`Applying strike penalty of ${penalty} points (${(penaltyPercent * 100).toFixed(0)}% of ${currentTotal})`);
-
             // Create penalty record (Always recorded on today's date for accounting, but notes refer to the strike date)
             await supabase.from('daily_records').insert({
                 user_id: userId,
@@ -1415,10 +1538,81 @@ export const SupabaseDataStore = {
 
         return !error;
     },
-
     // ═══════════════════════════════════════════════════════
     // DAILY MISSIONS
     // ═══════════════════════════════════════════════════════
+
+    async getDailyRerolls(userId: string, date: string): Promise<number> {
+        const { data, error } = await supabase
+            .from('users')
+            .select('preferences')
+            .eq('id', userId)
+            .single();
+
+        if (error || !data?.preferences?.dailyRerolls) return 0;
+
+        const rerolls = data.preferences.dailyRerolls;
+        if (rerolls.date === date) {
+            return rerolls.count || 0;
+        }
+        return 0; // Reset if it's a new day
+    },
+
+    async rerollDailyMission(
+        missionId: string,
+        newMissionData: Omit<DailyMission, 'id'>,
+        userId: string,
+        date: string
+    ): Promise<boolean> {
+        // 1. Get current preferences to check/update rerolls
+        const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('preferences')
+            .eq('id', userId)
+            .single();
+
+        if (userError) return false;
+
+        const prefs = userData?.preferences || {};
+        const dailyRerolls = prefs.dailyRerolls || { date: '', count: 0 };
+
+        let count = dailyRerolls.date === date ? dailyRerolls.count : 0;
+        if (count >= 2) return false; // Max 2 rerolls per day
+
+        // 2. Update the mission in DB
+        const { error: updateError } = await supabase
+            .from('daily_missions')
+            .update({
+                mission_type: newMissionData.missionType,
+                difficulty: newMissionData.difficulty,
+                title: newMissionData.title,
+                description: newMissionData.description,
+                target_value: newMissionData.targetValue,
+                current_value: 0,
+                action_id: newMissionData.actionId || null,
+                status: 'in_progress',
+                reward_points: newMissionData.rewardPoints
+            })
+            .eq('id', missionId);
+
+        if (updateError) {
+            console.error('Error rerolling mission:', updateError);
+            return false;
+        }
+
+        // 3. Increment reroll count in preferences
+        prefs.dailyRerolls = {
+            date: date,
+            count: count + 1
+        };
+
+        await supabase
+            .from('users')
+            .update({ preferences: prefs })
+            .eq('id', userId);
+
+        return true;
+    },
 
     async getDailyMissions(date: string): Promise<DailyMission[]> {
         const { data: { user } } = await supabase.auth.getUser();
@@ -1459,7 +1653,6 @@ export const SupabaseDataStore = {
         // Check if missions already exist for this date to prevent duplicates
         const existing = await this.getDailyMissions(date);
         if (existing.length > 0) {
-            console.log('Daily missions already exist for date:', date);
             return existing;
         }
 
@@ -1554,11 +1747,9 @@ export const SupabaseDataStore = {
             .order('date', { ascending: false });
 
         if (error || !data || data.length === 0) {
-            console.log('[STREAK DEBUG] No data found or error:', { error, dataLength: data?.length, userId, today, startDate });
             return 0;
         }
 
-        console.log('[STREAK DEBUG] Raw data from DB:', JSON.stringify(data));
 
         // Group by date
         const byDate: Record<string, string[]> = {};
@@ -1567,15 +1758,12 @@ export const SupabaseDataStore = {
             byDate[row.date].push(row.status);
         }
 
-        console.log('[STREAK DEBUG] Grouped by date:', JSON.stringify(byDate));
-        console.log('[STREAK DEBUG] Today string:', today);
 
         let streak = 0;
 
         // 1. Check today explicitly
         const todayStatuses = byDate[today];
         const todayCompleted = todayStatuses && todayStatuses.length > 0 && todayStatuses.every(s => s === 'completed');
-        console.log('[STREAK DEBUG] Today statuses:', todayStatuses, 'todayCompleted:', todayCompleted);
 
         if (todayCompleted) {
             streak++;
@@ -1588,18 +1776,15 @@ export const SupabaseDataStore = {
 
             const statuses = byDate[dateStr];
             const allCompleted = statuses && statuses.length > 0 && statuses.every(s => s === 'completed');
-            console.log(`[STREAK DEBUG] Day -${i} (${dateStr}):`, statuses, 'allCompleted:', allCompleted);
 
             if (allCompleted) {
                 streak++;
             } else {
                 // If a day is missed (not all completed, or no missions), the streak breaks.
-                console.log(`[STREAK DEBUG] Streak broken at day -${i} (${dateStr}). Final streak:`, streak);
                 break;
             }
         }
 
-        console.log('[STREAK DEBUG] Final calculated streak:', streak);
         return streak;
     },
 
@@ -2022,6 +2207,25 @@ export const SupabaseDataStore = {
             return { success: false, error: error.message };
         }
 
+        let bonusPoints = 0;
+        if (data.success) {
+            bonusPoints = Math.floor(Math.random() * (2000 - 200 + 1)) + 200;
+            try {
+                // Call logSystemEvent to add the points transparently
+                const { getTodayString } = await import('@/core/utils/dateUtils');
+                await SupabaseDataStore.logSystemEvent({
+                    userId: user.id,
+                    actionName: 'Bonus de Recuperación',
+                    date: getTodayString(),
+                    timestamp: new Date().toISOString(),
+                    points: bonusPoints,
+                    notes: `¡Perfil recuperado con Amnistía! Bonus de +${bonusPoints} sendas.`
+                });
+            } catch (err) {
+                console.error("Error creating amnistia bonus", err);
+            }
+        }
+
         return {
             success: data.success,
             error: data.error,
@@ -2032,12 +2236,13 @@ export const SupabaseDataStore = {
             nextAvailable: data.next_available,
             balance: data.balance,
             cost: data.cost,
+            bonus: bonusPoints,
         };
     },
 
     getAmnistiaInfo: async (): Promise<{ currentCost: number; cooldownEnds: string | null; purchaseCount: number }> => {
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return { currentCost: 25000, cooldownEnds: null, purchaseCount: 0 };
+        if (!user) return { currentCost: 15000, cooldownEnds: null, purchaseCount: 0 };
 
         // Get amnistia item
         const { data: item } = await supabase
@@ -2046,7 +2251,7 @@ export const SupabaseDataStore = {
             .eq('name', 'Amnistía')
             .single();
 
-        if (!item) return { currentCost: 25000, cooldownEnds: null, purchaseCount: 0 };
+        if (!item) return { currentCost: 15000, cooldownEnds: null, purchaseCount: 0 };
 
         // Get purchase history for this item
         const { data: purchases } = await supabase

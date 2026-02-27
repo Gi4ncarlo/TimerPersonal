@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import './UserLevel.css';
 import { getLevelTitle } from '@/core/config/levelRewards';
 import { SupabaseDataStore } from '@/data/supabaseData';
-import { LEAGUE_THRESHOLDS, League } from '@/core/types';
+import { LEAGUE_THRESHOLDS, League, Strike } from '@/core/types';
 import Avatar from './Avatar';
 import Twemoji from './Twemoji';
 
@@ -29,6 +29,7 @@ export default function UserLevel({ userId, level, xp, avatarUrl, isOnVacation, 
 
     // Liga Premium
     const [league, setLeague] = useState<League>(LEAGUE_THRESHOLDS[0]);
+    const [strikes, setStrikes] = useState<Strike[]>([]);
 
     useEffect(() => {
         if (userId) {
@@ -38,6 +39,7 @@ export default function UserLevel({ userId, level, xp, avatarUrl, isOnVacation, 
                 });
                 setLeague(currentLeague);
             });
+            SupabaseDataStore.getStrikes().then(s => setStrikes(s));
         }
     }, [userId]);
 
@@ -65,6 +67,14 @@ export default function UserLevel({ userId, level, xp, avatarUrl, isOnVacation, 
                         <span className="level-label">LVL</span>
                         <span className="level-number">{level}</span>
                     </div>
+
+                    {strikes.length > 0 && (
+                        <div className={`level-strikes-badge level-strikes-badge--${Math.min(strikes.length, 5)}`}>
+                            <Twemoji emoji="🔥" />
+                            <span>{strikes.length}</span>
+                        </div>
+                    )}
+
                     <div className={`status-badge-compact ${isOnVacation ? 'on-vacation' : 'active'}`}>
                         <span className="status-dot"></span>
                         {isOnVacation ? 'VACACIONES' : 'ACTIVO'}

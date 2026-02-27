@@ -840,7 +840,6 @@ export class NotificationEngine {
         );
 
         if (todayNotifications.length >= config.maxPerDay) {
-            console.log('NotificationEngine: Daily limit reached.');
             return [];
         }
 
@@ -850,7 +849,6 @@ export class NotificationEngine {
             const diffHours = (now - new Date(latest.createdAt).getTime()) / (1000 * 60 * 60);
 
             if (diffHours < config.globalCooldownHours) {
-                console.log(`NotificationEngine: Global cooldown active. Last notification was ${diffHours.toFixed(1)}h ago.`);
                 return [];
             }
         }

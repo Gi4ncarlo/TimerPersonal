@@ -34,8 +34,6 @@ export default function RegisterPage() {
         try {
             // IMPORTANT: Use the email field directly for auth
             // Login expects ${username}@demo.com format, so we need consistency
-            console.log('🔐 Registrando usuario:', { username, email });
-
             // Register user in Supabase Auth
             const { data: authData, error: authError } = await supabase.auth.signUp({
                 email,
@@ -47,11 +45,6 @@ export default function RegisterPage() {
                 }
             });
 
-            console.log('✅ Auth Response:', {
-                user: authData.user?.id,
-                error: authError?.message,
-                session: !!authData.session
-            });
 
             if (authError) throw authError;
 
@@ -62,7 +55,6 @@ export default function RegisterPage() {
             // Check if email confirmation is required
             if (!authData.session) {
                 setError('Por favor, revisa tu email para confirmar tu cuenta antes de iniciar sesión.');
-                console.log('⚠️ Email confirmation required');
                 setIsLoading(false);
                 return;
             }
@@ -77,7 +69,6 @@ export default function RegisterPage() {
                     preferences: {},
                 });
 
-            console.log('👤 Profile created:', { error: profileError?.message });
 
             if (profileError) throw profileError;
 
@@ -101,11 +92,8 @@ export default function RegisterPage() {
                 .from('actions')
                 .insert(defaultActions.map(a => ({ ...a, user_id: authData.user!.id })));
 
-            console.log('🎯 Actions created:', { error: actionsError?.message });
 
             if (actionsError) throw actionsError;
-
-            console.log('✨ Registration complete! Redirecting to dashboard...');
 
             // Redirect to dashboard
             router.push('/dashboard');
