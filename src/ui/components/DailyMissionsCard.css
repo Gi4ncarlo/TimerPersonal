@@ -8,7 +8,7 @@
     border: 1px solid rgba(138, 43, 226, 0.15);
     border-radius: 16px;
     padding: 0;
-    margin-bottom: 40px;
+    margin-bottom: 32px;
     position: relative;
     overflow: hidden;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
@@ -53,25 +53,25 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 18px 22px 12px;
+    padding: 22px 28px 14px;
 }
 
 .dm-header-left {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 14px;
 }
 
 .dm-header-icon {
-    width: 36px;
-    height: 36px;
+    width: 42px;
+    height: 42px;
     background: rgba(168, 85, 247, 0.12);
     border: 1px solid rgba(168, 85, 247, 0.2);
     border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.1rem;
+    font-size: 1.25rem;
 }
 
 .dm-header-text {
@@ -82,7 +82,7 @@
 
 .dm-title {
     font-family: var(--font-display);
-    font-size: 0.92rem;
+    font-size: 1.1rem;
     font-weight: 800;
     color: #fff;
     text-transform: uppercase;
@@ -91,7 +91,7 @@
 }
 
 .dm-streak-badge {
-    font-size: 0.75rem;
+    font-size: 0.85rem;
     font-weight: 700;
     font-family: var(--font-mono);
     padding: 2px 8px;
@@ -112,7 +112,7 @@
 }
 
 .dm-subtitle {
-    font-size: 0.7rem;
+    font-size: 0.82rem;
     color: var(--color-text-muted);
     font-weight: 500;
 }
@@ -126,8 +126,8 @@
 .dm-difficulty {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 5px 12px;
+    gap: 10px;
+    padding: 6px 14px;
     border-radius: 20px;
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.06);
@@ -163,7 +163,7 @@
 
 .dm-diff-label {
     font-family: var(--font-display);
-    font-size: 0.62rem;
+    font-size: 0.72rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -184,12 +184,12 @@
 
 /* ── Overall Progress ────────────────────────────────── */
 .dm-overall-progress {
-    padding: 0 22px 6px;
+    padding: 0 28px 8px;
 }
 
 .dm-overall-track {
     width: 100%;
-    height: 12px;
+    height: 14px;
     background: rgba(255, 255, 255, 0.06);
     border-radius: 6px;
     overflow: hidden;
@@ -212,17 +212,17 @@
 .dm-list {
     display: flex;
     flex-direction: column;
-    padding: 6px 14px 14px;
-    gap: 4px;
+    padding: 8px 18px 18px;
+    gap: 6px;
 }
 
 /* ── Mission Item ────────────────────────────────────── */
 .dm-item {
     display: flex;
     align-items: center;
-    gap: 14px;
-    padding: 12px 10px;
-    border-radius: 10px;
+    gap: 16px;
+    padding: 14px 12px;
+    border-radius: 12px;
     transition: all 0.25s ease;
     animation: dmItemIn 0.35s ease-out both;
     cursor: default;
@@ -254,8 +254,8 @@
 
 /* ── Status Dot ──────────────────────────────────────── */
 .dm-status-dot {
-    width: 24px;
-    height: 24px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
     flex-shrink: 0;
     display: flex;
@@ -319,13 +319,13 @@
 }
 
 .dm-type-icon {
-    font-size: 0.95rem;
+    font-size: 1.1rem;
     flex-shrink: 0;
 }
 
 .dm-item-name {
     font-family: var(--font-body);
-    font-size: 0.88rem;
+    font-size: 1rem;
     font-weight: 600;
     color: var(--color-text-primary);
     white-space: nowrap;
@@ -346,7 +346,7 @@
 
 .dm-progress-label {
     font-family: var(--font-mono);
-    font-size: 0.68rem;
+    font-size: 0.8rem;
     color: var(--color-text-muted);
     font-weight: 600;
     white-space: nowrap;
@@ -354,7 +354,7 @@
 
 .dm-reward {
     font-family: var(--font-mono);
-    font-size: 0.75rem;
+    font-size: 0.88rem;
     font-weight: 700;
     color: #f59e0b;
     background: rgba(245, 158, 11, 0.1);
@@ -373,10 +373,48 @@
     border-color: rgba(34, 197, 94, 0.15);
 }
 
+.dm-reroll-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.75rem;
+    font-family: var(--font-mono);
+    color: var(--color-text-secondary);
+    background: rgba(255, 255, 255, 0.05);
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: 600;
+}
+
+.dm-reroll-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.dm-reroll-btn:hover:not(:disabled) {
+    background: rgba(168, 85, 247, 0.15);
+    border-color: rgba(168, 85, 247, 0.4);
+    transform: rotate(15deg) scale(1.1);
+}
+
+.dm-reroll-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 /* ── Progress Bar ────────────────────────────────────── */
 .dm-progress-track {
     width: 100%;
-    height: 12px;
+    height: 14px;
     background: rgba(255, 255, 255, 0.06);
     border-radius: 6px;
     overflow: hidden;
@@ -405,7 +443,7 @@
 
 /* ── Footer ──────────────────────────────────────────── */
 .dm-footer {
-    padding: 10px 22px 14px;
+    padding: 12px 28px 16px;
     border-top: 1px solid rgba(255, 255, 255, 0.04);
 }
 
@@ -413,7 +451,7 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 0.72rem;
+    font-size: 0.82rem;
     color: var(--color-text-muted);
 }
 
@@ -424,7 +462,7 @@
 
 .dm-footer-icon {
     color: #ffd700;
-    font-size: 0.8rem;
+    font-size: 0.95rem;
 }
 
 /* ── Loading ─────────────────────────────────────────── */

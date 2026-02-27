@@ -703,55 +703,158 @@
     }
 }
 
-/* ─── Gacha Trigger Button (Dashboard) ──────── */
-.gacha-trigger-btn {
+/* ─── Gacha CTA Banner (Dashboard) ────────────── */
+.gacha-cta-banner {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 8px 16px;
-    border: 1px solid rgba(255, 215, 0, 0.2);
-    border-radius: 12px;
-    background: linear-gradient(135deg, rgba(255, 215, 0, 0.08), rgba(255, 140, 0, 0.08));
+    justify-content: center;
+    gap: 10px;
+    padding: 18px 32px;
+    border: 2px solid rgba(255, 215, 0, 0.4);
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.12), rgba(255, 140, 0, 0.12), rgba(255, 215, 0, 0.06));
     color: #ffd700;
-    font-size: 0.8rem;
-    font-weight: 600;
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+    font-weight: 800;
     cursor: pointer;
-    transition: all 0.3s;
+    transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1);
     position: relative;
     overflow: hidden;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    animation: gachaCTAPulse 3s ease-in-out infinite;
+    z-index: 1;
 }
 
-.gacha-trigger-btn:hover {
-    background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(255, 140, 0, 0.15));
-    border-color: rgba(255, 215, 0, 0.4);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 15px rgba(255, 215, 0, 0.15);
+.gacha-cta-banner:hover {
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.22), rgba(255, 140, 0, 0.22), rgba(255, 215, 0, 0.12));
+    border-color: rgba(255, 215, 0, 0.7);
+    transform: translateY(-3px) scale(1.03);
+    box-shadow: 0 8px 30px rgba(255, 215, 0, 0.25), 0 0 40px rgba(255, 215, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
-.gacha-trigger-btn .free-indicator {
-    position: absolute;
-    top: -1px;
-    right: -1px;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #4dff88;
-    animation: freePulse 1.5s ease infinite;
+.gacha-cta-banner:active {
+    transform: translateY(-1px) scale(1.01);
 }
 
-@keyframes freePulse {
+@keyframes gachaCTAPulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 20px rgba(255, 215, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        border-color: rgba(255, 215, 0, 0.4);
+    }
+
+    50% {
+        box-shadow: 0 0 35px rgba(255, 215, 0, 0.2), 0 0 60px rgba(255, 215, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        border-color: rgba(255, 215, 0, 0.6);
+    }
+}
+
+/* When free spin is available — extra glow and border animation */
+.gacha-cta-banner.has-free-spin {
+    border-color: rgba(77, 255, 136, 0.5);
+    background: linear-gradient(135deg, rgba(77, 255, 136, 0.08), rgba(255, 215, 0, 0.12), rgba(77, 255, 136, 0.05));
+    animation: gachaCTAFreeGlow 2s ease-in-out infinite;
+}
+
+.gacha-cta-banner.has-free-spin:hover {
+    border-color: rgba(77, 255, 136, 0.8);
+    box-shadow: 0 8px 30px rgba(77, 255, 136, 0.2), 0 0 50px rgba(255, 215, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+@keyframes gachaCTAFreeGlow {
+
+    0%,
+    100% {
+        box-shadow: 0 0 20px rgba(77, 255, 136, 0.15), 0 0 40px rgba(255, 215, 0, 0.05);
+        border-color: rgba(77, 255, 136, 0.4);
+    }
+
+    50% {
+        box-shadow: 0 0 40px rgba(77, 255, 136, 0.3), 0 0 70px rgba(255, 215, 0, 0.1);
+        border-color: rgba(77, 255, 136, 0.7);
+    }
+}
+
+.gacha-cta-icon {
+    font-size: 1.6rem;
+    filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.5));
+}
+
+.gacha-cta-text {
+    background: linear-gradient(135deg, #ffd700, #ffaa00, #ffd700);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.3));
+}
+
+/* Free Spin Badge — animated green tag */
+.gacha-cta-free-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 14px;
+    border-radius: 100px;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 1px;
+    background: linear-gradient(135deg, rgba(77, 255, 136, 0.2), rgba(0, 200, 83, 0.2));
+    border: 1px solid rgba(77, 255, 136, 0.5);
+    color: #4dff88;
+    -webkit-text-fill-color: #4dff88;
+    animation: freeSpinBadgePulse 1.5s ease-in-out infinite;
+    white-space: nowrap;
+}
+
+@keyframes freeSpinBadgePulse {
 
     0%,
     100% {
         transform: scale(1);
-        opacity: 1;
+        box-shadow: 0 0 8px rgba(77, 255, 136, 0.3);
     }
 
     50% {
-        transform: scale(1.5);
-        opacity: 0.5;
+        transform: scale(1.05);
+        box-shadow: 0 0 16px rgba(77, 255, 136, 0.5);
     }
 }
+
+/* Sweeping shine effect */
+.gacha-cta-shine {
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 60%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+    transform: skewX(-20deg);
+    animation: gachaCTAShine 4s ease-in-out infinite;
+    pointer-events: none;
+}
+
+@keyframes gachaCTAShine {
+
+    0%,
+    70%,
+    100% {
+        left: -100%;
+    }
+
+    35% {
+        left: 150%;
+    }
+}
+
+/* Keep old trigger styles as fallback */
+.gacha-trigger-btn {
+    display: none;
+}
+
 
 /* ─── Particles (Legendary) ──────────────────── */
 .gacha-particles {

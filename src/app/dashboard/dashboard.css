@@ -2,7 +2,7 @@
 
 .dashboard {
     min-height: 100vh;
-    padding: var(--space-3xl) var(--space-2xl);
+    padding: var(--space-xl) var(--space-lg);
     background: var(--color-background);
     background-image:
         radial-gradient(circle at 20% 20%, var(--color-void-glow) 0%, transparent 40%),
@@ -31,7 +31,7 @@
 .dashboard-container-new {
     max-width: 1400px;
     margin: 0 auto;
-    padding: 0 var(--space-xl);
+    padding: 0 var(--space-2xl);
     width: 100%;
     animation: materialize 0.8s ease-out;
 }
@@ -79,7 +79,7 @@
 
 .nav-link {
     font-family: var(--font-display);
-    font-size: 0.75rem;
+    font-size: 0.88rem;
     font-weight: 700;
     padding: var(--space-sm) var(--space-lg);
     background: rgba(255, 255, 255, 0.03);
@@ -105,7 +105,7 @@
 
 .logout-btn {
     font-family: var(--font-display);
-    font-size: 0.75rem;
+    font-size: 0.88rem;
     font-weight: 700;
     padding: var(--space-sm) var(--space-lg);
     background: rgba(244, 63, 94, 0.05);
@@ -129,7 +129,7 @@
     background-size: 200% 200%;
     border: 1px solid rgba(138, 43, 226, 0.2);
     border-radius: var(--radius-lg);
-    padding: var(--space-3xl) var(--space-xl);
+    padding: var(--space-3xl) var(--space-2xl);
     text-align: center;
     position: relative;
     overflow: hidden;
@@ -139,7 +139,7 @@
     justify-content: center;
     width: 100%;
     height: 100%;
-    min-height: 350px;
+    min-height: 400px;
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     z-index: 1;
@@ -228,7 +228,7 @@
 
 .accumulated-label {
     font-family: var(--font-display);
-    font-size: 0.95rem;
+    font-size: 1.1rem;
     color: var(--color-primary);
     text-transform: uppercase;
     letter-spacing: 0.4em;
@@ -247,7 +247,7 @@
 .command-hub-layout {
     display: flex;
     flex-direction: column;
-    gap: var(--space-3xl);
+    gap: var(--space-2xl);
     width: 100%;
     max-width: 1400px;
     margin: 0 auto;
@@ -256,7 +256,7 @@
 /* ROW 1: THE HEROES */
 .hero-row {
     display: grid;
-    grid-template-columns: 1fr 400px;
+    grid-template-columns: 1fr 440px;
     gap: var(--space-2xl);
     align-items: stretch;
 }
@@ -457,7 +457,7 @@
 
 .section-label-alt {
     font-family: var(--font-display);
-    font-size: 0.7rem;
+    font-size: 0.85rem;
     color: var(--color-text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.2em;
@@ -566,7 +566,7 @@
 
 .record-time {
     font-family: var(--font-mono);
-    font-size: 0.7rem;
+    font-size: 0.82rem;
     color: var(--color-accent);
     margin-bottom: var(--space-xs);
     opacity: 0.8;

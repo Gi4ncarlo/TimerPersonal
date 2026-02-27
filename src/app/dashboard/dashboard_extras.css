@@ -3,9 +3,9 @@
 .quick-add-bar {
     display: flex;
     gap: var(--space-md);
-    margin-bottom: var(--space-3xl);
+    margin-bottom: var(--space-2xl);
     flex-wrap: wrap;
-    padding: var(--space-md) var(--space-lg);
+    padding: var(--space-md) var(--space-xl);
     background: var(--color-surface-elevated);
     backdrop-filter: blur(10px);
     border: 1px solid rgba(168, 85, 247, 0.1);
@@ -18,10 +18,10 @@
     background: rgba(168, 85, 247, 0.05);
     border: 1px solid rgba(168, 85, 247, 0.3);
     color: var(--color-primary);
-    padding: var(--space-sm) var(--space-xl);
+    padding: var(--space-md) var(--space-xl);
     border-radius: var(--radius-sm);
     font-family: var(--font-display);
-    font-size: 0.8rem;
+    font-size: 0.95rem;
     font-weight: 700;
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -84,10 +84,10 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    height: 38px;
-    /* Fixed height for all navbar items */
-    padding: 0 var(--space-lg);
-    font-size: 0.75rem;
+    height: 44px;
+    /* Scaled up fixed height for all navbar items */
+    padding: 0 var(--space-xl);
+    font-size: 0.88rem;
     font-weight: 700;
 }
 

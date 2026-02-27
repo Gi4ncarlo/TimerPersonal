@@ -40,7 +40,7 @@
 
 .static-time-label {
     font-family: var(--font-body);
-    font-size: 1.1rem;
+    font-size: 1.25rem;
     /* +0.2rem for readability */
     color: var(--color-text-secondary);
     margin-bottom: var(--space-md);
@@ -105,7 +105,7 @@
 /* Suffix text */
 .points-suffix {
     font-family: var(--font-body);
-    font-size: 1.25rem;
+    font-size: 1.4rem;
     /* +0.25rem for readability */
     color: var(--color-text-secondary);
     margin-top: var(--space-sm);
@@ -156,7 +156,7 @@
 
 .time-suffix {
     font-family: var(--font-body);
-    font-size: 1rem;
+    font-size: 1.15rem;
     color: var(--color-text-secondary);
     margin-top: var(--space-sm);
     font-style: italic;

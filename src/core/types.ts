@@ -244,6 +244,7 @@ export interface PurchaseResult {
     nextAvailable?: string;
     balance?: number;
     cost?: number;
+    bonus?: number;
 }
 
 export const LEAGUE_THRESHOLDS: League[] = [

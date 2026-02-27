@@ -7,11 +7,11 @@
     position: sticky;
     top: 0;
     z-index: 1000;
-    padding: 12px 20px;
+    padding: 14px 24px;
     background: transparent;
     pointer-events: none;
     /* pass clicks through padding */
-    margin-bottom: 28px;
+    margin-bottom: 32px;
 }
 
 .navbar-inner {
@@ -19,13 +19,13 @@
     /* restore clicks on the bar */
     max-width: 1400px;
     margin: 0 auto;
-    height: 70px;
-    /* Increased from 56px */
+    height: 80px;
+    /* Scaled up from 70px */
     display: flex;
     align-items: center;
-    gap: 24px;
-    /* Increased from 12px */
-    padding: 0 12px 0 24px;
+    gap: 28px;
+    /* Increased from 24px */
+    padding: 0 16px 0 28px;
     /* Increased side padding */
     background: rgba(10, 10, 22, 0.82);
     border: 1px solid rgba(255, 255, 255, 0.06);
@@ -66,7 +66,7 @@
 }
 
 .brand-glyph {
-    font-size: 1.6rem;
+    font-size: 1.8rem;
     /* Bigger bolt */
     filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.6)) drop-shadow(0 0 2px rgba(139, 92, 246, 0.4));
     animation: brand-pulse 3s ease-in-out infinite;
@@ -96,7 +96,7 @@
 .brand-text-main {
     font-family: var(--font-display, 'Inter', sans-serif);
     font-weight: 900;
-    font-size: 1.2rem;
+    font-size: 1.4rem;
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: #fff;
@@ -109,7 +109,7 @@
 .brand-text-sub {
     font-family: var(--font-body, 'Inter', sans-serif);
     font-weight: 600;
-    font-size: 0.75rem;
+    font-size: 0.85rem;
     letter-spacing: 0.25em;
     text-transform: uppercase;
     color: rgba(167, 139, 250, 0.9);
@@ -151,15 +151,15 @@
     position: relative;
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 7px 14px;
-    border-radius: 10px;
+    gap: 8px;
+    padding: 9px 18px;
+    border-radius: 12px;
     border: 1px solid transparent;
     background: transparent;
     color: rgba(255, 255, 255, 0.4);
     font-family: var(--font-body, 'Inter', sans-serif);
     font-weight: 600;
-    font-size: 0.75rem;
+    font-size: 0.88rem;
     text-transform: uppercase;
     letter-spacing: 0.06em;
     text-decoration: none;
@@ -174,7 +174,7 @@
 }
 
 .nav-pill__icon {
-    font-size: 0.95rem;
+    font-size: 1.1rem;
     line-height: 1;
     flex-shrink: 0;
 }

@@ -1,7 +1,7 @@
 .leaderboard-page {
     min-height: 100vh;
     padding: var(--space-xl);
-    background: var(--color-background);
+    background: #07070e;
 }
 
 .leaderboard-container-wrapper {
@@ -14,31 +14,47 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: var(--space-2xl);
+    margin-bottom: 28px;
     flex-wrap: wrap;
     gap: var(--space-md);
+    padding-bottom: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .title-area {
     flex: 1;
 }
 
+.page-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #6c63ff;
+    margin: 0 0 6px 0;
+}
+
 .page-title {
-    font-family: var(--font-display);
-    font-size: 2.4rem;
-    font-weight: 900;
-    letter-spacing: 0.04em;
-    background: linear-gradient(135deg, #fff 30%, var(--color-primary));
+    font-family: 'Playfair Display', serif;
+    font-size: 2.6rem;
+    font-weight: 800;
+    color: #e8eaf0;
+    margin: 0 0 6px 0;
+    line-height: 1.1;
+}
+
+.page-title-accent {
+    background: linear-gradient(135deg, #f5c842, #ff8c00);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
-    margin: 0 0 4px 0;
 }
 
 .page-subtitle {
-    font-family: var(--font-body);
-    font-size: 1.05rem;
-    color: var(--color-text-muted);
+    font-family: 'Sora', sans-serif;
+    font-size: 0.95rem;
+    color: #6b7280;
     margin: 0;
     font-weight: 400;
 }
@@ -53,7 +69,7 @@
 .view-toggle {
     position: relative;
     display: flex;
-    background: rgba(255, 255, 255, 0.04);
+    background: #10101f;
     border-radius: 12px;
     padding: 4px;
     gap: 0;
@@ -67,21 +83,21 @@
     left: 4px;
     width: calc(50% - 4px);
     height: calc(100% - 8px);
-    background: var(--color-primary);
+    background: #6c63ff;
     border-radius: 9px;
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     z-index: 0;
-    box-shadow: 0 2px 8px rgba(168, 85, 247, 0.3);
+    box-shadow: 0 2px 8px rgba(108, 99, 255, 0.3);
 }
 
 .toggle-btn {
     position: relative;
     z-index: 1;
-    padding: 8px 18px;
+    padding: 8px 20px;
     background: transparent;
     border: none;
-    color: var(--color-text-muted);
-    font-family: var(--font-display);
+    color: #6b7280;
+    font-family: 'Sora', sans-serif;
     font-size: 0.82rem;
     font-weight: 600;
     cursor: pointer;
@@ -91,7 +107,7 @@
 }
 
 .toggle-btn:hover {
-    color: var(--color-text-primary);
+    color: #e8eaf0;
 }
 
 .toggle-btn.active {
@@ -101,11 +117,11 @@
 
 .refresh-btn {
     font-size: 1.15rem;
-    width: 40px;
-    height: 40px;
-    background: rgba(255, 255, 255, 0.04);
+    width: 42px;
+    height: 42px;
+    background: #10101f;
     border: 1px solid rgba(255, 255, 255, 0.06);
-    color: var(--color-text-secondary);
+    color: #6b7280;
     border-radius: 12px;
     transition: all 0.25s ease;
     cursor: pointer;
@@ -115,10 +131,10 @@
 }
 
 .refresh-btn:hover:not(:disabled) {
-    border-color: var(--color-primary);
-    color: var(--color-primary);
-    background: rgba(168, 85, 247, 0.08);
-    box-shadow: 0 0 12px rgba(168, 85, 247, 0.15);
+    border-color: #6c63ff;
+    color: #6c63ff;
+    background: rgba(108, 99, 255, 0.08);
+    transform: rotate(180deg);
 }
 
 .refresh-btn:disabled {
@@ -133,7 +149,7 @@
     }
 
     .page-title {
-        font-size: 1.6rem;
+        font-size: 1.8rem;
     }
 
     .page-header {

@@ -8,6 +8,9 @@ interface DailyMissionsCardProps {
     missions: DailyMission[];
     loading?: boolean;
     streakDays?: number;
+    rerollsUsed?: number;
+    onReroll?: (missionId: string) => void;
+    rerollingId?: string | null;
 }
 
 const TYPE_CONFIG: Record<DailyMission['missionType'], { icon: string; label: string }> = {
@@ -52,7 +55,7 @@ const XIcon = () => (
     </svg>
 );
 
-export default function DailyMissionsCard({ missions, loading, streakDays = 0 }: DailyMissionsCardProps) {
+export default function DailyMissionsCard({ missions, loading, streakDays = 0, rerollsUsed = 0, onReroll, rerollingId }: DailyMissionsCardProps) {
     if (loading) {
         return (
             <div className="dm-card">
@@ -103,8 +106,13 @@ export default function DailyMissionsCard({ missions, loading, streakDays = 0 }:
                                 🔥 {streakDays}
                             </span>
                         </div>
-                        <span className="dm-subtitle">
-                            {allCompleted ? '¡Todas completadas!' : `${completedCount} de ${missions.length} completadas`}
+                        <span className="dm-subtitle" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                            <span>{allCompleted ? '¡Todas completadas!' : `${completedCount} de ${missions.length} completadas`}</span>
+                            {rerollsUsed < 2 && !allCompleted && (
+                                <span className="dm-reroll-badge">
+                                    <Twemoji emoji="🎲" /> {2 - rerollsUsed} cambios
+                                </span>
+                            )}
                         </span>
                     </div>
                 </div>
@@ -165,6 +173,16 @@ export default function DailyMissionsCard({ missions, loading, streakDays = 0 }:
                                             <img src="/images/senda-coin-large-sinbg.png" alt="Senda" className="senda-floating-icon senda-floating-icon--sm" />
                                             {mission.rewardPoints}
                                         </span>
+                                        {!isCompleted && rerollsUsed < 2 && onReroll && (
+                                            <button
+                                                className="dm-reroll-btn"
+                                                onClick={() => onReroll(mission.id)}
+                                                disabled={rerollingId === mission.id}
+                                                title="Cambiar misión (aleatorio)"
+                                            >
+                                                {rerollingId === mission.id ? <span className="btn-loader"></span> : <Twemoji emoji="🎲" />}
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
 

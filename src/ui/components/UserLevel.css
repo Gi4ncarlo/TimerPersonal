@@ -142,6 +142,49 @@
     color: #fbbf24;
 }
 
+/* Strikes Badge */
+.level-strikes-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    padding: 1px 6px;
+    border-radius: var(--radius-sm);
+    font-family: 'JetBrains Mono', monospace;
+    background: rgba(0, 0, 0, 0.4);
+}
+
+.level-strikes-badge--1,
+.level-strikes-badge--2 {
+    color: #fbbf24;
+    border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+.level-strikes-badge--3,
+.level-strikes-badge--4 {
+    color: #f97316;
+    border: 1px solid rgba(249, 115, 22, 0.3);
+}
+
+.level-strikes-badge--5 {
+    color: #f43f5e;
+    border: 1px solid rgba(244, 63, 94, 0.5);
+    background: rgba(244, 63, 94, 0.2);
+    box-shadow: 0 0 10px rgba(244, 63, 94, 0.3);
+    animation: pulseCritical 2s infinite alternate;
+}
+
+@keyframes pulseCritical {
+    0% {
+        box-shadow: 0 0 10px rgba(244, 63, 94, 0.3);
+    }
+
+    100% {
+        box-shadow: 0 0 20px rgba(244, 63, 94, 0.6);
+    }
+}
+
 /* Main Title */
 .level-title-main {
     font-family: var(--font-display);
