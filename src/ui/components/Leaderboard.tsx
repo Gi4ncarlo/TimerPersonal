@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import Avatar from './Avatar';
 import Twemoji from './Twemoji';
+import StrikeIcon from './icons/StrikeIcon'; // Added StrikeIcon import
 import { LEAGUE_THRESHOLDS } from '@/core/types';
 import './Leaderboard.css';
 
@@ -299,7 +300,7 @@ export default function Leaderboard({ currentEntry, entries, isLoading, onRowCli
                             className={`lb-strike-badge lb-strike-badge--${Math.min(entry.strikes, 5)}`}
                             title={`${entry.strikes} strike${entry.strikes > 1 ? 's' : ''}`}
                         >
-                            <Twemoji emoji="🔥" /> {entry.strikes}
+                            <StrikeIcon width={14} height={14} className="lb-icon-inline" /> {entry.strikes}
                         </span>
                     )}
                 </div>
@@ -348,9 +349,12 @@ export default function Leaderboard({ currentEntry, entries, isLoading, onRowCli
                                 className={`lb-podium-card lb-podium-card--${rankLabel}`}
                                 onClick={() => onRowClick?.(entry)}
                             >
-                                <span className={`lb-podium-rank-badge lb-podium-rank-badge--${rankLabel}`}>{rankLabel}</span>
-
                                 <div className="lb-podium-avatar-wrap">
+                                    <img
+                                        src={`/images/numero${rankLabel}.png`}
+                                        alt={`Puesto ${rankLabel}`}
+                                        className={`lb-podium-rank-img lb-podium-rank-img--${rankLabel}`}
+                                    />
                                     {rankLabel === 1 && (
                                         <>
                                             <div className="lb-podium-glow" style={{ background: `radial-gradient(circle, ${league.color}40 0%, transparent 70%)` }} />

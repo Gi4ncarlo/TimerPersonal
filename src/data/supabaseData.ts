@@ -979,7 +979,7 @@ export const SupabaseDataStore = {
                 pointsLast24hPositive: isFresh ? (stat.points_last_24h_positive || 0) : 0,
                 pointsLast24hNegative: isFresh ? (stat.points_last_24h_negative || 0) : 0,
                 strikes: stat.strikes || 0,
-                lastActivity: stat.updated_at,
+                lastActivity: stat.last_activity || stat.updated_at,
                 weekStart: stat.week_start,
                 weekEnd: stat.week_end,
             };
@@ -1174,6 +1174,17 @@ export const SupabaseDataStore = {
         const pointsLast24hPos = recentStats.filter(r => r.pointsCalculated > 0).reduce((sum, r) => sum + r.pointsCalculated, 0);
         const pointsLast24hNeg = recentStats.filter(r => r.pointsCalculated < 0).reduce((sum, r) => sum + r.pointsCalculated, 0);
 
+        // Find the absolute latest activity timestamp
+        let latestActivityTime: string | null = null;
+        if (records.length > 0) {
+            records.forEach(r => {
+                const rTime = r.timestamp || r.date;
+                if (!latestActivityTime || rTime > latestActivityTime) {
+                    latestActivityTime = rTime;
+                }
+            });
+        }
+
         // Upsert stats
         const { error } = await supabase
             .from('leaderboard_stats')
@@ -1188,6 +1199,7 @@ export const SupabaseDataStore = {
                 goals_completed: goalsCompleted,
                 points_last_24h_positive: pointsLast24hPos,
                 points_last_24h_negative: pointsLast24hNeg,
+                last_activity: latestActivityTime,
                 updated_at: new Date().toISOString(),
             }, {
                 onConflict: 'user_id,week_start'
