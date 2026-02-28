@@ -10,6 +10,7 @@ import Navbar from '@/ui/components/Navbar';
 import ProfileModal from '@/ui/components/ProfileModal';
 import { getTodayString } from '@/core/utils/dateUtils';
 import { VacationService } from '@/core/services/VacationService';
+import StrikeIcon from '@/ui/components/icons/StrikeIcon';
 import '../dashboard/dashboard.css';
 import LogoLoader from '@/ui/components/LogoLoader';
 
@@ -403,7 +404,9 @@ export default function StrikesPage() {
                                     opacity: isActive ? 1 : 0.55,
                                 } as React.CSSProperties}
                             >
-                                <span className="sk-tier__emoji">{tier.emoji}</span>
+                                <span className="sk-tier__emoji">
+                                    {tier.emoji === '🔥' ? <StrikeIcon width={32} height={32} /> : tier.emoji}
+                                </span>
                                 <div className="sk-tier__label" style={{ color: tier.color }}>{tier.label}</div>
                                 <div className="sk-tier__range">
                                     {tier.max === 0 ? '0 strikes' : tier.max === Infinity ? `${tier.min}+ strikes` : `${tier.min}–${tier.max} strikes`}

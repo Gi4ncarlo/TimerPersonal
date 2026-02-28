@@ -10,6 +10,7 @@ import { useToast } from '@/core/contexts/ToastContext';
 import { Strike } from '@/core/types';
 import './ProfileModal.css';
 import Twemoji from './Twemoji';
+import StrikeIcon from './icons/StrikeIcon';
 
 const COSMETIC_AVATAR_MAP: Record<string, string> = {
     crown: '👑',
@@ -320,7 +321,12 @@ export default function ProfileModal({ user, isOpen, isOnVacation = false, onClo
                                     <p className="strikes-block-desc">
                                         {strikes.length === 0 && '✨ Perfil limpio. Seguí manteniendo tu honor intacto y sumá sendas.'}
                                         {strikes.length > 0 && strikes.length <= 2 && '⚠️ Atención. Tenés penalizaciones leves. Intentá mejorar tu comportamiento.'}
-                                        {strikes.length >= 3 && strikes.length < 5 && '🔥 Peligro. Se está aplicando una penalidad del -10% en todas tus ganancias. Tu capacidad ofensiva fue bloqueada.'}
+                                        {strikes.length >= 3 && strikes.length < 5 && (
+                                            <>
+                                                <StrikeIcon width={16} height={16} style={{ display: 'inline-block', verticalAlign: 'text-bottom', marginRight: '6px' }} />
+                                                Peligro. Se está aplicando una penalidad del -10% en todas tus ganancias. Tu capacidad ofensiva fue bloqueada.
+                                            </>
+                                        )}
                                         {strikes.length >= 5 && '🚨 Situación Crítica. Penalidad activa del -25% en ingresos. Comprá una amnistía urgente en la tienda.'}
                                     </p>
                                 </div>

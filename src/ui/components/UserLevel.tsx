@@ -5,6 +5,7 @@ import { SupabaseDataStore } from '@/data/supabaseData';
 import { LEAGUE_THRESHOLDS, League, Strike } from '@/core/types';
 import Avatar from './Avatar';
 import Twemoji from './Twemoji';
+import StrikeIcon from './icons/StrikeIcon';
 
 const COSMETIC_AVATAR_MAP: Record<string, string> = {
     crown: '👑', bolt: '⚡', shield_avatar: '🛡️', fire: '🔥', star: '⭐', skull: '💀',
@@ -44,62 +45,63 @@ export default function UserLevel({ userId, level, xp, avatarUrl, isOnVacation, 
     }, [userId]);
 
     return (
-        <div className={`user-level-card ${onClick ? 'clickable' : ''}`} onClick={onClick} title="Ver Perfil">
-            <div className="avatar-preview" style={{ position: 'relative' }}>
+        <div className={`user-level-id-card ${onClick ? 'clickable' : ''}`} onClick={onClick} title="Ver Perfil">
+            <div className="id-card-avatar-zone">
                 <Avatar
                     src={avatarUrl}
                     alt="User"
                     fallback="ME"
                     size="md"
-                    className="preview-img"
+                    className="id-avatar-img"
                     showBorder={false}
                 />
                 {cosmeticAvatar && (
-                    <div className="cosmetic-badge cosmetic-badge--sm" style={{ position: 'absolute', top: '-8px', left: '50%', transform: 'translateX(-50%)', zIndex: 10 }}>
+                    <div className="id-cosmetic-badge">
                         <Twemoji emoji={getCosmeticEmoji(cosmeticAvatar)} />
                     </div>
                 )}
             </div>
 
-            <div className="level-info">
-                <div className="level-top-row">
-                    <div className="level-badge">
-                        <span className="level-label">LVL</span>
-                        <span className="level-number">{level}</span>
+            <div className="id-card-data-grid">
+                <div className="id-data-top-row">
+                    <div className="id-level-block">
+                        <span className="id-level-label">LVL</span>
+                        <span className="id-level-number">{level}</span>
                     </div>
 
                     {strikes.length > 0 && (
-                        <div className={`level-strikes-badge level-strikes-badge--${Math.min(strikes.length, 5)}`}>
-                            <Twemoji emoji="🔥" />
-                            <span>{strikes.length}</span>
+                        <div className={`id-strikes-pill strikes-severity-${Math.min(strikes.length, 5)}`}>
+                            <StrikeIcon width={14} height={14} className="strike-svg" />
+                            <span className="strike-count">{strikes.length}</span>
                         </div>
                     )}
 
-                    <div className={`status-badge-compact ${isOnVacation ? 'on-vacation' : 'active'}`}>
-                        <span className="status-dot"></span>
-                        {isOnVacation ? 'VACACIONES' : 'ACTIVO'}
+                    <div className={`id-status-pill ${isOnVacation ? 'vacation' : 'active'}`}>
+                        <div className="status-indicator"></div>
+                        <span className="status-text">{isOnVacation ? 'VACACIONES' : 'ACTIVO'}</span>
                     </div>
                 </div>
 
-                <div className="level-middle-row" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <img src={league.imgUrl} alt={league.tier} style={{ width: '18px', height: '18px', objectFit: 'contain' }} className="badge-premium" />
-                    <span className="level-title-main" style={{ color: league.color }}>{league.tier}</span>
-                    <span className="level-title-main" style={{ opacity: 0.6, fontSize: '0.85em' }}>• {levelTitle}</span>
+                <div className="id-data-bottom-row">
+                    <img src={league.imgUrl} alt={league.tier} className="id-league-icon" />
+                    <span className="id-league-tier" style={{ color: league.color }}>{league.tier}</span>
+                    <span className="id-league-separator">•</span>
+                    <span className="id-level-title">{levelTitle}</span>
                 </div>
 
-                <div className="xp-info-row">
-                    <div className="xp-progress-container">
-                        <div
-                            className="xp-progress-fill"
-                            style={{ width: `${progress}%` }}
-                        />
-                    </div>
-                    <div className="xp-details">
-                        <span>EXPERIENCIA</span>
-                        <span className="xp-val">{currentLevelXp} / {xpForNextLevel} XP</span>
-                    </div>
+                <div className="id-xp-details">
+                    <span className="xp-label">EXPERIENCIA</span>
+                    <span className="xp-value">{currentLevelXp} / {xpForNextLevel} XP</span>
                 </div>
+            </div>
+
+            <div className="id-card-xp-base">
+                <div
+                    className="id-xp-neon-line"
+                    style={{ width: `${progress}%`, backgroundColor: league.color, boxShadow: `0 0 10px ${league.color}` }}
+                />
             </div>
         </div>
     );
 }
+
