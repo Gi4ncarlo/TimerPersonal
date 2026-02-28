@@ -3,9 +3,9 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 
 /* ═══════════════════════════════════════════════════════════
-   SENDA DE LOGROS — EPIC LOADER
-   4 phases, orbital particles, motivational text,
-   progress bar, and cinematic exit transition.
+   SENDA DE LOGROS — EPIC LOADER (INFINITE)
+   3 phases, orbital particles, motivational text,
+   progress bar, and continuous animation.
    ═══════════════════════════════════════════════════════════ */
 
 const PHRASES = [
@@ -13,6 +13,11 @@ const PHRASES = [
     'Cada día cuenta.',
     'Tu racha te espera.',
     'Preparando la experiencia...',
+    'Forjando hábitos inquebrantables...',
+    'La disciplina es la clave.',
+    'Construyendo tu mejor versión...',
+    'Analizando tu potencial...',
+    'Sincronizando logros...'
 ];
 
 const BRAND = 'SENDA DE LOGROS';
@@ -23,28 +28,17 @@ const RING_2 = { radius: 180, count: 12, speed: 7, dir: -1 };
 const RING_3 = { radius: 250, count: 6, speed: 11, dir: 1 };
 const SPARK_COUNT = 18;
 
-interface Props {
-    onComplete?: () => void;
-}
-
-export default function LogoLoader({ onComplete }: Props) {
-    const [phase, setPhase] = useState(0); // 0=hidden, 1–4
+// Remove onComplete from props, as it relies on unmounting from the parent.
+export default function LogoLoader() {
+    const [phase, setPhase] = useState(0); // 0=hidden, 1–3
     const [phraseIdx, setPhraseIdx] = useState(0);
     const [phraseVisible, setPhraseVisible] = useState(false);
-    const [progress, setProgress] = useState(0);
     const [brandRevealed, setBrandRevealed] = useState(false);
-    const [exitFlash, setExitFlash] = useState(false);
-    const [exitDone, setExitDone] = useState(false);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const rafRef = useRef<number>(0);
-    const startRef = useRef(0);
-    const convergeRef = useRef(false);
 
-    // ── Phase timeline ──
+    // ── Phase timeline (Infinite loop in phase 3) ──
     useEffect(() => {
-        const t0 = Date.now();
-        startRef.current = t0;
-
         // Phase 1: 0ms
         setPhase(1);
         setBrandRevealed(true);
@@ -52,23 +46,14 @@ export default function LogoLoader({ onComplete }: Props) {
         // Phase 2: 400ms
         const p2 = setTimeout(() => setPhase(2), 400);
 
-        // Phase 3: 1600ms
+        // Phase 3: 1600ms (Max phase, loops forever until parent unmounts)
         const p3 = setTimeout(() => setPhase(3), 1600);
 
-        // Phase 4: 2400ms — exit sequence
-        const p4 = setTimeout(() => {
-            setPhase(4);
-            convergeRef.current = true;
-            setTimeout(() => setExitFlash(true), 200);
-            setTimeout(() => {
-                setExitFlash(false);
-                setExitDone(true);
-                onComplete?.();
-            }, 650);
-        }, 2400);
-
-        return () => { clearTimeout(p2); clearTimeout(p3); clearTimeout(p4); };
-    }, [onComplete]);
+        return () => {
+            clearTimeout(p2);
+            clearTimeout(p3);
+        };
+    }, []);
 
     // ── Phrase rotation ──
     useEffect(() => {
@@ -79,25 +64,9 @@ export default function LogoLoader({ onComplete }: Props) {
             setTimeout(() => {
                 setPhraseIdx(i => (i + 1) % PHRASES.length);
                 setPhraseVisible(true);
-            }, 300);
-        }, 1100);
+            }, 600); // Increased fade out time
+        }, 3000); // Slooow down: wait 3 seconds before next phrase
         return () => clearInterval(interval);
-    }, [phase]);
-
-    // ── Progress bar ──
-    useEffect(() => {
-        if (phase < 1) return;
-        const start = Date.now();
-        const dur = 2400;
-        const tick = () => {
-            const elapsed = Date.now() - start;
-            const p = Math.min(1, elapsed / dur);
-            // ease-in-out
-            const eased = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
-            setProgress(eased * 100);
-            if (p < 1) requestAnimationFrame(tick);
-        };
-        requestAnimationFrame(tick);
     }, [phase]);
 
     // ── Canvas particles (Sparks — Type B) ──
@@ -148,12 +117,6 @@ export default function LogoLoader({ onComplete }: Props) {
                 s.x += s.vx;
                 s.y += s.vy;
 
-                if (convergeRef.current) {
-                    // Converge toward center
-                    s.vx += (cx - s.x) * 0.05;
-                    s.vy += (cy - s.y) * 0.05;
-                }
-
                 const alpha = Math.max(0, 1 - s.life / s.maxLife) * 0.5;
                 ctx.beginPath();
                 ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
@@ -162,7 +125,7 @@ export default function LogoLoader({ onComplete }: Props) {
 
                 if (s.life >= s.maxLife) {
                     sparks.splice(i, 1);
-                    if (!convergeRef.current) spawnSpark();
+                    spawnSpark(); // Infinite spawn
                 }
             }
 
@@ -172,24 +135,17 @@ export default function LogoLoader({ onComplete }: Props) {
     }, []);
 
     useEffect(() => {
-        if (phase >= 1) drawSparks();
-        return () => cancelAnimationFrame(rafRef.current);
-    }, [phase, drawSparks]);
-
-    if (exitDone) return null;
+        // Start sparks once and never stop/restart while mounted
+        drawSparks();
+        let currentRaf = rafRef.current; // Store locally to clean up properly
+        return () => cancelAnimationFrame(currentRaf);
+    }, [drawSparks]);
 
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 480;
     const scale = isMobile ? 0.75 : 1;
 
     return (
-        <div style={{
-            ...S.root,
-            opacity: exitFlash ? 0 : 1,
-            transition: 'opacity 0.3s',
-        }}>
-            {/* Full-screen white flash */}
-            {exitFlash && <div style={S.flash} />}
-
+        <div style={S.root}>
             {/* Canvas for ascending sparks */}
             <canvas ref={canvasRef} style={S.canvas} />
 
@@ -236,8 +192,8 @@ export default function LogoLoader({ onComplete }: Props) {
                         </>
                     )}
 
-                    {/* Energy bolts – Type C (Phase 2 only) */}
-                    {phase === 2 && (
+                    {/* Energy bolts – Type C (Phase 2 and 3) */}
+                    {phase >= 2 && (
                         <div className="ll-bolts">
                             {Array.from({ length: 5 }).map((_, i) => (
                                 <div key={i} className={`ll-bolt ll-bolt-${i}`} />
@@ -253,13 +209,9 @@ export default function LogoLoader({ onComplete }: Props) {
                             ...S.logo,
                             borderRadius: '40%',
                             opacity: phase >= 1 ? 1 : 0,
-                            transform: phase >= 4
-                                ? 'scale(1.15)'
-                                : phase >= 1
-                                    ? 'scale(1)'
-                                    : 'scale(0.6)',
+                            transform: phase >= 1 ? 'scale(1)' : 'scale(0.6)',
                         }}
-                        className={phase >= 2 && phase < 4 ? 'll-float' : ''}
+                        className={phase >= 2 ? 'll-float' : ''}
                     />
                 </div>
 
@@ -268,22 +220,15 @@ export default function LogoLoader({ onComplete }: Props) {
                     ...S.phrase,
                     opacity: phraseVisible ? 1 : 0,
                     transform: phraseVisible ? 'translateY(0)' : 'translateY(10px)',
-                    color: phase >= 4 ? '#f5c842' : 'rgba(255,255,255,0.6)',
+                    color: 'rgba(255,255,255,0.6)',
                 }}>
-                    {phase >= 4 ? '¡Listo!' : PHRASES[phraseIdx]}
+                    {PHRASES[phraseIdx]}
                 </p>
 
-                {/* Progress bar */}
-                <div style={S.progressWrap}>
+                {/* Continuous Indeterminate Progress Bar */}
+                <div style={{ ...S.progressWrap, opacity: phase >= 1 ? 1 : 0, transition: 'opacity 0.6s' }}>
                     <div style={S.progressTrack}>
-                        <div style={{
-                            ...S.progressFill,
-                            width: `${progress}%`,
-                        }} />
-                        <div style={{
-                            ...S.progressDot,
-                            left: `${progress}%`,
-                        }} />
+                        <div className="ll-progress-bar" style={S.progressFill} />
                     </div>
                 </div>
             </div>
@@ -341,13 +286,6 @@ const S: Record<string, React.CSSProperties> = {
         alignItems: 'center',
         justifyContent: 'center',
         overflow: 'hidden',
-    },
-    flash: {
-        position: 'fixed',
-        inset: 0,
-        zIndex: 100000,
-        background: 'white',
-        animation: 'llFlash 0.45s ease-out forwards',
     },
     canvas: {
         position: 'absolute',
@@ -437,28 +375,17 @@ const S: Record<string, React.CSSProperties> = {
     progressTrack: {
         position: 'relative',
         width: '100%',
-        height: 2,
-        borderRadius: 2,
+        height: 3,
+        borderRadius: 3,
         background: 'rgba(255,255,255,0.08)',
-        overflow: 'visible',
+        overflow: 'hidden', // Hide the parts of the thumb that go outside
     },
     progressFill: {
         height: '100%',
-        borderRadius: 2,
-        background: 'linear-gradient(90deg, #6c63ff, #f5c842)',
+        borderRadius: 3,
+        background: 'linear-gradient(90deg, transparent, #6c63ff, #f5c842, transparent)',
+        width: '50%',
         boxShadow: '0 0 8px #6c63ff',
-        transition: 'width 0.05s linear',
-    },
-    progressDot: {
-        position: 'absolute',
-        top: -1,
-        width: 4,
-        height: 4,
-        borderRadius: '50%',
-        background: '#fff',
-        boxShadow: '0 0 6px #fff, 0 0 12px #6c63ff',
-        transform: 'translateX(-50%)',
-        transition: 'left 0.05s linear',
     },
 };
 
@@ -508,10 +435,13 @@ const KEYFRAMES = `
     75% { opacity: 0.7; }
 }
 
-@keyframes llFlash {
-    0% { opacity: 0; }
-    30% { opacity: 0.85; }
-    100% { opacity: 0; }
+/* Indeterminate Progress Bar Animation */
+@keyframes llProgressAnim {
+    0% { transform: translateX(-150%); }
+    100% { transform: translateX(250%); }
+}
+.ll-progress-bar {
+    animation: llProgressAnim 1.8s ease-in-out infinite;
 }
 
 /* Mobile scale */
