@@ -21,6 +21,7 @@ const NAV_LINKS: { href: string; label: string; icon: string; variant?: string }
     { href: '/dashboard', label: 'Inicio', icon: '🏠' },
     { href: '/leaderboard', label: 'Ranking', icon: '🏆' },
     { href: '/estadisticas', label: 'Stats', icon: '📊' },
+    { href: '/historial-semanal', label: 'Semanas', icon: '📅' },
     { href: '/tienda', label: 'Tienda', icon: '🏪' },
 ];
 
