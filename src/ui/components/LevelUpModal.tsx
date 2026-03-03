@@ -1,53 +1,70 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { League } from '@/core/types';
+import { getLevelTitle } from '@/core/config/levelRewards';
+import Twemoji from './Twemoji';
 import './LevelUpModal.css';
 
 interface LevelUpModalProps {
-    isOpen: boolean;
-    league: League | null;
+    level: number;
     onClose: () => void;
 }
 
-export default function LevelUpModal({ isOpen, league, onClose }: LevelUpModalProps) {
+export default function LevelUpModal({ level, onClose }: LevelUpModalProps) {
     const [isVisible, setIsVisible] = useState(false);
+    const [title, setTitle] = useState('');
 
     useEffect(() => {
-        if (isOpen) {
-            setIsVisible(true);
-        } else {
-            setTimeout(() => setIsVisible(false), 300); // match transition
-        }
-    }, [isOpen]);
+        setTitle(getLevelTitle(level));
 
-    if (!isVisible || !league) return null;
+        // Pequeño delay para que la clase "active" detone la animación de entrada
+        const timer = setTimeout(() => setIsVisible(true), 100);
+        return () => clearTimeout(timer);
+    }, [level]);
+
+    const handleClose = () => {
+        setIsVisible(false);
+        setTimeout(onClose, 400); // Esperar que termine la animación de salida
+    };
+
+    // Partículas cósmicas para el fondo
+    const particles = Array.from({ length: 20 }).map((_, i) => (
+        <div
+            key={i}
+            className="lu-particle"
+            style={{
+                left: `${Math.random() * 100}%`,
+                animationDelay: `${Math.random() * 2}s`,
+                animationDuration: `${2 + Math.random() * 3}s`
+            }}
+        />
+    ));
 
     return (
-        <div className={`levelup-overlay ${isOpen ? 'open' : ''}`} onClick={onClose}>
-            <div className="levelup-content" onClick={(e) => e.stopPropagation()}>
+        <div className={`level-up-overlay ${isVisible ? 'active' : ''}`} onClick={handleClose}>
+            <div className="lu-particles-container">
+                {particles}
+            </div>
 
-                <div className="levelup-glow" style={{ background: `radial-gradient(circle, ${league.color}80 0%, transparent 70%)` }} />
+            <div className="level-up-modal" onClick={(e) => e.stopPropagation()}>
+                <div className="lu-header-fx" />
 
-                <h2 className="levelup-title">¡RANGO ALCANZADO!</h2>
+                <h2 className="lu-title">NIVEL ALCANZADO</h2>
 
-                <img
-                    src={league.imgUrl}
-                    alt={league.tier}
-                    className={`levelup-badge ${isOpen ? 'animate-pop' : ''}`}
-                    style={{ filter: `drop-shadow(0px 10px 25px ${league.color})` }}
-                />
+                <div className="lu-number-glow">{level}</div>
 
-                <h1 className="levelup-tier-name" style={{ color: league.color }}>
-                    LIGA {league.tier.toUpperCase()}
-                </h1>
+                <div className="lu-divider">
+                    <span className="lu-divider-line"></span>
+                    <Twemoji emoji="⭐" />
+                    <span className="lu-divider-line"></span>
+                </div>
 
-                <p className="levelup-subtitle">
-                    Has demostrado ser digno. Tu viaje en la Senda continúa.
-                </p>
+                <h3 className="lu-rank-name">{title}</h3>
 
-                <button className="levelup-btn" onClick={onClose} style={{ boxShadow: `0 0 15px ${league.color}40`, border: `1px solid ${league.color}80` }}>
-                    CONTINUAR
+                <p className="lu-subtitle">Tu camino hacia la maestría continúa.</p>
+
+                <button className="lu-cta-btn" onClick={handleClose}>
+                    ¡ÉPICO!
                 </button>
             </div>
         </div>

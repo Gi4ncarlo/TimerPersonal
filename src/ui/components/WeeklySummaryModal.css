@@ -1,0 +1,223 @@
+/* ═══════════════════════════════════════════════
+   WEEKLY SUMMARY MODAL
+   ═══════════════════════════════════════════════ */
+
+.ws-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(8, 8, 20, 0.88);
+    backdrop-filter: blur(16px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9998;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    pointer-events: none;
+    overflow-y: auto;
+    padding: 2rem 1rem;
+}
+
+.ws-overlay.active {
+    opacity: 1;
+    pointer-events: all;
+}
+
+.ws-modal {
+    position: relative;
+    background: linear-gradient(145deg, rgba(20, 20, 45, 0.97), rgba(10, 10, 25, 0.97));
+    border: 1px solid rgba(139, 92, 246, 0.25);
+    border-radius: 20px;
+    padding: 2rem 2.5rem;
+    width: 100%;
+    max-width: 640px;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    box-shadow: 0 0 60px rgba(139, 92, 246, 0.15), inset 0 0 20px rgba(139, 92, 246, 0.05);
+    transform: scale(0.92) translateY(30px);
+    opacity: 0;
+    transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.5s ease;
+}
+
+.ws-overlay.active .ws-modal {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+}
+
+/* Header */
+.ws-header {
+    text-align: center;
+}
+
+.ws-title {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #e5e7eb;
+    margin: 0 0 0.5rem 0;
+    letter-spacing: 0.01em;
+}
+
+.ws-message {
+    font-size: 0.95rem;
+    color: #a78bfa;
+    margin: 0;
+    font-weight: 600;
+}
+
+/* Stats Grid */
+.ws-stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+}
+
+.ws-stat-card {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: rgba(139, 92, 246, 0.06);
+    border: 1px solid rgba(139, 92, 246, 0.12);
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    position: relative;
+    transition: background 0.2s;
+}
+
+.ws-stat-card:hover {
+    background: rgba(139, 92, 246, 0.1);
+}
+
+.ws-stat-emoji {
+    font-size: 1.3rem;
+    flex-shrink: 0;
+}
+
+.ws-stat-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.ws-stat-label {
+    font-size: 0.7rem;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+}
+
+.ws-stat-value {
+    font-size: 0.9rem;
+    color: #f3f4f6;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Comparison Arrows */
+.ws-arrow {
+    font-size: 1.2rem;
+    font-weight: 900;
+    flex-shrink: 0;
+}
+
+.ws-arrow-up {
+    color: #34d399;
+}
+
+.ws-arrow-down {
+    color: #f87171;
+}
+
+.ws-arrow-same {
+    color: #6b7280;
+}
+
+.ws-first-week {
+    font-size: 0.65rem;
+    color: #6b7280;
+    background: rgba(107, 114, 128, 0.15);
+    border-radius: 4px;
+    padding: 0.1rem 0.35rem;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+/* Chart */
+.ws-chart-section {
+    background: rgba(15, 15, 35, 0.5);
+    border: 1px solid rgba(139, 92, 246, 0.1);
+    border-radius: 14px;
+    padding: 1rem 1.25rem;
+}
+
+.ws-section-title {
+    font-size: 0.8rem;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 700;
+    margin: 0 0 0.75rem 0;
+}
+
+.ws-chart-container {
+    position: relative;
+}
+
+/* Strike indicators under chart */
+.ws-strike-row {
+    display: flex;
+    justify-content: space-around;
+    padding: 0.25rem 2rem 0 2rem;
+}
+
+.ws-strike-cell {
+    width: 28px;
+    text-align: center;
+    font-size: 0.85rem;
+    min-height: 20px;
+}
+
+/* CTA Button */
+.ws-cta-btn {
+    background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+    color: white;
+    border: none;
+    border-radius: 999px;
+    padding: 0.85rem 2.5rem;
+    font-size: 1rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+    transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+    align-self: center;
+}
+
+.ws-cta-btn:hover {
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 8px 25px rgba(139, 92, 246, 0.45);
+}
+
+.ws-cta-btn:active {
+    transform: translateY(1px) scale(0.98);
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+    .ws-modal {
+        padding: 1.5rem 1.25rem;
+    }
+
+    .ws-stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .ws-title {
+        font-size: 1.05rem;
+    }
+}

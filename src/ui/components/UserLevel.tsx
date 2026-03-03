@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import './UserLevel.css';
 import { getLevelTitle } from '@/core/config/levelRewards';
+import { getLevelProgress } from '@/core/utils/levelUtils';
 import { SupabaseDataStore } from '@/data/supabaseData';
 import { LEAGUE_THRESHOLDS, League, Strike } from '@/core/types';
 import Avatar from './Avatar';
@@ -23,9 +24,7 @@ interface UserLevelProps {
 }
 
 export default function UserLevel({ userId, level, xp, avatarUrl, isOnVacation, cosmeticAvatar, onClick }: UserLevelProps) {
-    const xpForNextLevel = 1000;
-    const currentLevelXp = xp % 1000;
-    const progress = Math.min(100, (currentLevelXp / xpForNextLevel) * 100);
+    const { xpForNextLevel, currentLevelXp, progress } = getLevelProgress(xp);
     const levelTitle = getLevelTitle(level);
 
     // Liga Premium

@@ -22,6 +22,7 @@ import ConfirmModal from '@/ui/components/ConfirmModal';
 import Navbar from '@/ui/components/Navbar';
 import LogoLoader from '@/ui/components/LogoLoader';
 import LevelUpModal from '@/ui/components/LevelUpModal';
+import WeeklySummaryModal from '@/ui/components/WeeklySummaryModal';
 import { SupabaseDataStore } from '@/data/supabaseData';
 import { BalanceCalculator } from '@/core/services/BalanceCalculator';
 import { PointsCalculator } from '@/core/services/PointsCalculator';
@@ -29,11 +30,12 @@ import { StrikeDetector } from '@/core/services/StrikeDetector';
 import { VacationService } from '@/core/services/VacationService';
 import { DailyMissionEngine } from '@/core/services/DailyMissionEngine';
 import { NotificationEngine } from '@/core/services/NotificationEngine';
-import { Action, DailyRecord, DailyMission, Goal, Strike, User, VacationPeriod, SmartNotification, SarcasmLevel, ActiveBuff, NotificationType, League, LEAGUE_THRESHOLDS } from '@/core/types';
+import { WeeklySummaryEngine } from '@/core/services/WeeklySummaryEngine';
+import { Action, DailyRecord, DailyMission, Goal, Strike, User, VacationPeriod, SmartNotification, SarcasmLevel, ActiveBuff, NotificationType, League, LEAGUE_THRESHOLDS, WeeklySummary } from '@/core/types';
 import { format, differenceInCalendarDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { toast } from 'sonner';
-import { getTodayString, getArgentinaDate } from '@/core/utils/dateUtils';
+import { getTodayString, getArgentinaDate, getWeekStartString } from '@/core/utils/dateUtils';
 import './dashboard.css';
 
 // Global debounce for notification checks (prevents Strict Mode double-fire)
@@ -67,7 +69,9 @@ export default function Dashboard() {
 
     // League / Level Up State
     const currentLeagueRef = useRef<League | null>(null);
+    const prevLevelRef = useRef<number | null>(null);
     const [showLevelUpModal, setShowLevelUpModal] = useState(false);
+    const [achievedLevel, setAchievedLevel] = useState<number>(0);
     const [achievedLeague, setAchievedLeague] = useState<League | null>(null);
 
     // Daily Missions State
@@ -87,6 +91,13 @@ export default function Dashboard() {
 
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [recordToDelete, setRecordToDelete] = useState<string | null>(null);
+
+    // Weekly Summary State
+    const [showWeeklySummary, setShowWeeklySummary] = useState(false);
+    const [isWeeklySummaryLoading, setIsWeeklySummaryLoading] = useState(false);
+    const [weeklySummaryData, setWeeklySummaryData] = useState<WeeklySummary | null>(null);
+    const [previousWeeklySummary, setPreviousWeeklySummary] = useState<WeeklySummary | null>(null);
+    const weeklySummaryCheckedRef = useRef(false);
 
     // Ref for History Auto-Scroll
     const historyListRef = useRef<HTMLDivElement>(null);
@@ -155,14 +166,23 @@ export default function Dashboard() {
                 // Non-critical, default to false
             }
 
-            // Level Up logic
+            // Level Up / League Up logic
             const newLeague = LEAGUE_THRESHOLDS.reduce((prev, curr) => totalPoints >= curr.minPoints ? curr : prev);
-            if (currentLeagueRef.current) {
-                if (newLeague.tier !== currentLeagueRef.current.tier && newLeague.minPoints > currentLeagueRef.current.minPoints) {
-                    setAchievedLeague(newLeague);
+
+            // Revisa si es la primera carga o no
+            if (prevLevelRef.current !== null) {
+                // Comprueba si ha subido de nivel numérico o de Liga
+                if (user.level > prevLevelRef.current) {
+                    setAchievedLevel(user.level);
                     setShowLevelUpModal(true);
+                } else if (currentLeagueRef.current && newLeague.tier !== currentLeagueRef.current.tier && newLeague.minPoints > currentLeagueRef.current.minPoints) {
+                    // Mantenemos el aviso de subida de liga por si acaso, aunque el nivel numérico es el protagonista ahora
+                    setAchievedLeague(newLeague);
+                    // Puedes decidir si la liga dispara un modal diferente en el futuro, por ahora reusaremos LevelUpModal si el nivel subió.
                 }
             }
+
+            prevLevelRef.current = user.level;
             currentLeagueRef.current = newLeague;
 
             // Check vacation status
@@ -217,6 +237,62 @@ export default function Dashboard() {
                 if (newStrikes.length > 0) {
                     setLatestStrikes(newStrikes);
                     setShowStrikeWarning(true);
+                }
+            }
+
+            // ── Weekly Summary Auto-Trigger (Mondays) ──
+            if (!weeklySummaryCheckedRef.current) {
+                weeklySummaryCheckedRef.current = true;
+                try {
+                    const argDate = getArgentinaDate();
+                    const isMonday = argDate.getDay() === 1;
+                    const todayKey = `weekly_summary_shown_${today}`;
+                    const alreadyShown = typeof window !== 'undefined' && localStorage.getItem(todayKey) === 'true';
+
+                    if (isMonday && !alreadyShown) {
+                        // Compute last week's summary
+                        const lastWeekMonday = WeeklySummaryEngine.getPreviousWeekMonday(getWeekStartString());
+                        const lastWeekSunday = WeeklySummaryEngine.getSundayFromMonday(lastWeekMonday);
+
+                        // Check if already saved
+                        let savedSummary = await SupabaseDataStore.getWeeklySummary(user.id, lastWeekMonday);
+
+                        if (!savedSummary) {
+                            // Compute from raw data
+                            const lastWeekRecords = await SupabaseDataStore.getRecordsByDateRange(lastWeekMonday, lastWeekSunday);
+                            const lastWeekStrikes = await SupabaseDataStore.getStrikesForDateRange(user.id, lastWeekMonday, lastWeekSunday);
+
+                            // Find leaderboard position
+                            let position: number | null = null;
+                            try {
+                                const lb = await SupabaseDataStore.getLeaderboardStats(lastWeekMonday, lastWeekSunday);
+                                const idx = lb.findIndex((e: any) => e.userId === user.id);
+                                if (idx >= 0) position = idx + 1;
+                            } catch { /* leaderboard may not exist for that week */ }
+
+                            const computed = WeeklySummaryEngine.computeWeeklySummary(
+                                user.id, lastWeekRecords, lastWeekStrikes, lastWeekMonday, lastWeekSunday, position
+                            );
+
+                            await SupabaseDataStore.saveWeeklySummary(computed);
+                            savedSummary = { ...computed, id: '', createdAt: new Date().toISOString() };
+                        }
+
+                        // Get the week before for comparison
+                        const twoWeeksAgoMonday = WeeklySummaryEngine.getPreviousWeekMonday(lastWeekMonday);
+                        const prevSummary = await SupabaseDataStore.getWeeklySummary(user.id, twoWeeksAgoMonday);
+
+                        setWeeklySummaryData(savedSummary);
+                        setPreviousWeeklySummary(prevSummary);
+                        setShowWeeklySummary(true);
+
+                        // Mark as shown for today
+                        if (typeof window !== 'undefined') {
+                            localStorage.setItem(todayKey, 'true');
+                        }
+                    }
+                } catch (wsErr) {
+                    console.warn('Weekly summary auto-trigger error:', wsErr);
                 }
             }
 
@@ -916,6 +992,49 @@ export default function Dashboard() {
         );
     };
 
+    // ── Manual Weekly Summary Open ──
+    const handleOpenWeeklySummary = async () => {
+        if (!currentUser || isWeeklySummaryLoading) return;
+        setIsWeeklySummaryLoading(true);
+        try {
+            // Try to load the most recent saved summary
+            let summary = await SupabaseDataStore.getLastWeeklySummary(currentUser.id);
+
+            if (!summary) {
+                // Compute current week's partial summary on-the-fly
+                const weekStart = getWeekStartString();
+                const weekEnd = WeeklySummaryEngine.getSundayFromMonday(weekStart);
+                const weekRecords = await SupabaseDataStore.getRecordsByDateRange(weekStart, getTodayString());
+                const weekStrikes = await SupabaseDataStore.getStrikesForDateRange(currentUser.id, weekStart, getTodayString());
+
+                let position: number | null = null;
+                try {
+                    const lb = await SupabaseDataStore.getLeaderboardStats(weekStart, weekEnd);
+                    const idx = lb.findIndex((e: any) => e.userId === currentUser.id);
+                    if (idx >= 0) position = idx + 1;
+                } catch { /* leaderboard may not exist */ }
+
+                const computed = WeeklySummaryEngine.computeWeeklySummary(
+                    currentUser.id, weekRecords, weekStrikes, weekStart, weekEnd, position
+                );
+                summary = { ...computed, id: 'live', createdAt: new Date().toISOString() };
+            }
+
+            // Get previous for comparison
+            const prevMonday = WeeklySummaryEngine.getPreviousWeekMonday(summary.weekStart);
+            const prev = await SupabaseDataStore.getWeeklySummary(currentUser.id, prevMonday);
+
+            setWeeklySummaryData(summary);
+            setPreviousWeeklySummary(prev);
+            setShowWeeklySummary(true);
+        } catch (err) {
+            console.error('Error opening weekly summary:', err);
+            toast.error('No se pudo cargar el resumen semanal');
+        } finally {
+            setIsWeeklySummaryLoading(false);
+        }
+    };
+
     if (isLoading) return <LogoLoader />;
 
     const todayRecords = records.filter(r => r.date === getTodayString());
@@ -931,12 +1050,6 @@ export default function Dashboard() {
 
     return (
         <main className="dashboard">
-            <LevelUpModal
-                isOpen={showLevelUpModal}
-                league={achievedLeague}
-                onClose={() => setShowLevelUpModal(false)}
-            />
-
             <div className="dashboard-container-new">
                 <Navbar
                     currentUser={currentUser}
@@ -986,6 +1099,16 @@ export default function Dashboard() {
                                             </span>
                                         )}
                                         <span className="gacha-cta-shine"></span>
+                                    </button>
+                                    <button className="weekly-summary-cta" onClick={handleOpenWeeklySummary} disabled={isWeeklySummaryLoading}>
+                                        {isWeeklySummaryLoading ? (
+                                            <span className="btn-loader"></span>
+                                        ) : (
+                                            <>
+                                                <span className="ws-cta-icon">📊</span>
+                                                <span className="ws-cta-label">Resumen Semanal</span>
+                                            </>
+                                        )}
                                     </button>
                                 </div>
                                 <ActiveBuffsDisplay buffs={activeBuffs} />
@@ -1215,6 +1338,21 @@ export default function Dashboard() {
                 currentBalance={accumulatedPoints}
                 onSpinComplete={() => loadData()}
             />
+
+            {showLevelUpModal && (
+                <LevelUpModal
+                    level={achievedLevel}
+                    onClose={() => setShowLevelUpModal(false)}
+                />
+            )}
+
+            {showWeeklySummary && weeklySummaryData && (
+                <WeeklySummaryModal
+                    summary={weeklySummaryData}
+                    previousSummary={previousWeeklySummary}
+                    onClose={() => setShowWeeklySummary(false)}
+                />
+            )}
 
             <ConfirmModal
                 isOpen={isConfirmOpen}

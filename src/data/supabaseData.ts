@@ -179,8 +179,9 @@ export const SupabaseDataStore = {
 
         const oldLevel = user.level || 1;
         const newXp = (user.xp || 0) + xpToAdd;
-        // Simple logic: Level = 1 + floor(XP / 1000), capped at MAX_LEVEL (50)
-        const newLevel = Math.min(50, 1 + Math.floor(newXp / 1000));
+
+        // Dynamic logic: use getLevelFromXp to calculate level along the quadratic curve (max 50)
+        const newLevel = await import('@/core/utils/levelUtils').then(m => m.getLevelFromXp(newXp));
 
         // 2. Update user level and XP
         await supabase
@@ -2386,5 +2387,144 @@ export const SupabaseDataStore = {
 
         if (error) return { success: false, error: error.message };
         return data as PurchaseResult;
+    },
+
+    // ══════════════════════════════════════════════════
+    // WEEKLY SUMMARIES
+    // ══════════════════════════════════════════════════
+
+    saveWeeklySummary: async (summary: Omit<import('@/core/types').WeeklySummary, 'id' | 'createdAt'>): Promise<boolean> => {
+        const { error } = await supabase
+            .from('weekly_summaries')
+            .upsert({
+                user_id: summary.userId,
+                week_start: summary.weekStart,
+                week_end: summary.weekEnd,
+                total_points: summary.totalPoints,
+                total_activities: summary.totalActivities,
+                total_strikes: summary.totalStrikes,
+                best_day_name: summary.bestDayName,
+                best_day_points: summary.bestDayPoints,
+                most_frequent_action: summary.mostFrequentAction,
+                most_frequent_count: summary.mostFrequentCount,
+                leaderboard_position: summary.leaderboardPosition,
+                daily_breakdown: summary.dailyBreakdown,
+                strike_days: summary.strikeDays,
+            }, { onConflict: 'user_id,week_start' });
+
+        if (error) {
+            console.error('Error saving weekly summary:', error);
+            return false;
+        }
+        return true;
+    },
+
+    getWeeklySummary: async (userId: string, weekStart: string): Promise<import('@/core/types').WeeklySummary | null> => {
+        const { data, error } = await supabase
+            .from('weekly_summaries')
+            .select('*')
+            .eq('user_id', userId)
+            .eq('week_start', weekStart)
+            .maybeSingle();
+
+        if (error || !data) return null;
+
+        return {
+            id: data.id,
+            userId: data.user_id,
+            weekStart: data.week_start,
+            weekEnd: data.week_end,
+            totalPoints: data.total_points,
+            totalActivities: data.total_activities,
+            totalStrikes: data.total_strikes,
+            bestDayName: data.best_day_name,
+            bestDayPoints: data.best_day_points,
+            mostFrequentAction: data.most_frequent_action,
+            mostFrequentCount: data.most_frequent_count,
+            leaderboardPosition: data.leaderboard_position,
+            dailyBreakdown: data.daily_breakdown || {},
+            strikeDays: data.strike_days || [],
+            createdAt: data.created_at,
+        };
+    },
+
+    getAllWeeklySummaries: async (userId: string): Promise<import('@/core/types').WeeklySummary[]> => {
+        const { data, error } = await supabase
+            .from('weekly_summaries')
+            .select('*')
+            .eq('user_id', userId)
+            .order('week_start', { ascending: false });
+
+        if (error || !data) return [];
+
+        return data.map(d => ({
+            id: d.id,
+            userId: d.user_id,
+            weekStart: d.week_start,
+            weekEnd: d.week_end,
+            totalPoints: d.total_points,
+            totalActivities: d.total_activities,
+            totalStrikes: d.total_strikes,
+            bestDayName: d.best_day_name,
+            bestDayPoints: d.best_day_points,
+            mostFrequentAction: d.most_frequent_action,
+            mostFrequentCount: d.most_frequent_count,
+            leaderboardPosition: d.leaderboard_position,
+            dailyBreakdown: d.daily_breakdown || {},
+            strikeDays: d.strike_days || [],
+            createdAt: d.created_at,
+        }));
+    },
+
+    getLastWeeklySummary: async (userId: string): Promise<import('@/core/types').WeeklySummary | null> => {
+        const { data, error } = await supabase
+            .from('weekly_summaries')
+            .select('*')
+            .eq('user_id', userId)
+            .order('week_start', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+        if (error || !data) return null;
+
+        return {
+            id: data.id,
+            userId: data.user_id,
+            weekStart: data.week_start,
+            weekEnd: data.week_end,
+            totalPoints: data.total_points,
+            totalActivities: data.total_activities,
+            totalStrikes: data.total_strikes,
+            bestDayName: data.best_day_name,
+            bestDayPoints: data.best_day_points,
+            mostFrequentAction: data.most_frequent_action,
+            mostFrequentCount: data.most_frequent_count,
+            leaderboardPosition: data.leaderboard_position,
+            dailyBreakdown: data.daily_breakdown || {},
+            strikeDays: data.strike_days || [],
+            createdAt: data.created_at,
+        };
+    },
+
+    getStrikesForDateRange: async (userId: string, startDate: string, endDate: string): Promise<import('@/core/types').Strike[]> => {
+        const { data, error } = await supabase
+            .from('strikes')
+            .select('*')
+            .eq('user_id', userId)
+            .gte('strike_date', startDate)
+            .lte('strike_date', endDate);
+
+        if (error || !data) return [];
+
+        return data.map(s => ({
+            id: s.id,
+            userId: s.user_id,
+            strikeDate: s.strike_date,
+            reason: s.reason,
+            detectedAt: s.detected_at,
+            pointsBefore: s.points_before,
+            pointsDeducted: s.points_deducted,
+            balanceAfter: s.balance_after,
+        }));
     },
 };
