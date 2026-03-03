@@ -16,17 +16,15 @@
 
 .navbar-inner {
     pointer-events: all;
-    /* restore clicks on the bar */
-    max-width: 1470px;
+    max-width: 1560px;
+    /* Slight increase to give more room */
     margin: 0 auto;
     height: 80px;
-    /* Scaled up from 70px */
     display: flex;
     align-items: center;
-    gap: 36px;
-    /* Increased from 24px */
-    padding: 0 16px 0 28px;
-    /* Increased side padding */
+    gap: 20px;
+    /* Reduced from 36px to prevent overlap */
+    padding: 0 20px;
     background: rgba(10, 10, 22, 0.82);
     border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 20px;
@@ -54,10 +52,9 @@
     gap: 12px;
     text-decoration: none;
     flex-shrink: 0;
-    padding-right: 24px;
-    /* More breathing room */
+    padding-right: 16px;
     border-right: 1px solid rgba(255, 255, 255, 0.08);
-    margin-right: 8px;
+    margin-right: 4px;
     transition: opacity 0.2s;
 }
 
@@ -124,11 +121,9 @@
     background: none;
     border: none;
     cursor: pointer;
-    padding: 0 16px 0 0;
-    /* More spacing on the right */
+    padding: 0 14px 0 0;
     border-right: 1px solid rgba(255, 255, 255, 0.08);
-    margin-right: 12px;
-    /* More spacing before nav */
+    margin-right: 4px;
     flex-shrink: 0;
     transition: transform 0.2s ease;
 }
@@ -151,8 +146,8 @@
     position: relative;
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 9px 18px;
+    gap: 6px;
+    padding: 8px 14px;
     border-radius: 12px;
     border: 1px solid transparent;
     background: transparent;

@@ -247,6 +247,25 @@ export interface PurchaseResult {
     bonus?: number;
 }
 
+// Weekly Summary System
+export interface WeeklySummary {
+    id: string;
+    userId: string;
+    weekStart: string; // YYYY-MM-DD (Monday)
+    weekEnd: string;   // YYYY-MM-DD (Sunday)
+    totalPoints: number;
+    totalActivities: number;
+    totalStrikes: number;
+    bestDayName: string | null;
+    bestDayPoints: number;
+    mostFrequentAction: string | null;
+    mostFrequentCount: number;
+    leaderboardPosition: number | null;
+    dailyBreakdown: Record<string, number>; // { "Lun": 120, "Mar": 450, ... }
+    strikeDays: string[]; // ["2026-02-25", ...]
+    createdAt: string;
+}
+
 export const LEAGUE_THRESHOLDS: League[] = [
     { tier: 'Bronce', minPoints: 0, color: '#cd7f32', imgUrl: '/images/bronce-sinfondo.webp' },
     { tier: 'Plata', minPoints: 35000, color: '#c0c0c0', imgUrl: '/images/plata-sinfondo.webp' },
