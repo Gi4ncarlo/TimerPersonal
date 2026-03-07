@@ -1,5 +1,5 @@
 ﻿import { supabase } from '@/lib/supabase/client';
-import { Action, DailyRecord, User, Goal, Strike, VacationPeriod, DailyMission, SmartNotification, SarcasmLevel, GachaState, ActiveBuff, ShopItem, UserPurchase, PurchaseResult } from '@/core/types';
+import { Action, DailyRecord, User, Goal, Strike, VacationPeriod, DailyMission, SmartNotification, SarcasmLevel, GachaState, ActiveBuff, ShopItem, UserPurchase, PurchaseResult, Tournament, TournamentParticipant } from '@/core/types';
 import { getTodayString, getWeekStartString, getWeekEndString, getArgentinaDate, getMonthEndString, getYearEndString, getFarFutureString } from '@/core/utils/dateUtils';
 import { subDays, differenceInDays, parseISO, format } from 'date-fns';
 
@@ -2527,4 +2527,178 @@ export const SupabaseDataStore = {
             balanceAfter: s.balance_after,
         }));
     },
+
+    // ══════════════════════════════════════════════════
+    // WEEKLY TOURNAMENTS
+    // ══════════════════════════════════════════════════
+
+    async getCurrentTournament(weekStart: string): Promise<Tournament | null> {
+        const { data, error } = await supabase
+            .from('weekly_tournaments')
+            .select('*')
+            .eq('week_start', weekStart)
+            .maybeSingle();
+
+        if (error || !data) return null;
+
+        return {
+            id: data.id,
+            weekStart: data.week_start,
+            weekEnd: data.week_end,
+            category: data.category,
+            title: data.title,
+            emoji: data.emoji,
+            description: data.description,
+            status: data.status,
+            winnerId: data.winner_id,
+            winnerUsername: data.winner_username,
+            rewardMultiplier: Number(data.reward_multiplier),
+            rewardDurationHours: data.reward_duration_hours,
+            createdAt: data.created_at,
+        };
+    },
+
+    async createTournament(tournament: Omit<Tournament, 'id' | 'createdAt'>): Promise<Tournament | null> {
+        const { data, error } = await supabase
+            .from('weekly_tournaments')
+            .insert({
+                week_start: tournament.weekStart,
+                week_end: tournament.weekEnd,
+                category: tournament.category,
+                title: tournament.title,
+                emoji: tournament.emoji,
+                description: tournament.description,
+                status: tournament.status,
+                reward_multiplier: tournament.rewardMultiplier,
+                reward_duration_hours: tournament.rewardDurationHours,
+            })
+            .select()
+            .single();
+
+        if (error || !data) {
+            console.error('Error creating tournament:', error);
+            return null;
+        }
+
+        return {
+            id: data.id,
+            weekStart: data.week_start,
+            weekEnd: data.week_end,
+            category: data.category,
+            title: data.title,
+            emoji: data.emoji,
+            description: data.description,
+            status: data.status,
+            winnerId: data.winner_id,
+            winnerUsername: data.winner_username,
+            rewardMultiplier: Number(data.reward_multiplier),
+            rewardDurationHours: data.reward_duration_hours,
+            createdAt: data.created_at,
+        };
+    },
+
+    async getTournamentParticipants(tournamentId: string): Promise<TournamentParticipant[]> {
+        const { data, error } = await supabase
+            .from('tournament_participants')
+            .select('*')
+            .eq('tournament_id', tournamentId)
+            .order('rank', { ascending: true });
+
+        if (error || !data) return [];
+
+        return data.map((p: any) => ({
+            id: p.id,
+            tournamentId: p.tournament_id,
+            userId: p.user_id,
+            username: p.username,
+            score: Number(p.score),
+            rank: p.rank,
+        }));
+    },
+
+    async upsertTournamentScore(
+        tournamentId: string,
+        userId: string,
+        username: string,
+        score: number,
+        rank: number
+    ): Promise<void> {
+        const { error } = await supabase
+            .from('tournament_participants')
+            .upsert({
+                tournament_id: tournamentId,
+                user_id: userId,
+                username,
+                score,
+                rank,
+                updated_at: new Date().toISOString(),
+            }, { onConflict: 'tournament_id,user_id' });
+
+        if (error) console.error('Error upserting tournament score:', error);
+    },
+
+    async completeTournament(tournamentId: string, winnerId: string, winnerUsername: string): Promise<void> {
+        const { error } = await supabase
+            .from('weekly_tournaments')
+            .update({
+                status: 'completed',
+                winner_id: winnerId,
+                winner_username: winnerUsername,
+            })
+            .eq('id', tournamentId);
+
+        if (error) console.error('Error completing tournament:', error);
+    },
+
+    async getAllRecordsByDateRangeForAllUsers(startDate: string, endDate: string): Promise<(DailyRecord & { userId: string })[]> {
+        const { data, error } = await supabase
+            .from('daily_records')
+            .select('*')
+            .gte('date', startDate)
+            .lte('date', endDate)
+            .order('date', { ascending: true });
+
+        if (error || !data) return [];
+
+        return data.map(r => ({
+            id: r.id,
+            userId: r.user_id,
+            actionId: r.action_id,
+            actionName: r.action_name,
+            date: r.date,
+            timestamp: r.timestamp,
+            durationMinutes: r.duration_minutes,
+            metricValue: r.metric_value ? Number(r.metric_value) : undefined,
+            pointsCalculated: Number(r.points_calculated),
+            notes: r.notes,
+        }));
+    },
+
+    async getTournamentHistory(limit: number = 5): Promise<Tournament[]> {
+        const { data, error } = await supabase
+            .from('weekly_tournaments')
+            .select('*')
+            .eq('status', 'completed')
+            .order('week_start', { ascending: false })
+            .limit(limit);
+
+        if (error || !data) return [];
+
+        return data.map((t: any) => ({
+            id: t.id,
+            weekStart: t.week_start,
+            weekEnd: t.week_end,
+            category: t.category,
+            title: t.title,
+            emoji: t.emoji,
+            description: t.description,
+            status: t.status,
+            winnerId: t.winner_id,
+            winnerUsername: t.winner_username,
+            rewardMultiplier: Number(t.reward_multiplier),
+            rewardDurationHours: t.reward_duration_hours,
+            createdAt: t.created_at,
+        }));
+    },
 };
+
