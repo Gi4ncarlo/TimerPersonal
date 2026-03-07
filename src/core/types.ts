@@ -266,6 +266,34 @@ export interface WeeklySummary {
     createdAt: string;
 }
 
+// Tournament System
+export type TournamentCategory = 'fitness' | 'reading' | 'productivity' | 'discipline' | 'total';
+
+export interface Tournament {
+    id: string;
+    weekStart: string;      // YYYY-MM-DD (Monday)
+    weekEnd: string;        // YYYY-MM-DD (Sunday)
+    category: TournamentCategory;
+    title: string;
+    emoji: string;
+    description: string;
+    status: 'active' | 'completed';
+    winnerId?: string;
+    winnerUsername?: string;
+    rewardMultiplier: number;    // 1.5 default
+    rewardDurationHours: number; // 48 default
+    createdAt: string;
+}
+
+export interface TournamentParticipant {
+    id: string;
+    tournamentId: string;
+    userId: string;
+    username: string;
+    score: number;
+    rank: number;
+}
+
 export const LEAGUE_THRESHOLDS: League[] = [
     { tier: 'Bronce', minPoints: 0, color: '#cd7f32', imgUrl: '/images/bronce-sinfondo.webp' },
     { tier: 'Plata', minPoints: 35000, color: '#c0c0c0', imgUrl: '/images/plata-sinfondo.webp' },
