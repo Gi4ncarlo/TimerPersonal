@@ -42,28 +42,29 @@ export default function Navbar({
     return (
         <header className="navbar">
             <div className="navbar-inner">
-                {/* ── Zone 1: Brand ── */}
-                <Link href="/dashboard" className="navbar-brand">
-                    <span className="brand-glyph">⚡</span>
-                    <div className="brand-text-container">
-                        <span className="brand-text-main">SENDA</span>
-                        <span className="brand-text-sub">DE LOGROS</span>
-                    </div>
-                </Link>
+                {/* ── Zone 1 & 2: Left Side ── */}
+                <div className="navbar-left">
+                    <Link href="/dashboard" className="navbar-brand">
+                        <span className="brand-glyph">⚡</span>
+                        <div className="brand-text-container">
+                            <span className="brand-text-main">SENDA</span>
+                            <span className="brand-text-sub">DE LOGROS</span>
+                        </div>
+                    </Link>
 
-                {/* ── Zone 2: Profile Chip ── */}
-                {userLevel && currentUser && (
-                    <button className="navbar-profile-chip" onClick={onProfileClick} type="button">
-                        <UserLevel
-                            userId={currentUser.id}
-                            level={userLevel.level}
-                            xp={userLevel.xp}
-                            avatarUrl={currentUser.avatarUrl}
-                            isOnVacation={isOnVacation}
-                            cosmeticAvatar={currentUser.cosmeticAvatar}
-                        />
-                    </button>
-                )}
+                    {userLevel && currentUser && (
+                        <button className="navbar-profile-chip" onClick={onProfileClick} type="button">
+                            <UserLevel
+                                userId={currentUser.id}
+                                level={userLevel.level}
+                                xp={userLevel.xp}
+                                avatarUrl={currentUser.avatarUrl}
+                                isOnVacation={isOnVacation}
+                                cosmeticAvatar={currentUser.cosmeticAvatar}
+                            />
+                        </button>
+                    )}
+                </div>
 
                 {/* ── Zone 3: Navigation ── */}
                 <nav className="navbar-nav" role="navigation">

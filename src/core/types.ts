@@ -41,6 +41,7 @@ export interface User {
     cosmeticAvatar?: string;
     nameColor?: string;
     nameTitle?: string;
+    realAge?: number;
 }
 
 export interface Goal {
@@ -302,3 +303,33 @@ export const LEAGUE_THRESHOLDS: League[] = [
     { tier: 'Diamante', minPoints: 1000000, color: '#b9f2ff', imgUrl: '/images/diamante-sinfondo.webp' },
     { tier: 'Élite', minPoints: 2500000, color: '#8a2be2', imgUrl: '/images/elite-sinfondo.webp' },
 ];
+
+// Dopamine Age System
+export interface DopamineAgeSurvey {
+    sleepHours: number;
+    screenTimeHours: number;
+    exerciseFrequency: number;
+    socialMediaUsage: 'low' | 'medium' | 'high' | 'extreme';
+    dietQuality: 'poor' | 'average' | 'good' | 'excellent';
+    stressLevel: 1 | 2 | 3 | 4 | 5;
+    realAge: number;
+}
+
+export interface DopamineAge {
+    userId: string;
+    realAge: number;
+    dopamineAge: number;
+    delta: number;
+    weeklyDelta?: number | null;
+    status: 'optimal' | 'good' | 'warning' | 'critical';
+    lastCalculatedAt: string;
+    surveyCompleted: boolean;
+    surveyAnswers?: DopamineAgeSurvey;
+}
+
+export interface HistoryPoint {
+    date: string;
+    dopamineAge: number;
+    status: DopamineAge['status'];
+}
+
