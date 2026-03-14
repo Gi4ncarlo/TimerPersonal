@@ -7,7 +7,7 @@
     position: sticky;
     top: 0;
     z-index: 1000;
-    padding: 14px 24px;
+    padding: 14px 0; /* Changed from 14px 24px to match app width symmetrically */
     background: transparent;
     pointer-events: none;
     /* pass clicks through padding */
@@ -16,19 +16,17 @@
 
 .navbar-inner {
     pointer-events: all;
-    max-width: 1560px;
-    /* Slight increase to give more room */
+    max-width: 1470px; /* Match dashboard width */
     margin: 0 auto;
     height: 80px;
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    gap: 20px;
-    /* Reduced from 36px to prevent overlap */
+    gap: 12px;
     padding: 0 20px;
     background: rgba(10, 10, 22, 0.82);
     border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 20px;
-    /* Slightly more rounded */
     backdrop-filter: blur(24px) saturate(1.6);
     -webkit-backdrop-filter: blur(24px) saturate(1.6);
     box-shadow:
@@ -43,6 +41,12 @@
         0 0 0 1px rgba(139, 92, 246, 0.1),
         0 12px 40px rgba(0, 0, 0, 0.5),
         0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.navbar-left {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
 }
 
 /* ─── Zone 1 · Brand ──────────────────────────────── */
@@ -137,8 +141,7 @@
     display: flex;
     align-items: center;
     gap: 3px;
-    flex: 1;
-    min-width: 0;
+    flex: 0 0 auto;
     justify-content: center;
 }
 
@@ -270,14 +273,12 @@
     background: linear-gradient(90deg, transparent, #eab308, transparent);
 }
 
-/* ─── Zone 4 · Actions (bell etc.) ────────────────── */
 .navbar-actions {
     display: flex;
     align-items: center;
+    justify-content: flex-end; 
     gap: 4px;
-    flex-shrink: 0;
-    margin-left: auto;
-    padding-left: 8px;
+    padding-left: 12px;
     border-left: 1px solid rgba(255, 255, 255, 0.06);
 }
 
@@ -304,6 +305,7 @@
 
     .navbar-inner {
         height: auto;
+        display: flex;
         flex-wrap: wrap;
         padding: 10px;
         gap: 8px;
