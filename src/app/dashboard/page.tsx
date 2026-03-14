@@ -23,6 +23,9 @@ import Navbar from '@/ui/components/Navbar';
 import LogoLoader from '@/ui/components/LogoLoader';
 import LevelUpModal from '@/ui/components/LevelUpModal';
 import WeeklySummaryModal from '@/ui/components/WeeklySummaryModal';
+import DopamineAgeSurvey from '@/ui/DopamineAgeSurvey/DopamineAgeSurvey';
+import DopamineAgeCard from '@/ui/DopamineAgeCard/DopamineAgeCard';
+import { useAppStore } from '@/store';
 import { SupabaseDataStore } from '@/data/supabaseData';
 import { BalanceCalculator } from '@/core/services/BalanceCalculator';
 import { PointsCalculator } from '@/core/services/PointsCalculator';
@@ -102,8 +105,12 @@ export default function Dashboard() {
     // Ref for History Auto-Scroll
     const historyListRef = useRef<HTMLDivElement>(null);
 
+    // Dopamine Age Integration
+    const { dopamineAge, isLoadingDopamineAge, fetchDopamineAge } = useAppStore();
+
     useEffect(() => {
         loadData();
+        fetchDopamineAge(); // Llamamos al backend lazy-loading para cargar la Dopamine Age
     }, []);
 
     // Auto-scroll history to bottom when records update
@@ -1123,6 +1130,13 @@ export default function Dashboard() {
                             </div>
                         </section>
 
+                        {/* DOPAMINE AGE SECTION */}
+                        {!isLoadingDopamineAge && dopamineAge && dopamineAge.surveyCompleted && (
+                            <section className="dopamine-section">
+                                <DopamineAgeCard />
+                            </section>
+                        )}
+
                         <section className="the-chronicle">
                             <QuestCard title="Historial" subtitle={`${todayRecords.length} hoy`}>
                                 {todayRecords.length === 0 ? (
@@ -1352,6 +1366,11 @@ export default function Dashboard() {
                     previousSummary={previousWeeklySummary}
                     onClose={() => setShowWeeklySummary(false)}
                 />
+            )}
+
+            {/* SURVEY OVERLAY */}
+            {!isLoadingDopamineAge && (dopamineAge === null || !dopamineAge.surveyCompleted) && (
+                <DopamineAgeSurvey />
             )}
 
             <ConfirmModal
