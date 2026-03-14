@@ -23,6 +23,7 @@ import Navbar from '@/ui/components/Navbar';
 import LogoLoader from '@/ui/components/LogoLoader';
 import LevelUpModal from '@/ui/components/LevelUpModal';
 import WeeklySummaryModal from '@/ui/components/WeeklySummaryModal';
+import WeeklyTournamentCard from '@/ui/components/WeeklyTournamentCard';
 import DopamineAgeSurvey from '@/ui/DopamineAgeSurvey/DopamineAgeSurvey';
 import DopamineAgeCard from '@/ui/DopamineAgeCard/DopamineAgeCard';
 import { useAppStore } from '@/store';
@@ -34,11 +35,12 @@ import { VacationService } from '@/core/services/VacationService';
 import { DailyMissionEngine } from '@/core/services/DailyMissionEngine';
 import { NotificationEngine } from '@/core/services/NotificationEngine';
 import { WeeklySummaryEngine } from '@/core/services/WeeklySummaryEngine';
-import { Action, DailyRecord, DailyMission, Goal, Strike, User, VacationPeriod, SmartNotification, SarcasmLevel, ActiveBuff, NotificationType, League, LEAGUE_THRESHOLDS, WeeklySummary } from '@/core/types';
+import { TournamentEngine } from '@/core/services/TournamentEngine';
+import { Action, DailyRecord, DailyMission, Goal, Strike, User, VacationPeriod, SmartNotification, SarcasmLevel, ActiveBuff, NotificationType, League, LEAGUE_THRESHOLDS, WeeklySummary, Tournament, TournamentParticipant } from '@/core/types';
 import { format, differenceInCalendarDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { toast } from 'sonner';
-import { getTodayString, getArgentinaDate, getWeekStartString } from '@/core/utils/dateUtils';
+import { getTodayString, getArgentinaDate, getWeekStartString, getWeekEndString } from '@/core/utils/dateUtils';
 import './dashboard.css';
 
 // Global debounce for notification checks (prevents Strict Mode double-fire)
@@ -100,6 +102,13 @@ export default function Dashboard() {
     const [isWeeklySummaryLoading, setIsWeeklySummaryLoading] = useState(false);
     const [weeklySummaryData, setWeeklySummaryData] = useState<WeeklySummary | null>(null);
     const [previousWeeklySummary, setPreviousWeeklySummary] = useState<WeeklySummary | null>(null);
+
+    // Tournament State
+    const [currentTournament, setCurrentTournament] = useState<Tournament | null>(null);
+    const [tournamentParticipants, setTournamentParticipants] = useState<TournamentParticipant[]>([]);
+    const [tournamentLoading, setTournamentLoading] = useState(false);
+    const [lastTournamentWinner, setLastTournamentWinner] = useState<{ username: string; emoji: string } | null>(null);
+    const tournamentCheckedRef = useRef(false);
     const weeklySummaryCheckedRef = useRef(false);
 
     // Ref for History Auto-Scroll
@@ -500,6 +509,88 @@ export default function Dashboard() {
                 console.warn('Daily missions error:', missionErr);
             } finally {
                 setMissionsLoading(false);
+            }
+
+            // ── Weekly Tournament ─────────────────────────────
+            if (!tournamentCheckedRef.current) {
+                tournamentCheckedRef.current = true;
+                try {
+                    setTournamentLoading(true);
+                    const weekStart = getWeekStartString();
+                    const weekEnd = getWeekEndString();
+
+                    // 1. Get or create the tournament for this week
+                    let tournament = await SupabaseDataStore.getCurrentTournament(weekStart);
+
+                    if (!tournament) {
+                        const definition = TournamentEngine.buildTournamentDefinition(weekStart, weekEnd);
+                        tournament = await SupabaseDataStore.createTournament(definition);
+                    }
+
+                    if (tournament && tournament.status === 'active') {
+                        // 2. Calculate scores for all users
+                        const allRecords = await SupabaseDataStore.getAllRecordsByDateRangeForAllUsers(weekStart, weekEnd);
+
+                        // Group records by userId
+                        const recordsByUser: Record<string, typeof allRecords> = {};
+                        for (const r of allRecords) {
+                            if (!recordsByUser[r.userId]) recordsByUser[r.userId] = [];
+                            recordsByUser[r.userId].push(r);
+                        }
+
+                        // Get all users for names
+                        const allUsers = await SupabaseDataStore.getAllUsers();
+                        const userMap = new Map(allUsers.map(u => [u.id, u.username]));
+
+                        // Calculate scores
+                        const scores: { userId: string; username: string; score: number }[] = [];
+                        for (const [userId, userRecords] of Object.entries(recordsByUser)) {
+                            const username = userMap.get(userId) || 'Usuario';
+                            const score = TournamentEngine.calculateParticipantScore(
+                                userRecords, fetchedActions, tournament.category
+                            );
+                            if (score > 0) {
+                                scores.push({ userId, username, score });
+                            }
+                        }
+
+                        // Also include current user even if 0 score
+                        if (!scores.find(s => s.userId === user.id)) {
+                            scores.push({ userId: user.id, username: user.username, score: 0 });
+                        }
+
+                        // Rank participants
+                        const ranked = TournamentEngine.rankParticipants(scores);
+
+                        // Upsert all participants
+                        for (const p of ranked) {
+                            await SupabaseDataStore.upsertTournamentScore(
+                                tournament.id, p.userId, p.username, p.score, p.rank
+                            );
+                        }
+
+                        setTournamentParticipants(ranked);
+                    } else if (tournament) {
+                        // Tournament completed, just load participants
+                        const participants = await SupabaseDataStore.getTournamentParticipants(tournament.id);
+                        setTournamentParticipants(participants);
+                    }
+
+                    setCurrentTournament(tournament);
+
+                    // 3. Fetch last tournament winner for display
+                    const history = await SupabaseDataStore.getTournamentHistory(1);
+                    if (history.length > 0 && history[0].winnerUsername) {
+                        setLastTournamentWinner({
+                            username: history[0].winnerUsername,
+                            emoji: history[0].emoji,
+                        });
+                    }
+                } catch (tournamentErr) {
+                    console.warn('Tournament error:', tournamentErr);
+                } finally {
+                    setTournamentLoading(false);
+                }
             }
 
             // ── Smart Notifications ────────────────────────────
@@ -1079,6 +1170,16 @@ export default function Dashboard() {
                     onReroll={handleRerollMission}
                     rerollingId={rerollingMissionId}
                 />
+
+                {currentUser && (
+                    <WeeklyTournamentCard
+                        tournament={currentTournament}
+                        participants={tournamentParticipants}
+                        currentUserId={currentUser.id}
+                        lastWinner={lastTournamentWinner}
+                        isLoading={tournamentLoading}
+                    />
+                )}
 
                 <div className="command-hub-layout">
                     {/* ROW 1: THE HEROES (POINTS & HISTORY) */}
