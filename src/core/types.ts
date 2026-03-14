@@ -320,9 +320,16 @@ export interface DopamineAge {
     realAge: number;
     dopamineAge: number;
     delta: number;
+    weeklyDelta?: number | null;
     status: 'optimal' | 'good' | 'warning' | 'critical';
     lastCalculatedAt: string;
     surveyCompleted: boolean;
     surveyAnswers?: DopamineAgeSurvey;
+}
+
+export interface HistoryPoint {
+    date: string;
+    dopamineAge: number;
+    status: DopamineAge['status'];
 }
 

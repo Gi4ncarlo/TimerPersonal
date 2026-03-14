@@ -109,14 +109,22 @@ export async function GET(request: Request) {
                 actionId: r.action_id,
                 actionName: r.action_name,
                 date: r.date,
-                durationMinutes: r.duration_minutes,
-                pointsCalculated: r.points_calculated,
+                durationMinutes: Number(r.duration_minutes) || 0,
+                pointsCalculated: Number(r.points_calculated) || 0,
                 targetGoalId: r.target_goal_id,
                 notes: r.notes
             }));
 
             // Calculate
             const surveyAnswers: DopamineAgeSurvey = daRecord.survey_answers;
+
+            console.log('--- DOPAMINE AGE ENGINE VERIFICATION (GET) ---');
+            console.log(`Cantidad de DailyRecords encontrados: ${mappedRecords.length}`);
+            console.log(`Cantidad de Strikes activos: ${strikes?.length || 0}`);
+            console.log(`Balance total: ${currentBalance.totalPoints}`);
+            console.log(`Streak actual: ${currentStreak}`);
+            console.log('------------------------------------------------');
+
             const newAge = calculateDopamineAge({
                 survey: surveyAnswers,
                 recentRecords: mappedRecords,
@@ -127,12 +135,42 @@ export async function GET(request: Request) {
 
             newAge.userId = userId;
 
+            // --- TENDENCIA SEMANAL (weekly_delta) ---
+            const dateMinus6Days = new Date();
+            dateMinus6Days.setDate(dateMinus6Days.getDate() - 6);
+            const dateMinus8Days = new Date();
+            dateMinus8Days.setDate(dateMinus8Days.getDate() - 8);
+
+            const { data: historyData } = await db
+                .from('dopamine_age_history')
+                .select('dopamine_age')
+                .eq('user_id', userId)
+                .gte('calculated_at', dateMinus8Days.toISOString())
+                .lte('calculated_at', dateMinus6Days.toISOString())
+                .order('calculated_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+            let weeklyDelta = null;
+            if (historyData) {
+                weeklyDelta = newAge.dopamineAge - historyData.dopamine_age;
+            }
+
+            // Siempre guardar el registro del nuevo cálculo en el historial
+            await db.from('dopamine_age_history').insert({
+                user_id: userId,
+                dopamine_age: newAge.dopamineAge,
+                delta: newAge.delta,
+                status: newAge.status
+            });
+
             // Update in DB
             const { data: updatedRecord, error: updateError } = await db
                 .from('dopamine_age')
                 .update({
                     dopamine_age: newAge.dopamineAge,
                     delta: newAge.delta,
+                    weekly_delta: weeklyDelta,
                     status: newAge.status,
                     last_calculated_at: new Date().toISOString(),
                     updated_at: new Date().toISOString()
@@ -152,6 +190,7 @@ export async function GET(request: Request) {
                     realAge: updatedRecord.real_age,
                     dopamineAge: updatedRecord.dopamine_age,
                     delta: updatedRecord.delta,
+                    weeklyDelta: updatedRecord.weekly_delta,
                     status: updatedRecord.status as DopamineAge['status'],
                     lastCalculatedAt: updatedRecord.last_calculated_at,
                     surveyCompleted: updatedRecord.survey_completed,
@@ -167,6 +206,7 @@ export async function GET(request: Request) {
                 realAge: daRecord.real_age,
                 dopamineAge: daRecord.dopamine_age,
                 delta: daRecord.delta,
+                weeklyDelta: daRecord.weekly_delta,
                 status: daRecord.status as DopamineAge['status'],
                 lastCalculatedAt: daRecord.last_calculated_at,
                 surveyCompleted: daRecord.survey_completed,

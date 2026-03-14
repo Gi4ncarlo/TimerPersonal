@@ -34,13 +34,36 @@ export function calculateDopamineAge(params: {
     else if (survey.stressLevel >= 4) computedAge -= 2;
 
     // --- FACTORES DE LA APP (VALORACIÓN DE SENDA) ---
-    const positiveCount = recentRecords.filter(r => r.pointsCalculated > 0).length;
-    const negativeCount = recentRecords.filter(r => r.pointsCalculated < 0).length;
+    const now = new Date();
+    
+    let weightedPositive = 0;
+    let weightedNegative = 0;
+
+    recentRecords.forEach(r => {
+        const recordDate = new Date(r.date);
+        const diffMs = now.getTime() - recordDate.getTime();
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+        let weight = 1.0;
+        if (diffDays <= 7) {
+            weight = 2.0;
+        } else if (diffDays <= 14) {
+            weight = 1.5;
+        } else {
+            weight = 1.0;
+        }
+
+        if (r.pointsCalculated > 0) {
+            weightedPositive += weight;
+        } else if (r.pointsCalculated < 0) {
+            weightedNegative += weight;
+        }
+    });
 
     // Recompensamos el trabajo constante
-    computedAge += Math.floor(positiveCount / 10) * 1;
+    computedAge += Math.floor(weightedPositive / 15) * 1;
     // Penalizamos las debilidades
-    computedAge -= Math.floor(negativeCount / 5) * 1;
+    computedAge -= Math.floor(weightedNegative / 10) * 1;
 
     // Racha actual (Strike)
     if (currentStreak >= 21) computedAge += 6; // Nivel de disciplina 'Monje'

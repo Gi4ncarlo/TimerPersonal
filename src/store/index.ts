@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { DopamineAge, DopamineAgeSurvey } from '@/core/types'
+import { DopamineAge, DopamineAgeSurvey, HistoryPoint } from '@/core/types'
 import { supabase } from '@/lib/supabase/client'
 
 interface AppStore {
@@ -8,11 +8,18 @@ interface AppStore {
     isLoadingDopamineAge: boolean
     fetchDopamineAge: () => Promise<void>
     completeSurvey: (survey: DopamineAgeSurvey) => Promise<void>
+
+    // Dopamine Age History
+    dopamineAgeHistory: HistoryPoint[]
+    isLoadingHistory: boolean
+    fetchDopamineAgeHistory: () => Promise<void>
 }
 
 export const useAppStore = create<AppStore>((set) => ({
     dopamineAge: null,
     isLoadingDopamineAge: false,
+    dopamineAgeHistory: [],
+    isLoadingHistory: false,
 
     fetchDopamineAge: async () => {
         set({ isLoadingDopamineAge: true })
@@ -48,6 +55,23 @@ export const useAppStore = create<AppStore>((set) => ({
         set({
             dopamineAge: 'dopamineAge' in data ? data.dopamineAge : data,
             isLoadingDopamineAge: false
+        })
+    },
+
+    fetchDopamineAgeHistory: async () => {
+        set({ isLoadingHistory: true })
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return set({ isLoadingHistory: false });
+
+        const res = await fetch('/api/dopamine-age/history', {
+            headers: {
+                'Authorization': `Bearer ${session.access_token}`
+            }
+        })
+        const data = await res.json()
+        set({
+            dopamineAgeHistory: data.history || [],
+            isLoadingHistory: false
         })
     },
 }))

@@ -15,7 +15,7 @@ import StrikeWarning from '@/ui/components/StrikeWarning';
 import ProfileModal from '@/ui/components/ProfileModal';
 import CreateActionModal from '@/ui/components/CreateActionModal';
 import CreateShortcutModal from '@/ui/components/CreateShortcutModal';
-import DailyMissionsCard from '@/ui/components/DailyMissionsCard';
+import ArenaPanel from '@/ui/ArenaPanel/ArenaPanel';
 import GachaRoulette from '@/ui/components/GachaRoulette';
 import ActiveBuffsDisplay from '@/ui/components/ActiveBuffsDisplay';
 import ConfirmModal from '@/ui/components/ConfirmModal';
@@ -23,9 +23,10 @@ import Navbar from '@/ui/components/Navbar';
 import LogoLoader from '@/ui/components/LogoLoader';
 import LevelUpModal from '@/ui/components/LevelUpModal';
 import WeeklySummaryModal from '@/ui/components/WeeklySummaryModal';
-import WeeklyTournamentCard from '@/ui/components/WeeklyTournamentCard';
+
 import DopamineAgeSurvey from '@/ui/DopamineAgeSurvey/DopamineAgeSurvey';
 import DopamineAgeCard from '@/ui/DopamineAgeCard/DopamineAgeCard';
+import DopamineAgeChart from '@/ui/DopamineAgeChart/DopamineAgeChart';
 import { useAppStore } from '@/store';
 import { SupabaseDataStore } from '@/data/supabaseData';
 import { BalanceCalculator } from '@/core/services/BalanceCalculator';
@@ -115,11 +116,12 @@ export default function Dashboard() {
     const historyListRef = useRef<HTMLDivElement>(null);
 
     // Dopamine Age Integration
-    const { dopamineAge, isLoadingDopamineAge, fetchDopamineAge } = useAppStore();
+    const { dopamineAge, isLoadingDopamineAge, fetchDopamineAge, fetchDopamineAgeHistory } = useAppStore();
 
     useEffect(() => {
         loadData();
         fetchDopamineAge(); // Llamamos al backend lazy-loading para cargar la Dopamine Age
+        fetchDopamineAgeHistory();
     }, []);
 
     // Auto-scroll history to bottom when records update
@@ -1162,82 +1164,81 @@ export default function Dashboard() {
                 />
                 {getQuickAdds()}
 
-                <DailyMissionsCard
-                    missions={dailyMissions}
-                    loading={missionsLoading}
-                    streakDays={missionStreak}
-                    rerollsUsed={dailyRerollsUsed}
-                    onReroll={handleRerollMission}
-                    rerollingId={rerollingMissionId}
-                />
-
-                {currentUser && (
-                    <WeeklyTournamentCard
-                        tournament={currentTournament}
-                        participants={tournamentParticipants}
-                        currentUserId={currentUser.id}
-                        lastWinner={lastTournamentWinner}
-                        isLoading={tournamentLoading}
+                <div className="arena-panel-wrapper" style={{ marginBottom: '24px' }}>
+                    <ArenaPanel
+                        missions={dailyMissions}
+                        activeTournament={currentTournament}
+                        tournamentParticipants={tournamentParticipants}
+                        currentUser={currentUser}
+                        currentStreak={missionStreak}
+                        dailyFlameCount={missionStreak}
+                        dailyRerollsUsed={dailyRerollsUsed}
+                        rerollingMissionId={rerollingMissionId}
+                        onRerollMission={handleRerollMission}
                     />
-                )}
+                </div>
 
                 <div className="command-hub-layout">
                     {/* ROW 1: THE HEROES (POINTS & HISTORY) */}
                     <div className="hero-row">
-                        <section className="the-forge materialized">
-                            <div className={`accumulated-time-card ${accumulatedPoints >= 0 ? 'positive' : 'negative'} ethereal-border`}>
-                                <p className="accumulated-label text-arcade">
-                                    {accumulatedPoints >= 0 ? '✓ PUNTOS GANADOS' : '⚠ PUNTOS EN DEUDA'}
-                                    {activeGlobalMultiplier > 1 && (
-                                        <span className="global-mult-badge">
-                                            <span style={{ color: '#fff', WebkitTextFillColor: '#fff' }}>x{activeGlobalMultiplier.toFixed(1)}</span>
-                                            {' '}
-                                            <span style={{ color: 'initial', WebkitTextFillColor: 'initial', textShadow: 'none', filter: 'none' }}>⚡</span>
-                                        </span>
-                                    )}
-                                </p>
-                                <StaticTimeDisplay totalPoints={accumulatedPoints} />
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '12px' }}>
-                                    <button className={`gacha-cta-banner ${hasFreeSpin ? 'has-free-spin' : ''}`} onClick={() => setIsGachaOpen(true)}>
-                                        <span className="gacha-cta-icon">🎰</span>
-                                        <span className="gacha-cta-text">Ruleta de Premios</span>
-                                        {hasFreeSpin && (
-                                            <span className="gacha-cta-free-badge">
-                                                🎁 ¡TIRADA GRATIS!
+                        {/* LEFT COLUMN: Forge & Dopamine */}
+                        <div className={`hero-left-col ${!isLoadingDopamineAge && dopamineAge && dopamineAge.surveyCompleted ? 'has-dopamine' : ''}`}>
+                            <section className="the-forge materialized">
+                                <div className={`accumulated-time-card ${accumulatedPoints >= 0 ? 'positive' : 'negative'} ethereal-border`}>
+                                    <p className="accumulated-label text-arcade">
+                                        {accumulatedPoints >= 0 ? '✓ PUNTOS GANADOS' : '⚠ PUNTOS EN DEUDA'}
+                                        {activeGlobalMultiplier > 1 && (
+                                            <span className="global-mult-badge">
+                                                <span style={{ color: '#fff', WebkitTextFillColor: '#fff' }}>x{activeGlobalMultiplier.toFixed(1)}</span>
+                                                {' '}
+                                                <span style={{ color: 'initial', WebkitTextFillColor: 'initial', textShadow: 'none', filter: 'none' }}>⚡</span>
                                             </span>
                                         )}
-                                        <span className="gacha-cta-shine"></span>
-                                    </button>
-                                    <button className="weekly-summary-cta" onClick={handleOpenWeeklySummary} disabled={isWeeklySummaryLoading}>
-                                        {isWeeklySummaryLoading ? (
-                                            <span className="btn-loader"></span>
-                                        ) : (
-                                            <>
-                                                <span className="ws-cta-icon">📊</span>
-                                                <span className="ws-cta-label">Resumen Semanal</span>
-                                            </>
-                                        )}
-                                    </button>
-                                </div>
-                                <ActiveBuffsDisplay buffs={activeBuffs} />
-
-                                {(activeGlobalMultiplier > 1 || hasActivityMultipliers) && (
-                                    <div className="mult-promo-message">
-                                        🔥 ¡Multiplicadores activos! ¿Vas a desaprovechar esta oportunidad?
+                                    </p>
+                                    <StaticTimeDisplay totalPoints={accumulatedPoints} />
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '12px' }}>
+                                        <button className={`gacha-cta-banner ${hasFreeSpin ? 'has-free-spin' : ''}`} onClick={() => setIsGachaOpen(true)}>
+                                            <span className="gacha-cta-icon">🎰</span>
+                                            <span className="gacha-cta-text">Ruleta de Premios</span>
+                                            {hasFreeSpin && (
+                                                <span className="gacha-cta-free-badge">
+                                                    🎁 ¡TIRADA GRATIS!
+                                                </span>
+                                            )}
+                                            <span className="gacha-cta-shine"></span>
+                                        </button>
+                                        <button className="weekly-summary-cta" onClick={handleOpenWeeklySummary} disabled={isWeeklySummaryLoading}>
+                                            {isWeeklySummaryLoading ? (
+                                                <span className="btn-loader"></span>
+                                            ) : (
+                                                <>
+                                                    <span className="ws-cta-icon">📊</span>
+                                                    <span className="ws-cta-label">Resumen Semanal</span>
+                                                </>
+                                            )}
+                                        </button>
                                     </div>
-                                )}
+                                    <ActiveBuffsDisplay buffs={activeBuffs} />
 
-                                <div className="hero-decoration"></div>
-                            </div>
-                        </section>
+                                    {(activeGlobalMultiplier > 1 || hasActivityMultipliers) && (
+                                        <div className="mult-promo-message">
+                                            🔥 ¡Multiplicadores activos! ¿Vas a desaprovechar esta oportunidad?
+                                        </div>
+                                    )}
 
-                        {/* DOPAMINE AGE SECTION */}
-                        {!isLoadingDopamineAge && dopamineAge && dopamineAge.surveyCompleted && (
-                            <section className="dopamine-section">
-                                <DopamineAgeCard />
+                                    <div className="hero-decoration"></div>
+                                </div>
                             </section>
-                        )}
 
+                            {/* DOPAMINE AGE SECTION */}
+                            {!isLoadingDopamineAge && dopamineAge && dopamineAge.surveyCompleted && (
+                                <section className="dopamine-section">
+                                    <DopamineAgeCard />
+                                </section>
+                            )}
+                        </div>
+
+                        {/* RIGHT COLUMN: Historial */}
                         <section className="the-chronicle">
                             <QuestCard title="Historial" subtitle={`${todayRecords.length} hoy`}>
                                 {todayRecords.length === 0 ? (
@@ -1318,6 +1319,13 @@ export default function Dashboard() {
                             </QuestCard>
                         </section>
                     </div>
+
+                    {/* ROW 1.5: DOPAMINE AGE CHART (FULL WIDTH) */}
+                    {!isLoadingDopamineAge && dopamineAge && dopamineAge.surveyCompleted && (
+                        <div style={{ width: '100%' }}>
+                            <DopamineAgeChart />
+                        </div>
+                    )}
 
                     {/* ROW 2: THE MISSION (GOALS FULL WIDTH) */}
                     <div className="mission-row">

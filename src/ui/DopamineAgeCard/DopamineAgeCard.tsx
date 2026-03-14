@@ -71,6 +71,32 @@ export default function DopamineAgeCard() {
             ? `Igual a tu edad real`
             : `${Math.abs(dopamineAge.delta)} años menos que tu edad real (óptimo)`;
 
+    let weeklyDeltaNode = null;
+    if (dopamineAge.weeklyDelta !== undefined && dopamineAge.weeklyDelta !== null) {
+        if (dopamineAge.weeklyDelta > 0) {
+            // Empeoró (edad sube) = Malo (Rojo)
+            weeklyDeltaNode = (
+                <div className={styles.weeklyDelta} style={{ color: '#ff4444' }}>
+                    ↑ +{dopamineAge.weeklyDelta} años esta semana
+                </div>
+            );
+        } else if (dopamineAge.weeklyDelta < 0) {
+            // Mejoró (edad baja) = Bueno (Verde)
+            weeklyDeltaNode = (
+                <div className={styles.weeklyDelta} style={{ color: '#00ff88' }}>
+                    ↓ {Math.abs(dopamineAge.weeklyDelta)} años esta semana
+                </div>
+            );
+        } else {
+            // Sin cambios
+            weeklyDeltaNode = (
+                <div className={styles.weeklyDelta} style={{ color: '#888' }}>
+                    Sin cambios esta semana
+                </div>
+            );
+        }
+    }
+
     const handleShare = async () => {
         if (!captureRef.current) return;
         try {
@@ -120,6 +146,8 @@ export default function DopamineAgeCard() {
                     <h1 className={styles.ageNumber}>{dopamineAge.dopamineAge}</h1>
                 </div>
 
+                {weeklyDeltaNode}
+
                 <div className={styles.delta} style={{ color: dopamineAge.delta > 0 ? '#ff4444' : '#00ff88' }}>
                     {deltaText}
                 </div>
@@ -145,6 +173,8 @@ export default function DopamineAgeCard() {
                 <div className={styles.captureNumber} style={{ color: statusColor, textShadow: `0 0 40px ${statusColor}66` }}>
                     {dopamineAge.dopamineAge}
                 </div>
+
+                {weeklyDeltaNode}
 
                 <div className={styles.captureDivider}></div>
                 <div className={styles.realAge} style={{ fontSize: '1.5rem', marginBottom: '30px' }}>

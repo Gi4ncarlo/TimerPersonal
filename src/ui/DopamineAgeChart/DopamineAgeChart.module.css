@@ -1,0 +1,125 @@
+.chartWrapper {
+    background: rgba(10, 10, 10, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
+    padding: 24px;
+    margin-top: 24px;
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 
+        inset 0 0 0 1px rgba(255,255,255,0.02),
+        0 8px 30px rgba(0,0,0,0.5);
+}
+
+.title {
+    font-size: 0.8rem;
+    font-weight: 800;
+    letter-spacing: 2px;
+    color: rgba(255, 255, 255, 0.5);
+    text-transform: uppercase;
+    margin: 0 0 20px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.title::before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.5;
+}
+
+.chartContainer {
+    width: 100%;
+    height: 250px;
+}
+
+/* Tooltip Custom styling */
+.customTooltip {
+    background: #111;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 12px 16px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.8);
+    backdrop-filter: blur(10px);
+}
+
+.tooltipDate {
+    margin: 0 0 4px 0;
+    color: #888;
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.tooltipAge {
+    margin: 0 0 4px 0;
+    font-size: 1.1rem;
+}
+
+.tooltipAge strong {
+    font-weight: 800;
+    font-size: 1.3rem;
+}
+
+.tooltipStatus {
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 700;
+    opacity: 0.7;
+    letter-spacing: 1px;
+}
+
+/* States */
+.emptyState {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    min-height: 200px;
+    color: #888;
+}
+
+.emptyState p {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+}
+
+.emptyState span {
+    font-size: 0.85rem;
+    opacity: 0.7;
+}
+
+/* Skeleton Loading Pulse */
+.skeleton {
+    min-height: 300px;
+}
+
+.pulseBox {
+    width: 100%;
+    height: 250px;
+    background: linear-gradient(
+        90deg,
+        rgba(255,255,255,0.02) 25%,
+        rgba(255,255,255,0.05) 50%,
+        rgba(255,255,255,0.02) 75%
+    );
+    background-size: 400% 100%;
+    animation: skeleton-loading 1.5s infinite ease-in-out;
+    border-radius: 12px;
+    margin-top: 40px;
+}
+
+@keyframes skeleton-loading {
+    0% { background-position: 100% 50%; }
+    100% { background-position: 0 50%; }
+}

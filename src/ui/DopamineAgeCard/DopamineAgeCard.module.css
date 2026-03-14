@@ -1,7 +1,9 @@
 .card {
-    background: var(--card-bg, #111);
-    border: 1px solid var(--border-color, #222);
-    border-radius: 20px;
+    background: radial-gradient(circle at top right, rgba(40,40,55,0.6) 0%, rgba(10,10,15,0.8) 100%);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-lg, 24px);
     padding: 30px;
     position: relative;
     overflow: hidden;
@@ -9,8 +11,15 @@
     flex-direction: column;
     align-items: center;
     text-align: center;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-    margin-bottom: 24px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(255,255,255,0.02);
+    margin-bottom: 0; 
+    height: 100%;
+    transition: transform 0.4s cubic-bezier(0.19, 1, 0.22, 1), box-shadow 0.4s ease;
+}
+
+.card:hover {
+    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.6), inset 0 0 30px rgba(255,255,255,0.05);
+    transform: translateY(-4px);
 }
 
 .header {
@@ -18,86 +27,146 @@
     justify-content: space-between;
     align-items: center;
     width: 100%;
-    margin-bottom: 20px;
+    margin-bottom: 24px;
 }
 
 .title {
-    font-size: 1rem;
-    font-weight: 800;
-    color: #888;
+    font-size: 1.1rem;
+    font-weight: 900;
+    color: #fff;
     letter-spacing: 2px;
     text-transform: uppercase;
     margin: 0;
     display: flex;
     align-items: center;
     gap: 8px;
+    opacity: 0.9;
+    background: linear-gradient(to right, #fff, #aaa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
 
 .badge {
-    padding: 4px 12px;
+    padding: 6px 14px;
     border-radius: 20px;
     font-size: 0.75rem;
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 1px;
+    box-shadow: 0 0 15px currentColor;
+    border: 1px solid currentColor;
 }
 
 .realAge {
-    font-size: 1rem;
-    color: #666;
-    margin-bottom: 20px;
+    font-size: 1.1rem;
+    color: #888;
+    margin-bottom: auto;
     font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 2px;
 }
 
 .numberBox {
     border: 2px solid;
-    border-radius: 20px;
-    padding: 20px 50px;
-    margin-bottom: 20px;
-    background: rgba(0, 0, 0, 0.3);
-    box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.5);
+    border-radius: 50%;
+    width: 160px;
+    height: 160px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 24px;
+    margin-top: 24px;
+    background: radial-gradient(circle at center, rgba(0,0,0,0.6), transparent);
+    box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0,0,0,0.4);
+    position: relative;
+}
+
+.numberBox::after {
+    content: '';
+    position: absolute;
+    top: -5px; right: -5px; bottom: -5px; left: -5px;
+    border-radius: 50%;
+    border: 1px dashed currentColor;
+    opacity: 0.3;
+    animation: rotateSlow 20s linear infinite;
+}
+
+@keyframes rotateSlow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }
 
 .ageNumber {
-    font-size: 5rem;
+    font-size: 4.5rem;
     font-weight: 900;
     line-height: 1;
     margin: 0;
-    text-shadow: 0 0 20px currentColor;
+    text-shadow: 0 0 20px currentColor, 0 0 10px currentColor;
+    font-family: var(--font-display, inherit);
 }
 
 .delta {
-    font-size: 1.1rem;
-    font-weight: 700;
+    font-size: 1.2rem;
+    font-weight: 800;
     margin-bottom: 15px;
+    letter-spacing: 0.5px;
+    background: rgba(0,0,0,0.3);
+    padding: 8px 16px;
+    border-radius: 8px;
+}
+
+.weeklyDelta {
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin-top: -10px;
+    margin-bottom: 12px;
+    letter-spacing: 0.3px;
+    opacity: 0;
+    animation: fadeIn 0.4s ease 0.2s forwards;
+    padding: 4px 12px;
+    border-radius: 6px;
+    background: rgba(0,0,0,0.2);
+}
+
+@keyframes fadeIn {
+    to { opacity: 1; }
 }
 
 .message {
-    font-size: 1.1rem;
-    color: #aaa;
+    font-size: 1rem;
+    color: #ccc;
     font-style: italic;
     line-height: 1.5;
-    margin-bottom: 30px;
-    max-width: 400px;
+    margin-bottom: auto;
+    margin-top: 15px;
+    max-width: 90%;
+    font-weight: 500;
 }
 
 .shareBtn {
     background: rgba(255, 255, 255, 0.05);
-    border: 1px solid #333;
+    border: 1px solid rgba(255,255,255,0.15);
     color: #fff;
-    padding: 12px 24px;
+    padding: 14px 28px;
     border-radius: 30px;
-    font-weight: 600;
+    font-weight: 700;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1);
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
+    margin-top: 25px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-size: 0.85rem;
+    width: 100%;
+    justify-content: center;
 }
 
 .shareBtn:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: #555;
+    background: rgba(255, 255, 255, 0.15);
+    border-color: #fff;
+    box-shadow: 0 0 20px rgba(255,255,255,0.2);
     transform: translateY(-2px);
 }
 
@@ -109,10 +178,8 @@
 /* Oculto a la vista normal, usado para screenshot limpio */
 .captureContainer {
     position: absolute;
-    top: -9999px;
-    left: -9999px;
+    top: -9999px; left: -9999px;
     width: 600px;
-    height: auto;
     min-height: 600px;
     background: #0a0a0a;
     padding: 50px;
