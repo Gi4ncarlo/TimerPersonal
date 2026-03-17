@@ -514,6 +514,7 @@ export default function Dashboard() {
             }
 
             // ── Weekly Tournament ─────────────────────────────
+            // 1. Initialization: Get or create tournament (once per mount)
             if (!tournamentCheckedRef.current) {
                 tournamentCheckedRef.current = true;
                 try {
@@ -521,7 +522,6 @@ export default function Dashboard() {
                     const weekStart = getWeekStartString();
                     const weekEnd = getWeekEndString();
 
-                    // 1. Get or create the tournament for this week
                     let tournament = await SupabaseDataStore.getCurrentTournament(weekStart);
 
                     if (!tournament) {
@@ -529,58 +529,9 @@ export default function Dashboard() {
                         tournament = await SupabaseDataStore.createTournament(definition);
                     }
 
-                    if (tournament && tournament.status === 'active') {
-                        // 2. Calculate scores for all users
-                        const allRecords = await SupabaseDataStore.getAllRecordsByDateRangeForAllUsers(weekStart, weekEnd);
-
-                        // Group records by userId
-                        const recordsByUser: Record<string, typeof allRecords> = {};
-                        for (const r of allRecords) {
-                            if (!recordsByUser[r.userId]) recordsByUser[r.userId] = [];
-                            recordsByUser[r.userId].push(r);
-                        }
-
-                        // Get all users for names
-                        const allUsers = await SupabaseDataStore.getAllUsers();
-                        const userMap = new Map(allUsers.map(u => [u.id, u.username]));
-
-                        // Calculate scores
-                        const scores: { userId: string; username: string; score: number }[] = [];
-                        for (const [userId, userRecords] of Object.entries(recordsByUser)) {
-                            const username = userMap.get(userId) || 'Usuario';
-                            const score = TournamentEngine.calculateParticipantScore(
-                                userRecords, fetchedActions, tournament.category
-                            );
-                            if (score > 0) {
-                                scores.push({ userId, username, score });
-                            }
-                        }
-
-                        // Also include current user even if 0 score
-                        if (!scores.find(s => s.userId === user.id)) {
-                            scores.push({ userId: user.id, username: user.username, score: 0 });
-                        }
-
-                        // Rank participants
-                        const ranked = TournamentEngine.rankParticipants(scores);
-
-                        // Upsert all participants
-                        for (const p of ranked) {
-                            await SupabaseDataStore.upsertTournamentScore(
-                                tournament.id, p.userId, p.username, p.score, p.rank
-                            );
-                        }
-
-                        setTournamentParticipants(ranked);
-                    } else if (tournament) {
-                        // Tournament completed, just load participants
-                        const participants = await SupabaseDataStore.getTournamentParticipants(tournament.id);
-                        setTournamentParticipants(participants);
-                    }
-
                     setCurrentTournament(tournament);
 
-                    // 3. Fetch last tournament winner for display
+                    // Fetch last tournament winner for display
                     const history = await SupabaseDataStore.getTournamentHistory(1);
                     if (history.length > 0 && history[0].winnerUsername) {
                         setLastTournamentWinner({
@@ -589,10 +540,70 @@ export default function Dashboard() {
                         });
                     }
                 } catch (tournamentErr) {
-                    console.warn('Tournament error:', tournamentErr);
+                    console.warn('Tournament init error:', tournamentErr);
                 } finally {
                     setTournamentLoading(false);
                 }
+            }
+
+            // 2. Score recalculation: runs on EVERY loadData() call for live updates
+            try {
+                const activeTournament = currentTournament ?? await (async () => {
+                    const weekStart = getWeekStartString();
+                    return await SupabaseDataStore.getCurrentTournament(weekStart);
+                })();
+
+                if (activeTournament && activeTournament.status === 'active') {
+                    const weekStart = getWeekStartString();
+                    const weekEnd = getWeekEndString();
+                    const allRecords = await SupabaseDataStore.getAllRecordsByDateRangeForAllUsers(weekStart, weekEnd);
+
+                    // Group records by userId
+                    const recordsByUser: Record<string, typeof allRecords> = {};
+                    for (const r of allRecords) {
+                        if (!recordsByUser[r.userId]) recordsByUser[r.userId] = [];
+                        recordsByUser[r.userId].push(r);
+                    }
+
+                    // Get all users for names
+                    const allUsers = await SupabaseDataStore.getAllUsers();
+                    const userMap = new Map(allUsers.map(u => [u.id, u.username]));
+
+                    // Calculate scores
+                    const scores: { userId: string; username: string; score: number }[] = [];
+                    for (const [userId, userRecords] of Object.entries(recordsByUser)) {
+                        const username = userMap.get(userId) || 'Usuario';
+                        const score = TournamentEngine.calculateParticipantScore(
+                            userRecords, fetchedActions, activeTournament.category
+                        );
+                        if (score > 0) {
+                            scores.push({ userId, username, score });
+                        }
+                    }
+
+                    // Also include current user even if 0 score
+                    if (!scores.find(s => s.userId === user.id)) {
+                        scores.push({ userId: user.id, username: user.username, score: 0 });
+                    }
+
+                    // Rank participants
+                    const ranked = TournamentEngine.rankParticipants(scores);
+
+                    // Upsert all participants
+                    for (const p of ranked) {
+                        await SupabaseDataStore.upsertTournamentScore(
+                            activeTournament.id, p.userId, p.username, p.score, p.rank
+                        );
+                    }
+
+                    setTournamentParticipants(ranked);
+                } else if (activeTournament) {
+                    // Tournament completed, just load participants
+                    const participants = await SupabaseDataStore.getTournamentParticipants(activeTournament.id);
+                    setTournamentParticipants(participants);
+                }
+            } catch (tournamentScoreErr) {
+                console.warn('Tournament score refresh error:', tournamentScoreErr);
             }
 
             // ── Smart Notifications ────────────────────────────
