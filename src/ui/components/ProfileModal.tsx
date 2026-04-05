@@ -8,6 +8,7 @@ import { getLevelTitle } from '@/core/config/levelRewards';
 import Avatar from './Avatar';
 import { useToast } from '@/core/contexts/ToastContext';
 import { Strike } from '@/core/types';
+import { getTodayString } from '@/core/utils/dateUtils';
 import './ProfileModal.css';
 import Twemoji from './Twemoji';
 import StrikeIcon from './icons/StrikeIcon';
@@ -46,6 +47,11 @@ export default function ProfileModal({ user, isOpen, isOnVacation = false, onClo
     );
     const [sarcasmSaving, setSarcasmSaving] = useState(false);
 
+    // Cuenta Pausada
+    const [pausePeriodId, setPausePeriodId] = useState<string | null>(null);
+    const [isAccountPaused, setIsAccountPaused] = useState(false);
+    const [isTogglingPause, setIsTogglingPause] = useState(false);
+
     // Liga Premium
     const [league, setLeague] = useState(LEAGUE_THRESHOLDS[0]);
     const [strikes, setStrikes] = useState<Strike[]>([]);
@@ -59,8 +65,57 @@ export default function ProfileModal({ user, isOpen, isOnVacation = false, onClo
                 setLeague(currentLeague);
             });
             SupabaseDataStore.getStrikes().then(s => setStrikes(s));
+            SupabaseDataStore.getVacationPeriods().then(periods => {
+                const today = getTodayString();
+                const activePause = periods.find(p => p.reason === '[SISTEMA] Cuenta Pausada' && today >= p.startDate && today <= p.endDate);
+                if (activePause) {
+                    setIsAccountPaused(true);
+                    setPausePeriodId(activePause.id);
+                } else {
+                    setIsAccountPaused(false);
+                    setPausePeriodId(null);
+                }
+            });
         }
     }, [isOpen, user?.id]);
+
+    const toggleAccountPause = async () => {
+        setIsTogglingPause(true);
+        try {
+            if (isAccountPaused && pausePeriodId) {
+                const today = getTodayString();
+                const success = await SupabaseDataStore.updateVacationPeriodEndDate(pausePeriodId, today);
+                if (success) {
+                    setIsAccountPaused(false);
+                    setPausePeriodId(null);
+                    addToast('Cuenta reanudada correctamente', 'success');
+                    onUpdate();
+                } else {
+                    addToast(`Error al reanudar la cuenta (No se pudo actualizar DB)`, 'error');
+                }
+            } else {
+                const today = getTodayString();
+                const endDate = '2099-12-31'; // Usamos 2099 ya que la BD será actualizada para omitir la validación de 30 días
+                
+                const period = await SupabaseDataStore.createVacationPeriod({
+                    startDate: today,
+                    endDate,
+                    reason: '[SISTEMA] Cuenta Pausada'
+                });
+                if (period) {
+                    setIsAccountPaused(true);
+                    setPausePeriodId(period.id);
+                    addToast('Cuenta pausada indefinidamente', 'success');
+                    onUpdate();
+                }
+            }
+        } catch (error) {
+            console.error('Error toggling pause:', error);
+            addToast('Error inesperado al modificar el estado de la cuenta', 'error');
+        } finally {
+            setIsTogglingPause(false);
+        }
+    };
 
     const handleLogout = async () => {
         await SupabaseDataStore.logout();
@@ -429,6 +484,30 @@ export default function ProfileModal({ user, isOpen, isOnVacation = false, onClo
                                     <h2>Configuración</h2>
                                     <p className="tab-subtitle">Personalizá tu experiencia</p>
                                 </header>
+
+                                <div className="profile-settings-section" style={{ marginBottom: '24px' }}>
+                                    <h3>⏸️ Estado de la Cuenta</h3>
+                                    <p className="section-description">Pausá tu cuenta indefinidamente para no recibir strikes ni perder rachas mientras estés inactivo.</p>
+                                    
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'var(--bg-card)', padding: '16px', borderRadius: '12px', border: `1px solid ${isAccountPaused ? 'var(--color-warning)' : 'var(--color-border)'}` }}>
+                                        <div>
+                                            <span style={{ display: 'block', fontWeight: 'bold', color: isAccountPaused ? 'var(--color-warning)' : 'var(--color-success)', marginBottom: '4px' }}>
+                                                {isAccountPaused ? '⏸️ Cuenta Pausada' : '🟢 Cuenta Activa'}
+                                            </span>
+                                            <span style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>
+                                                {isAccountPaused ? 'Sistemas en reposo. No perderás rachas.' : 'Sistemas operativos. Cuenta visible.'}
+                                            </span>
+                                        </div>
+                                        <button 
+                                            className={`sarcasm-btn ${isAccountPaused ? 'sarcasm-low active' : 'sarcasm-medium'}`}
+                                            style={{ margin: 0, minWidth: '140px', padding: '10px' }}
+                                            onClick={toggleAccountPause}
+                                            disabled={isTogglingPause}
+                                        >
+                                            {isTogglingPause ? 'Procesando...' : isAccountPaused ? 'Reanudar Cuenta' : 'Pausar Cuenta'}
+                                        </button>
+                                    </div>
+                                </div>
 
                                 <div className="profile-settings-section">
                                     <h3>🔔 Nivel de Sarcasmo</h3>

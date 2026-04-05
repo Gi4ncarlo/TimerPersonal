@@ -298,7 +298,11 @@ export default function TiendaPage() {
                                     )}
                                 </div>
                                 <h3 className="shop-card__name" style={item.metadata?.cosmetic_type === 'name_color' ? { color: item.metadata.cosmetic_value } : {}}>{item.name}</h3>
-                                <p className="shop-card__desc">{item.description}</p>
+                                <p className="shop-card__desc">
+                                    {item.name === 'Seguro de Racha' 
+                                        ? 'Escudo permanente. Si faltás un día o tenés strikes pendientes, se activa automáticamente para salvarte.' 
+                                        : item.description}
+                                </p>
 
                                 <div className="shop-card__price-tag">
                                     <span className="shop-card__price-icon" style={{ display: 'flex', marginRight: '6px' }}><img src="/images/senda-coin-large-sinbg.png" alt="Senda" className="senda-floating-icon senda-floating-icon--sm" style={{ transform: 'scale(1.4)' }} /></span>
