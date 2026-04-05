@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "skills": {
+    "database-schema-design": {
+      "source": "supercent-io/skills-template",
+      "sourceType": "github",
+      "computedHash": "4c33e1db0dbbe6f7c4c99a8a4d38b695d8bc417bcad3f18a34543c8d9bceb79d"
+    },
+    "frontend-design-system": {
+      "source": "supercent-io/skills-template",
+      "sourceType": "github",
+      "computedHash": "da8fe39e337e255e6cffa99bec61458afbfb843c0b01b66012f628b5aabdb5b6"
+    },
+    "security-best-practices": {
+      "source": "supercent-io/skills-template",
+      "sourceType": "github",
+      "computedHash": "c5ddd50338549d28b2edd45cec131d6a231349b0671a093b3b7e3b51d4780ab8"
+    },
+    "senior-architect": {
+      "source": "sickn33/antigravity-awesome-skills",
+      "sourceType": "github",
+      "computedHash": "d3726478b49557209aeab3b663ce4fc958514a4d2ea6e31f463f0b1e943b7e87"
+    }
+  }
+}
