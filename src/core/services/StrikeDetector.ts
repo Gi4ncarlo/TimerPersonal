@@ -117,7 +117,7 @@ export class StrikeDetector {
     /**
      * Calcula rachas por actividad específica
      */
-    static calculateActivityStreaks(records: DailyRecord[]): Record<string, { current: number; longest: number }> {
+    static calculateActivityStreaks(records: DailyRecord[], vacationPeriods: VacationPeriod[] = []): Record<string, { current: number; longest: number }> {
         const streaks: Record<string, { current: number; longest: number; lastDate: string; temp: number }> = {};
 
         // Sort records by date ascending
@@ -139,18 +139,45 @@ export class StrikeDetector {
                 if (diff === 1) {
                     s.temp++;
                 } else if (diff > 1) {
-                    s.temp = 1;
+                    // Verificar si la brecha está cubierta por vacaciones/pausa
+                    const gapDates: string[] = [];
+                    for(let j = 1; j < diff; j++) {
+                        gapDates.push(format(subDays(parseISO(record.date), j), 'yyyy-MM-dd'));
+                    }
+                    const unprotectedDays = VacationService.filterVacationDays(gapDates, vacationPeriods);
+                    if (unprotectedDays.length === 0) {
+                        // Toda la brecha estaba protegida
+                        s.temp++;
+                    } else {
+                        // Se perdió la racha
+                        s.temp = 1;
+                    }
                 }
             }
             s.lastDate = record.date;
             s.longest = Math.max(s.longest, s.temp);
         });
 
-        // Final current streak check: if last activity was not today or yesterday, current is 0
+        // Final current streak check: if last activity was not today or yesterday, current is 0 unless gap is protected
         const result: Record<string, { current: number; longest: number }> = {};
         Object.keys(streaks).forEach(name => {
             const s = streaks[name];
-            const isActive = s.lastDate === today || s.lastDate === yesterday;
+            let isActive = s.lastDate === today || s.lastDate === yesterday;
+
+            if (!isActive && s.lastDate) {
+                const diff = differenceInDays(parseISO(today), parseISO(s.lastDate));
+                if (diff > 1) {
+                    const gapDates: string[] = [];
+                    for(let j = 1; j < diff; j++) {
+                        gapDates.push(format(subDays(parseISO(today), j), 'yyyy-MM-dd'));
+                    }
+                    const unprotectedDays = VacationService.filterVacationDays(gapDates, vacationPeriods);
+                    if (unprotectedDays.length === 0) {
+                        isActive = true;
+                    }
+                }
+            }
+
             result[name] = {
                 current: isActive ? s.temp : 0,
                 longest: s.longest

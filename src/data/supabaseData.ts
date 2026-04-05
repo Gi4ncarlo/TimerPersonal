@@ -1,4 +1,4 @@
-﻿import { supabase } from '@/lib/supabase/client';
+import { supabase } from '@/lib/supabase/client';
 import { Action, DailyRecord, User, Goal, Strike, VacationPeriod, DailyMission, SmartNotification, SarcasmLevel, GachaState, ActiveBuff, ShopItem, UserPurchase, PurchaseResult, Tournament, TournamentParticipant } from '@/core/types';
 import { getTodayString, getWeekStartString, getWeekEndString, getArgentinaDate, getMonthEndString, getYearEndString, getFarFutureString } from '@/core/utils/dateUtils';
 import { subDays, differenceInDays, parseISO, format } from 'date-fns';
@@ -1278,16 +1278,27 @@ export const SupabaseDataStore = {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user || dates.length === 0) return [];
 
-        // EXCLUDE DEMO
         const currentUser = await SupabaseDataStore.getCurrentUser();
         if (currentUser?.username === 'demo') return [];
 
         const createdStrikes: Strike[] = [];
-
-        // Sort dates ascending to apply penalties in order
         const sortedDates = [...dates].sort();
 
-        // Get initial global balance to maintain it through the loop (sequential processing)
+        // 1. Check for Streak Insurance (Seguro de Racha)
+        const { data: activeInsurance } = await supabase
+            .from('user_active_powers')
+            .select('*')
+            .eq('target_user_id', user.id)
+            .eq('power_type', 'seguro_racha')
+            .gt('expires_at', new Date().toISOString())
+            .order('created_at', { ascending: true })
+            .limit(1)
+            .maybeSingle();
+
+        let hasShield = !!activeInsurance;
+        let shieldConsumed = false;
+
+        // Get initial global balance
         const { data: records } = await supabase
             .from('daily_records')
             .select('points_calculated')
@@ -1306,8 +1317,29 @@ export const SupabaseDataStore = {
 
             if (existing) continue;
 
+            // IF SHIELD IS ACTIVE: Prevent the FIRST strike only (or all in one go?)
+            // The user said "un salvavidas", usually that's 1 use.
+            if (hasShield && !shieldConsumed) {
+                console.log(`🛡️ Seguro de Racha consumido para la fecha ${date}`);
+                shieldConsumed = true;
+                
+                // Consume the power in DB
+                await supabase.from('user_active_powers').delete().eq('id', activeInsurance.id);
+                
+                // Log it as a system event for transparency
+                await SupabaseDataStore.logSystemEvent({
+                    userId: user.id,
+                    actionName: '🛡️ Escudo Activado',
+                    date,
+                    timestamp: new Date().toISOString(),
+                    points: 0,
+                    notes: 'El Seguro de Racha previno un strike y ha sido consumido.'
+                });
+
+                continue; // Skip creating this strike
+            }
+
             try {
-                // Apply Penalty using the current running balance
                 const penaltyInfo = await SupabaseDataStore.applyStrikePenalty(user.id, date, currentGlobalBalance);
 
                 const strike = await SupabaseDataStore.createStrike({
@@ -1319,7 +1351,6 @@ export const SupabaseDataStore = {
                     balanceAfter: penaltyInfo?.balanceAfter,
                 });
 
-                // Update the running balance for the next iteration
                 if (penaltyInfo) {
                     currentGlobalBalance = penaltyInfo.balanceAfter;
                 }
@@ -1533,6 +1564,44 @@ export const SupabaseDataStore = {
             .eq('id', id);
 
         return !error;
+    },
+
+    updateVacationPeriodEndDate: async (id: string, endDate: string): Promise<boolean> => {
+        const { data: existing } = await supabase
+            .from('vacation_periods')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        if (!existing) return false;
+
+        // Si se pausó y reanudó el mismo día (o retroactivamente), borramos la pausa entera
+        if (existing.start_date >= endDate) {
+            const { error } = await supabase.from('vacation_periods').delete().eq('id', id);
+            return !error;
+        }
+
+        const { error } = await supabase
+            .from('vacation_periods')
+            .update({ end_date: endDate })
+            .eq('id', id);
+
+        if (error) {
+            console.error('Error in updateVacationPeriodEndDate (RLS?), trying fallback', error);
+            // Fallback: Delete and Re-insert
+            await supabase.from('vacation_periods').delete().eq('id', id);
+            
+            const { error: insError } = await supabase.from('vacation_periods').insert({
+                user_id: existing.user_id,
+                start_date: existing.start_date,
+                end_date: endDate,
+                reason: existing.reason,
+                notified_start: existing.notified_start,
+                notified_end_warning: existing.notified_end_warning
+            });
+            return !insError;
+        }
+        return true;
     },
 
     markVacationNotified: async (id: string, type: 'start' | 'end_warning'): Promise<void> => {
@@ -2275,7 +2344,8 @@ export const SupabaseDataStore = {
             .order('purchased_at', { ascending: false });
 
         const count = purchases?.length || 0;
-        const currentCost = Math.round(item.cost * Math.pow(1.5, count));
+        // Editado: base de 15000 y multiplicador de 1.1x (10% por vez)
+        const currentCost = Math.round(15000 * Math.pow(1.1, count));
 
         let cooldownEnds: string | null = null;
         if (purchases && purchases.length > 0) {
